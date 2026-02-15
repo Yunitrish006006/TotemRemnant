@@ -10,5 +10,7 @@
   "container.deadrecall.backpack.standard": "标准背包",
   "container.deadrecall.backpack.advanced": "进阶背包",
   "item.deadrecall.backpack_netherite": "狱髓背包",
-  "container.deadrecall.backpack.netherite": "狱髓背包"
+  "container.deadrecall.backpack.netherite": "狱髓背包",
+  "item.deadrecall.death_backpack": "死亡背包",
+  "container.deadrecall.death_backpack": "死亡背包"
 }

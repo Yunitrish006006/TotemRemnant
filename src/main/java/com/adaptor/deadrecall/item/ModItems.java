@@ -22,6 +22,10 @@ public class ModItems {
     public static final Item BACKPACK_NETHERITE = registerItem("backpack_netherite",
         new TieredBackpackItem(new Item.Settings().maxCount(1).fireproof(), TieredBackpackItem.BackpackTier.NETHERITE));
 
+    // 死亡背包 - 特殊的死亡掉落物品收集器
+    public static final Item DEATH_BACKPACK = registerItem("death_backpack",
+        new DeathBackpackItem(new Item.Settings().maxCount(1).fireproof()));
+
     // 保留舊的背包物品以兼容性（指向標準背包）
     @Deprecated
     public static final Item BACKPACK = BACKPACK_STANDARD;
@@ -40,6 +44,13 @@ public class ModItems {
             content.add(BACKPACK_ADVANCED);
             content.add(BACKPACK_NETHERITE);
         });
+
+        // 同時添加到功能性物品組，讓創造模式更容易找到
+        ItemGroupEvents.modifyEntriesEvent(ItemGroups.FUNCTIONAL).register(content -> {
+            content.add(BACKPACK_BASIC);
+            content.add(BACKPACK_STANDARD);
+            content.add(BACKPACK_ADVANCED);
+            content.add(BACKPACK_NETHERITE);
+        });
     }
 }
-

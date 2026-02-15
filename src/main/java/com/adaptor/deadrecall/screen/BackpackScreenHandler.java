@@ -1,9 +1,8 @@
 package com.adaptor.deadrecall.screen;
 
 import com.adaptor.deadrecall.inventory.BackpackInventory;
-import com.adaptor.deadrecall.item.ModItems;
+import com.adaptor.deadrecall.item.DeathBackpackItem;
 import com.adaptor.deadrecall.item.TieredBackpackItem;
-import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
@@ -11,12 +10,10 @@ import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.codec.PacketCodecs;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
@@ -25,12 +22,11 @@ public class BackpackScreenHandler extends ScreenHandler {
     private final Inventory inventory;
     private final TieredBackpackItem.BackpackTier tier;
 
-    public static final ScreenHandlerType<BackpackScreenHandler> SCREEN_HANDLER_TYPE =
+    public static final ExtendedScreenHandlerType<BackpackScreenHandler, Integer> SCREEN_HANDLER_TYPE =
         Registry.register(Registries.SCREEN_HANDLER, Identifier.of("deadrecall", "backpack"),
             new ExtendedScreenHandlerType<>(
                 (syncId, playerInventory, data) -> {
-                    int tierOrdinal = (Integer) data;
-                    TieredBackpackItem.BackpackTier tier = TieredBackpackItem.BackpackTier.values()[tierOrdinal];
+                    TieredBackpackItem.BackpackTier tier = TieredBackpackItem.BackpackTier.values()[data];
                     return new BackpackScreenHandler(syncId, playerInventory, tier);
                 },
                 PacketCodecs.INTEGER
@@ -70,6 +66,14 @@ public class BackpackScreenHandler extends ScreenHandler {
                 this.addSlot(new Slot(inventory, col + row * 9, 8 + col * 18, 18 + row * 18) {
                     @Override
                     public boolean canInsert(ItemStack stack) {
+                        // 檢查是否是死亡背包 - 如果是，禁止插入任何物品
+                        if (inventory instanceof BackpackInventory) {
+                            BackpackInventory backpackInv = (BackpackInventory) inventory;
+                            ItemStack backpackStack = backpackInv.getBackpackStack();
+                            if (!backpackStack.isEmpty() && backpackStack.getItem() instanceof DeathBackpackItem) {
+                                return false; // 死亡背包只能取出，不能放入
+                            }
+                        }
                         // 防止背包套娃
                         return !(stack.getItem() instanceof TieredBackpackItem);
                     }
@@ -113,13 +117,26 @@ public class BackpackScreenHandler extends ScreenHandler {
 
             int backpackSlots = tier.getSlots();
 
+            // 檢查是否是死亡背包
+            boolean isDeathBackpack = false;
+            if (inventory instanceof BackpackInventory) {
+                BackpackInventory backpackInv = (BackpackInventory) inventory;
+                ItemStack backpackStack = backpackInv.getBackpackStack();
+                if (!backpackStack.isEmpty() && backpackStack.getItem() instanceof DeathBackpackItem) {
+                    isDeathBackpack = true;
+                }
+            }
+
             if (slot < backpackSlots) {
-                // 從背包移動到玩家背包
+                // 從背包移動到玩家背包 - 總是允許
                 if (!this.insertItem(originalStack, backpackSlots, this.slots.size(), true)) {
                     return ItemStack.EMPTY;
                 }
             } else {
-                // 從玩家背包移動到背包
+                // 從玩家背包移動到背包 - 死亡背包不允許
+                if (isDeathBackpack) {
+                    return ItemStack.EMPTY; // 死亡背包不能放入物品
+                }
                 if (!this.insertItem(originalStack, 0, backpackSlots, false)) {
                     return ItemStack.EMPTY;
                 }

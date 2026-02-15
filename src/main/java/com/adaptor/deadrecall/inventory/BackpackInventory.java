@@ -1,5 +1,6 @@
 package com.adaptor.deadrecall.inventory;
 
+import com.adaptor.deadrecall.item.DeathBackpackItem;
 import com.adaptor.deadrecall.item.TieredBackpackItem;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ContainerComponent;
@@ -23,7 +24,7 @@ public class BackpackInventory implements Inventory {
         loadFromStack();
     }
 
-    private ItemStack getBackpackStack() {
+    public ItemStack getBackpackStack() {
         return player.getStackInHand(hand);
     }
 
@@ -88,6 +89,16 @@ public class BackpackInventory implements Inventory {
     @Override
     public void markDirty() {
         saveToStack();
+        // 檢查是否是空的死亡背包，如果是則立即移除
+        ItemStack backpackStack = getBackpackStack();
+        if (!backpackStack.isEmpty() && backpackStack.getItem() instanceof DeathBackpackItem && isEmpty()) {
+            // 移除空的死亡背包
+            if (hand == Hand.MAIN_HAND) {
+                player.getInventory().setStack(player.getInventory().selectedSlot, ItemStack.EMPTY);
+            } else {
+                player.getInventory().offHand.set(0, ItemStack.EMPTY);
+            }
+        }
     }
 
     @Override
@@ -123,6 +134,23 @@ public class BackpackInventory implements Inventory {
             backpackStack.set(DataComponentTypes.CONTAINER, ContainerComponent.fromStacks(items));
         }
     }
+
+    @Override
+    public void onClose(PlayerEntity player) {
+        // 檢查是否是死亡背包且為空
+        ItemStack backpackStack = getBackpackStack();
+        if (!backpackStack.isEmpty() && backpackStack.getItem() instanceof DeathBackpackItem && isEmpty()) {
+            // 移除空的死亡背包
+            if (hand == Hand.MAIN_HAND) {
+                player.getInventory().setStack(player.getInventory().selectedSlot, ItemStack.EMPTY);
+            } else {
+                player.getInventory().offHand.set(0, ItemStack.EMPTY);
+            }
+        }
+    }
+
+    @Override
+    public int getMaxCountPerStack() {
+        return 64; // 標準物品堆疊上限
+    }
 }
-
-

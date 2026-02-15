@@ -10,5 +10,7 @@
   "container.deadrecall.backpack.standard": "Standard Backpack",
   "container.deadrecall.backpack.advanced": "Advanced Backpack",
   "item.deadrecall.backpack_netherite": "Netherite Backpack",
-  "container.deadrecall.backpack.netherite": "Netherite Backpack"
+  "container.deadrecall.backpack.netherite": "Netherite Backpack",
+  "item.deadrecall.death_backpack": "Death Backpack",
+  "container.deadrecall.death_backpack": "Death Backpack"
 }
