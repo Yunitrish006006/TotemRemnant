@@ -12,7 +12,8 @@ public class BackpackScreen extends HandledScreen<BackpackScreenHandler> {
 
     public BackpackScreen(BackpackScreenHandler handler, PlayerInventory inventory, Text title) {
         super(handler, inventory, title);
-        this.backgroundHeight = 114 + 3 * 18; // 背包3行 + 玩家背包
+        int rows = handler.getTier().getRows();
+        this.backgroundHeight = 114 + rows * 18; // 背包行數 + 玩家背包
         this.playerInventoryTitleY = this.backgroundHeight - 94;
     }
 
@@ -20,10 +21,12 @@ public class BackpackScreen extends HandledScreen<BackpackScreenHandler> {
     protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
         int x = (width - backgroundWidth) / 2;
         int y = (height - backgroundHeight) / 2;
-        // 繪製背包部分（3行）
-        context.drawTexture(TEXTURE, x, y, 0, 0, this.backgroundWidth, 3 * 18 + 17);
+        int rows = handler.getTier().getRows();
+
+        // 繪製背包部分（動態行數）
+        context.drawTexture(TEXTURE, x, y, 0, 0, this.backgroundWidth, rows * 18 + 17);
         // 繪製玩家背包部分
-        context.drawTexture(TEXTURE, x, y + 3 * 18 + 17, 0, 126, this.backgroundWidth, 96);
+        context.drawTexture(TEXTURE, x, y + rows * 18 + 17, 0, 126, this.backgroundWidth, 96);
     }
 
     @Override

@@ -2,16 +2,19 @@
   "type": "minecraft:crafting_shaped",
   "pattern": [
     "LLL",
-    "L L",
+    "LCL",
     "LLL"
   ],
   "key": {
     "L": {
       "item": "minecraft:leather"
+    },
+    "C": {
+      "item": "minecraft:chest"
     }
   },
   "result": {
-    "id": "deadrecall:backpack",
+    "id": "deadrecall:backpack_basic",
     "count": 1
   }
 }

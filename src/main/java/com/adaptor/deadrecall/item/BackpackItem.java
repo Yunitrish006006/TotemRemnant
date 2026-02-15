@@ -23,7 +23,7 @@ public class BackpackItem extends Item {
             // 在伺服器端開啟背包介面，传递hand信息
             user.openHandledScreen(new SimpleNamedScreenHandlerFactory(
                 (syncId, playerInventory, player) ->
-                    new BackpackScreenHandler(syncId, playerInventory, player, hand),
+                    new BackpackScreenHandler(syncId, playerInventory, player, hand, TieredBackpackItem.BackpackTier.STANDARD),
                 Text.translatable("container.deadrecall.backpack")
             ));
         }
@@ -31,4 +31,3 @@ public class BackpackItem extends Item {
         return TypedActionResult.success(stack, world.isClient());
     }
 }
-

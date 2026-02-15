@@ -1,5 +1,6 @@
 package com.adaptor.deadrecall.inventory;
 
+import com.adaptor.deadrecall.item.TieredBackpackItem;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ContainerComponent;
 import net.minecraft.entity.player.PlayerEntity;
@@ -12,12 +13,13 @@ public class BackpackInventory implements Inventory {
     private final DefaultedList<ItemStack> items;
     private final PlayerEntity player;
     private final Hand hand;
-    public static final int SIZE = 27; // 3行9列，類似箱子
+    private final int size;
 
-    public BackpackInventory(PlayerEntity player, Hand hand) {
+    public BackpackInventory(PlayerEntity player, Hand hand, TieredBackpackItem.BackpackTier tier) {
         this.player = player;
         this.hand = hand;
-        this.items = DefaultedList.ofSize(SIZE, ItemStack.EMPTY);
+        this.size = tier.getSlots();
+        this.items = DefaultedList.ofSize(size, ItemStack.EMPTY);
         loadFromStack();
     }
 
@@ -27,7 +29,7 @@ public class BackpackInventory implements Inventory {
 
     @Override
     public int size() {
-        return SIZE;
+        return size;
     }
 
     @Override
@@ -108,7 +110,7 @@ public class BackpackInventory implements Inventory {
         ContainerComponent container = backpackStack.getOrDefault(DataComponentTypes.CONTAINER, ContainerComponent.DEFAULT);
         int index = 0;
         for (ItemStack stack : container.iterateNonEmpty()) {
-            if (index < SIZE) {
+            if (index < size) {
                 items.set(index, stack.copy());
                 index++;
             }

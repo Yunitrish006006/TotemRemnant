@@ -1,5 +1,14 @@
 {
   "item.deadrecall.backpack": "背包",
-  "container.deadrecall.backpack": "背包"
+  "item.deadrecall.backpack_basic": "基础背包",
+  "item.deadrecall.backpack_standard": "标准背包",
+  "item.deadrecall.backpack_advanced": "进阶背包",
+  "item.deadrecall.backpack.tier": "等级：%s",
+  "item.deadrecall.backpack.slots": "槽位：%s",
+  "container.deadrecall.backpack": "背包",
+  "container.deadrecall.backpack.basic": "基础背包",
+  "container.deadrecall.backpack.standard": "标准背包",
+  "container.deadrecall.backpack.advanced": "进阶背包",
+  "item.deadrecall.backpack_netherite": "狱髓背包",
+  "container.deadrecall.backpack.netherite": "狱髓背包"
 }
-

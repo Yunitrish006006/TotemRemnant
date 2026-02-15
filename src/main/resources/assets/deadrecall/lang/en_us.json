@@ -1,5 +1,14 @@
 {
   "item.deadrecall.backpack": "Backpack",
-  "container.deadrecall.backpack": "Backpack"
+  "item.deadrecall.backpack_basic": "Basic Backpack",
+  "item.deadrecall.backpack_standard": "Standard Backpack",
+  "item.deadrecall.backpack_advanced": "Advanced Backpack",
+  "item.deadrecall.backpack.tier": "Tier: %s",
+  "item.deadrecall.backpack.slots": "Slots: %s",
+  "container.deadrecall.backpack": "Backpack",
+  "container.deadrecall.backpack.basic": "Basic Backpack",
+  "container.deadrecall.backpack.standard": "Standard Backpack",
+  "container.deadrecall.backpack.advanced": "Advanced Backpack",
+  "item.deadrecall.backpack_netherite": "Netherite Backpack",
+  "container.deadrecall.backpack.netherite": "Netherite Backpack"
 }
-

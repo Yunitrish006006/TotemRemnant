@@ -2,11 +2,17 @@ package com.adaptor.deadrecall.screen;
 
 import com.adaptor.deadrecall.inventory.BackpackInventory;
 import com.adaptor.deadrecall.item.ModItems;
+import com.adaptor.deadrecall.item.TieredBackpackItem;
+import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
+import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.network.codec.PacketCodec;
+import net.minecraft.network.codec.PacketCodecs;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.screen.ScreenHandler;
@@ -17,51 +23,78 @@ import net.minecraft.util.Identifier;
 
 public class BackpackScreenHandler extends ScreenHandler {
     private final Inventory inventory;
+    private final TieredBackpackItem.BackpackTier tier;
 
     public static final ScreenHandlerType<BackpackScreenHandler> SCREEN_HANDLER_TYPE =
         Registry.register(Registries.SCREEN_HANDLER, Identifier.of("deadrecall", "backpack"),
-            new ScreenHandlerType<>(BackpackScreenHandler::new, null));
+            new ExtendedScreenHandlerType<>(
+                (syncId, playerInventory, data) -> {
+                    int tierOrdinal = (Integer) data;
+                    TieredBackpackItem.BackpackTier tier = TieredBackpackItem.BackpackTier.values()[tierOrdinal];
+                    return new BackpackScreenHandler(syncId, playerInventory, tier);
+                },
+                PacketCodecs.INTEGER
+            ));
 
-    // 客户端构造函数
+    // 客户端构造函数（從網路數據讀取等級）
+    public BackpackScreenHandler(int syncId, PlayerInventory playerInventory, RegistryByteBuf buf) {
+        this(syncId, playerInventory, TieredBackpackItem.BackpackTier.values()[buf.readInt()]);
+    }
+
+    // 客户端构造函数（接收等級參數）
+    public BackpackScreenHandler(int syncId, PlayerInventory playerInventory, TieredBackpackItem.BackpackTier tier) {
+        this(syncId, playerInventory, new SimpleInventory(tier.getSlots()), tier);
+    }
+
+    // 客户端构造函数（使用标准等级作为默认）
     public BackpackScreenHandler(int syncId, PlayerInventory playerInventory) {
-        this(syncId, playerInventory, new SimpleInventory(BackpackInventory.SIZE));
+        this(syncId, playerInventory, new SimpleInventory(27), TieredBackpackItem.BackpackTier.STANDARD);
     }
 
-    // 服务器端构造函数（使用玩家和手的引用）
-    public BackpackScreenHandler(int syncId, PlayerInventory playerInventory, PlayerEntity player, Hand hand) {
-        this(syncId, playerInventory, new BackpackInventory(player, hand));
+    // 服务器端构造函数
+    public BackpackScreenHandler(int syncId, PlayerInventory playerInventory, PlayerEntity player, Hand hand, TieredBackpackItem.BackpackTier tier) {
+        this(syncId, playerInventory, new BackpackInventory(player, hand, tier), tier);
     }
 
-    public BackpackScreenHandler(int syncId, PlayerInventory playerInventory, Inventory inventory) {
+    public BackpackScreenHandler(int syncId, PlayerInventory playerInventory, Inventory inventory, TieredBackpackItem.BackpackTier tier) {
         super(SCREEN_HANDLER_TYPE, syncId);
         this.inventory = inventory;
-        checkSize(inventory, BackpackInventory.SIZE);
+        this.tier = tier;
+        checkSize(inventory, tier.getSlots());
         inventory.onOpen(playerInventory.player);
 
-        // 背包的3行9列
-        for (int row = 0; row < 3; row++) {
+        // 背包槽位 - 根据等级动态生成
+        int rows = tier.getRows();
+        for (int row = 0; row < rows; row++) {
             for (int col = 0; col < 9; col++) {
                 this.addSlot(new Slot(inventory, col + row * 9, 8 + col * 18, 18 + row * 18) {
                     @Override
                     public boolean canInsert(ItemStack stack) {
                         // 防止背包套娃
-                        return stack.getItem() != ModItems.BACKPACK;
+                        return !(stack.getItem() instanceof TieredBackpackItem);
                     }
                 });
             }
         }
 
+        // 玩家背包位置需要根据背包大小调整
+        int playerInventoryY = 18 + rows * 18 + 14; // 背包行数 * 18 + 间距
+
         // 玩家背包（3行）
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                this.addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
+                this.addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, playerInventoryY + row * 18));
             }
         }
 
         // 玩家快捷欄（1行）
         for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
+            this.addSlot(new Slot(playerInventory, col, 8 + col * 18, playerInventoryY + 58));
         }
+    }
+
+    public TieredBackpackItem.BackpackTier getTier() {
+        return tier;
     }
 
     @Override
@@ -74,18 +107,20 @@ public class BackpackScreenHandler extends ScreenHandler {
             newStack = originalStack.copy();
 
             // 防止背包套娃
-            if (originalStack.getItem() == ModItems.BACKPACK) {
+            if (originalStack.getItem() instanceof TieredBackpackItem) {
                 return ItemStack.EMPTY;
             }
 
-            if (slot < BackpackInventory.SIZE) {
+            int backpackSlots = tier.getSlots();
+
+            if (slot < backpackSlots) {
                 // 從背包移動到玩家背包
-                if (!this.insertItem(originalStack, BackpackInventory.SIZE, this.slots.size(), true)) {
+                if (!this.insertItem(originalStack, backpackSlots, this.slots.size(), true)) {
                     return ItemStack.EMPTY;
                 }
             } else {
                 // 從玩家背包移動到背包
-                if (!this.insertItem(originalStack, 0, BackpackInventory.SIZE, false)) {
+                if (!this.insertItem(originalStack, 0, backpackSlots, false)) {
                     return ItemStack.EMPTY;
                 }
             }
@@ -111,6 +146,3 @@ public class BackpackScreenHandler extends ScreenHandler {
         this.inventory.onClose(player);
     }
 }
-
-
-
