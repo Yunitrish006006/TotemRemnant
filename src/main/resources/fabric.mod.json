@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "deadrecall",
+  "version": "${version}",
+  "name": "DeadRecall",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "BSD-3-Clause",
+  "icon": "assets/deadrecall/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-datagen": [
+      "com.adaptor.deadrecall.client.DeadrecallDataGenerator"
+    ],
+    "client": [
+      "com.adaptor.deadrecall.client.DeadrecallClient"
+    ],
+    "main": [
+      "com.adaptor.deadrecall.Deadrecall"
+    ]
+  },
+  "mixins": [
+    "deadrecall.mixins.json",
+    "deadrecall.client.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
