@@ -49,7 +49,7 @@ public class TieredBackpackItem extends Item {
 
                 @Override
                 public Object getScreenOpeningData(ServerPlayerEntity player) {
-                    return tier.ordinal();
+                    return tier.getRows();
                 }
             });
         }

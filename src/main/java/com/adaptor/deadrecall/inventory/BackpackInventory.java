@@ -17,9 +17,14 @@ public class BackpackInventory implements Inventory {
     private final int size;
 
     public BackpackInventory(PlayerEntity player, Hand hand, TieredBackpackItem.BackpackTier tier) {
+        this(player, hand, tier.getSlots());
+    }
+
+    // 動態大小構造函數（用於死亡背包）
+    public BackpackInventory(PlayerEntity player, Hand hand, int size) {
         this.player = player;
         this.hand = hand;
-        this.size = tier.getSlots();
+        this.size = size;
         this.items = DefaultedList.ofSize(size, ItemStack.EMPTY);
         loadFromStack();
     }

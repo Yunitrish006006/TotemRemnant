@@ -24,6 +24,7 @@
     "deadrecall.mixins.json",
     "deadrecall.client.mixins.json"
   ],
+  "accessWidener": "deadrecall.accesswidener",
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric-api": "*",

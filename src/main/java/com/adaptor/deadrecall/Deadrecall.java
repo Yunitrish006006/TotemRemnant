@@ -125,6 +125,8 @@ public class Deadrecall implements ModInitializer {
                         // 設置物品所有者，防止立即消失
                         backpackEntity.setOwner(player.getUuid());
                         backpackEntity.setPickupDelay(40); // 2 秒拾取延遲
+                        // 將死亡背包標記為不可被傷害/摧毀（例如仙人掌傷害）的一個額外保護
+                        backpackEntity.setInvulnerable(true);
                         // lifespan已在DeathBackpackEntity構造函數中設置為永久
 
                         world.spawnEntity(backpackEntity);
