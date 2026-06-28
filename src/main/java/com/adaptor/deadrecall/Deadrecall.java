@@ -1,22 +1,22 @@
 package com.adaptor.deadrecall;
 
-import com.adaptor.deadrecall.entity.DeathBackpackEntity;
 import com.adaptor.deadrecall.item.ModItems;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ContainerComponent;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
+import net.minecraft.commands.Commands;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Relative;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.phys.AABB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +36,8 @@ public class Deadrecall implements ModInitializer {
 
         // 註冊死亡背包功能 - 當玩家死亡時收集掉落物品
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
-            if (entity instanceof ServerPlayerEntity player) {
+            if (entity instanceof ServerPlayer player) {
+                DeathLocationManager.setDeathLocation(player, player.blockPosition(), player.level());
                 handlePlayerDeath(player);
             }
         });
@@ -44,28 +45,28 @@ public class Deadrecall implements ModInitializer {
         // 監聽玩家聊天訊息，轉發到 Discord
         ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) -> {
             String username = sender.getName().getString();
-            String content = message.getContent().getString();
+            String content = message.decoratedContent().getString();
             DiscordBridge.sendChatMessage(username, content);
         });
 
-        // 僅註冊 /back 指令，死亡座標記錄交由 Mixin 處理
+        // 註冊 /back 指令
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            dispatcher.register(CommandManager.literal("back")
+            dispatcher.register(Commands.literal("back")
                 .executes(context -> {
-                    ServerPlayerEntity player = context.getSource().getPlayer();
+                    ServerPlayer player = context.getSource().getPlayerOrException();
                     DeathLocationManager.DeathLocation loc = DeathLocationManager.getDeathLocation(player);
                     if (loc == null) {
-                        player.sendMessage(Text.literal("§c沒有死亡座標可傳送！"), false);
+                        player.sendSystemMessage(Component.literal("§c沒有死亡座標可傳送！"));
                         return 0;
                     }
 
-                    ServerWorld world = player.getServerWorld();
+                    ServerLevel world = (ServerLevel) player.level();
                     if (world == null) {
-                        player.sendMessage(Text.literal("§c找不到死亡世界！"), false);
+                        player.sendSystemMessage(Component.literal("§c找不到死亡世界！"));
                         return 0;
                     }
-                    player.teleport(world, loc.pos.getX() + 0.5, loc.pos.getY(), loc.pos.getZ() + 0.5, player.getYaw(), player.getPitch());
-                    player.sendMessage(Text.literal("§a已傳送回死亡地點！"), false);
+                    player.teleportTo(world, loc.pos.getX() + 0.5, loc.pos.getY(), loc.pos.getZ() + 0.5, Relative.DELTA, player.getYRot(), player.getXRot(), false);
+                    player.sendSystemMessage(Component.literal("§a已傳送回死亡地點！"));
                     DeathLocationManager.clearDeathLocation(player);
                     return 1;
                 })
@@ -73,9 +74,9 @@ public class Deadrecall implements ModInitializer {
         });
     }
 
-    private void handlePlayerDeath(ServerPlayerEntity player) {
-        ServerWorld world = player.getServerWorld();
-        BlockPos deathPos = player.getBlockPos();
+    private void handlePlayerDeath(ServerPlayer player) {
+        ServerLevel world = (ServerLevel) player.level();
+        BlockPos deathPos = player.blockPosition();
 
         LOGGER.info("Player {} died at {}, starting death backpack collection", player.getName().getString(), deathPos);
 
@@ -85,16 +86,8 @@ public class Deadrecall implements ModInitializer {
                 LOGGER.info("Collecting dropped items for player {} at {}", player.getName().getString(), deathPos);
 
                 // 收集死亡地點附近的掉落物品
-                Box searchBox = new Box(deathPos).expand(10.0); // 搜尋範圍 10 格
-                List<ItemEntity> droppedItems = world.getEntitiesByClass(ItemEntity.class, searchBox, itemEntity -> {
-                    LOGGER.debug("Found item entity: {} at {}, age: {}",
-                        itemEntity.getStack().getItem().getName().getString(),
-                        itemEntity.getBlockPos(),
-                        itemEntity.age);
-
-                    // 收集所有在搜尋區域內的物品（簡化邏輯）
-                    return true;
-                });
+                AABB searchBox = new AABB(deathPos).inflate(10.0); // 搜尋範圍 10 格
+                List<ItemEntity> droppedItems = world.getEntitiesOfClass(ItemEntity.class, searchBox, entity -> true);
 
                 LOGGER.info("Found {} dropped items for player {}", droppedItems.size(), player.getName().getString());
 
@@ -105,37 +98,31 @@ public class Deadrecall implements ModInitializer {
 
                     // 收集物品並移除實體
                     for (ItemEntity itemEntity : droppedItems) {
-                        collectedItems.add(itemEntity.getStack().copy());
+                        collectedItems.add(itemEntity.getItem().copy());
                         itemEntity.discard(); // 移除實體
-                        LOGGER.info("Collected item: {} x{}", itemEntity.getStack().getItem().getName().getString(), itemEntity.getStack().getCount());
+                        LOGGER.info("Collected item: {} x{}", itemEntity.getItem().getItem().getName(itemEntity.getItem()).getString(), itemEntity.getItem().getCount());
                     }
 
                     // 將物品存儲到背包中
                     if (!collectedItems.isEmpty()) {
-                        // 創建容器組件來存儲物品
-                        ContainerComponent container =
-                            ContainerComponent.fromStacks(collectedItems);
-                        deathBackpack.set(DataComponentTypes.CONTAINER, container);
+                        deathBackpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(collectedItems));
 
                         // 在死亡地點生成背包實體
-                        DeathBackpackEntity backpackEntity = new DeathBackpackEntity(world,
+                        ItemEntity backpackEntity = new ItemEntity(world,
                             deathPos.getX() + 0.5, deathPos.getY() + 0.5, deathPos.getZ() + 0.5,
                             deathBackpack);
 
                         // 設置物品所有者，防止立即消失
-                        backpackEntity.setOwner(player.getUuid());
-                        backpackEntity.setPickupDelay(40); // 2 秒拾取延遲
+                        backpackEntity.setPickUpDelay(40); // 2 秒拾取延遲
                         // 將死亡背包標記為不可被傷害/摧毀（例如仙人掌傷害）的一個額外保護
-                        backpackEntity.setInvulnerable(true);
-                        // lifespan已在DeathBackpackEntity構造函數中設置為永久
-
-                        world.spawnEntity(backpackEntity);
+                        backpackEntity.setUnlimitedLifetime();
+                        world.addFreshEntity(backpackEntity);
 
                         LOGGER.info("Created death backpack for player {} with {} items at {}",
                             player.getName().getString(), collectedItems.size(), deathPos);
 
                         // 通知玩家
-                        player.sendMessage(Text.literal("§e你的物品已被收集到死亡背包中！"), false);
+                        player.sendSystemMessage(Component.literal("§e你的物品已被收集到死亡背包中！"));
                     }
                 } else {
                     LOGGER.info("No dropped items found for player {} at {}", player.getName().getString(), deathPos);

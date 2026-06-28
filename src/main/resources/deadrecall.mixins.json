@@ -2,11 +2,7 @@
   "required": true,
   "package": "com.adaptor.deadrecall.mixin",
   "compatibilityLevel": "JAVA_17",
-  "mixins": [
-    "ServerPlayerEntityMixin",
-    "CactusBlockMixin",
-    "ItemEntityMixin"
-  ],
+  "mixins": [],
   "client": [],
   "injectors": {
     "defaultRequire": 1

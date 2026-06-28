@@ -55,7 +55,7 @@ if ($javaHomes.Count -eq 0) {
     Write-Host "❌ 找不到 Java 安裝" -ForegroundColor Red
     Write-Host ""
     Write-Host "請執行以下步驟：" -ForegroundColor Yellow
-    Write-Host "1. 下載並安裝 Java 21（Minecraft 1.21.1 需要）" -ForegroundColor White
+    Write-Host "1. 下載並安裝 Java 25（Minecraft 26.2 需要）" -ForegroundColor White
     Write-Host "   推薦來源：https://adoptium.net/" -ForegroundColor Cyan
     Write-Host "2. 安裝後重新執行此腳本" -ForegroundColor White
     Write-Host ""
@@ -95,17 +95,17 @@ for ($i = 0; $i -lt $javaHomes.Count; $i++) {
     Write-Host ""
 }
 
-# 檢查是否有 Java 21
-$java21 = $validJavas | Where-Object { $_.Version -eq "21" } | Select-Object -First 1
+# 檢查是否有 Java 25
+$java25 = $validJavas | Where-Object { $_.Version -eq "25" } | Select-Object -First 1
 
-if ($java21) {
-    Write-Host "✅ 找到 Java 21（Minecraft 1.21.1 推薦版本）" -ForegroundColor Green
+if ($java25) {
+    Write-Host "✅ 找到 Java 25（Minecraft 26.2 推薦版本）" -ForegroundColor Green
     Write-Host ""
-    Write-Host "是否要使用 Java 21？(Y/N，推薦選 Y)" -ForegroundColor Yellow
+    Write-Host "是否要使用 Java 25？(Y/N，推薦選 Y)" -ForegroundColor Yellow
     $useRecommended = Read-Host
 
     if ($useRecommended -eq "Y" -or $useRecommended -eq "y" -or $useRecommended -eq "") {
-        $selectedJava = $java21.Path
+        $selectedJava = $java25.Path
     } else {
         Write-Host ""
         Write-Host "請選擇要使用的 Java 版本 (1-$($validJavas.Count)):" -ForegroundColor Yellow
@@ -119,7 +119,7 @@ if ($java21) {
         }
     }
 } else {
-    Write-Host "⚠️  未找到 Java 21（Minecraft 1.21.1 推薦版本）" -ForegroundColor Yellow
+    Write-Host "⚠️  未找到 Java 25（Minecraft 26.2 推薦版本）" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "請選擇要使用的 Java 版本 (1-$($validJavas.Count)):" -ForegroundColor Yellow
     $selection = Read-Host

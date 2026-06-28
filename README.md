@@ -13,9 +13,9 @@
 - ✅ **Discord 橋接**：聊天和死亡消息發送到 Discord
 
 ### 📊 技術資訊
-- **Minecraft 版本**：1.21.1
+- **Minecraft 版本**：26.2
 - **模組載入器**：Fabric
-- **當前版本**：v1.6.0
+- **當前版本**：v1.7.2
 - **開發日期**：2026年2月15日
 
 ---
@@ -146,7 +146,7 @@ PlayerName
    ```
 
 3. **安裝到遊戲**
-   - 將 `build/libs/deadrecall-1.6.0.jar` 複製到 `.minecraft/mods/` 文件夹
+   - 將 `build/libs/deadrecall-1.7.2.jar` 複製到 `.minecraft/mods/` 文件夹
 
 4. **啟動遊戲**
    ```bash
@@ -255,7 +255,7 @@ src/main/resources/
 
 ## 📈 版本歷史
 
-### v1.6.0 (2026-02-15)
+### v1.7.2 (2026-02-15)
 - ✅ 新增死亡背包系統
 - ✅ 修復網路同步問題
 - ✅ 優化背包界面動態調整
@@ -280,7 +280,7 @@ src/main/resources/
 ## 🤝 貢獻指南
 
 ### 開發環境設定
-1. 安裝 Java 21
+1. 安裝 Java 25
 2. 複製項目
 3. 執行 `.\setup-java.ps1`
 4. 使用 IntelliJ IDEA 或 VS Code 開發
@@ -298,7 +298,7 @@ src/main/resources/
 ```
 
 ### 代碼規範
-- 使用 Java 21 特性
+- 使用 Java 25 特性
 - 遵循 Minecraft Fabric 最佳實踐
 - 添加適當的註釋和文檔
 

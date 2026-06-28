@@ -1,8 +1,8 @@
 package com.adaptor.deadrecall;
 
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,16 +11,16 @@ import java.util.UUID;
 public class DeathLocationManager {
     private static final Map<UUID, DeathLocation> deathLocations = new HashMap<>();
 
-    public static void setDeathLocation(ServerPlayerEntity player, BlockPos pos, World world) {
-        deathLocations.put(player.getUuid(), new DeathLocation(pos, world.getRegistryKey().getValue().toString()));
+    public static void setDeathLocation(ServerPlayer player, BlockPos pos, Level world) {
+        deathLocations.put(player.getUUID(), new DeathLocation(pos, world.dimension().toString()));
     }
 
-    public static DeathLocation getDeathLocation(ServerPlayerEntity player) {
-        return deathLocations.get(player.getUuid());
+    public static DeathLocation getDeathLocation(ServerPlayer player) {
+        return deathLocations.get(player.getUUID());
     }
 
-    public static void clearDeathLocation(ServerPlayerEntity player) {
-        deathLocations.remove(player.getUuid());
+    public static void clearDeathLocation(ServerPlayer player) {
+        deathLocations.remove(player.getUUID());
     }
 
     public static class DeathLocation {
@@ -32,4 +32,3 @@ public class DeathLocationManager {
         }
     }
 }
-

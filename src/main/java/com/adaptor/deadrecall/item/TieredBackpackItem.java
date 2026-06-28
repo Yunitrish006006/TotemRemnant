@@ -1,27 +1,30 @@
 package com.adaptor.deadrecall.item;
 
-import com.adaptor.deadrecall.screen.BackpackScreenHandler;
-import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.TypedActionResult;
-import net.minecraft.world.World;
+import com.adaptor.deadrecall.inventory.BackpackInventory;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Item.TooltipContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.level.Level;
 
-import java.util.List;
+import java.util.function.Consumer;
 
 public class TieredBackpackItem extends Item {
     private final BackpackTier tier;
 
-    public TieredBackpackItem(Settings settings, BackpackTier tier) {
+    public TieredBackpackItem(Properties settings, BackpackTier tier) {
         super(settings);
         this.tier = tier;
     }
@@ -31,39 +34,36 @@ public class TieredBackpackItem extends Item {
     }
 
     @Override
-    public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
-        ItemStack stack = user.getStackInHand(hand);
+    public InteractionResult use(Level world, Player user, InteractionHand hand) {
+        ItemStack stack = user.getItemInHand(hand);
 
-        if (!world.isClient) {
-            // 在伺服器端開啟背包介面，使用 ExtendedScreenHandlerFactory 傳遞等級信息
-            user.openHandledScreen(new ExtendedScreenHandlerFactory() {
-                @Override
-                public Text getDisplayName() {
-                    return Text.translatable("container.deadrecall.backpack." + tier.getName());
-                }
-
-                @Override
-                public ScreenHandler createMenu(int syncId, PlayerInventory playerInventory, PlayerEntity player) {
-                    return new BackpackScreenHandler(syncId, playerInventory, player, hand, tier);
-                }
-
-                @Override
-                public Object getScreenOpeningData(ServerPlayerEntity player) {
-                    return tier.getRows();
-                }
-            });
+        if (!world.isClientSide() && user instanceof ServerPlayer serverPlayer) {
+            BackpackInventory backpackInventory = new BackpackInventory(serverPlayer, hand, tier);
+            serverPlayer.openMenu(new SimpleMenuProvider(
+                (syncId, playerInventory, player) -> createChestMenu(syncId, playerInventory, backpackInventory, tier.getRows()),
+                Component.translatable("container.deadrecall.backpack." + tier.getName())
+            ));
         }
 
-        return TypedActionResult.success(stack, world.isClient());
+        return InteractionResult.SUCCESS;
     }
 
     @Override
-    public void appendTooltip(ItemStack stack, TooltipContext context, List<Text> tooltip, net.minecraft.item.tooltip.TooltipType type) {
-        super.appendTooltip(stack, context, tooltip, type);
-        tooltip.add(Text.literal("等級: " + tier.getDisplayName())
-            .formatted(Formatting.GRAY));
-        tooltip.add(Text.literal("槽位: " + tier.getSlots())
-            .formatted(Formatting.BLUE));
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay tooltipDisplay, Consumer<Component> tooltipAdder, TooltipFlag tooltipFlag) {
+        super.appendHoverText(stack, context, tooltipDisplay, tooltipAdder, tooltipFlag);
+        tooltipAdder.accept(Component.literal("等級: " + tier.getDisplayName()).withStyle(ChatFormatting.GRAY));
+        tooltipAdder.accept(Component.literal("槽位: " + tier.getSlots()).withStyle(ChatFormatting.BLUE));
+    }
+
+    private static AbstractContainerMenu createChestMenu(int syncId, Inventory playerInventory, BackpackInventory backpackInventory, int rows) {
+        return switch (rows) {
+            case 1 -> new ChestMenu(MenuType.GENERIC_9x1, syncId, playerInventory, backpackInventory, 1);
+            case 2 -> new ChestMenu(MenuType.GENERIC_9x2, syncId, playerInventory, backpackInventory, 2);
+            case 3 -> new ChestMenu(MenuType.GENERIC_9x3, syncId, playerInventory, backpackInventory, 3);
+            case 4 -> new ChestMenu(MenuType.GENERIC_9x4, syncId, playerInventory, backpackInventory, 4);
+            case 5 -> new ChestMenu(MenuType.GENERIC_9x5, syncId, playerInventory, backpackInventory, 5);
+            default -> new ChestMenu(MenuType.GENERIC_9x6, syncId, playerInventory, backpackInventory, 6);
+        };
     }
 
     public enum BackpackTier {
