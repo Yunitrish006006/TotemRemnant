@@ -2,494 +2,317 @@
 
 ## 📖 項目概述
 
-**DeadRecall** 是一個 Minecraft Fabric 模組，主要功能是實現多等級背包系統。
-
-### 🎯 主要功能
-- ✅ **多等級背包系統**：4種不同容量的背包
-- ✅ **漸進式升級**：從基礎背包逐步升級到高級背包
-- ✅ **網路同步**：解決客戶端服務器同步問題
-- ✅ **創造模式支援**：方便測試和使用
-- ✅ **死亡背包系統**：死亡時自動收集物品到背包實體
+**DeadRecall** 是一個 Minecraft Fabric 模組，提供多等級背包系統、死亡物品保護、Discord 聊天橋接及煉金配方等功能。
 
 ### 📊 技術資訊
 - **Minecraft 版本**：26.2
-- **模組載入器**：Fabric
+- **模組載入器**：Fabric（需 Fabric API）
 - **當前版本**：v1.7.2
-- **開發日期**：2026年2月15日
+- **授權**：BSD-3-Clause
 
 ---
 
-## 🎒 背包系統完整說明
+## 🧑‍🎮 生存會體驗到的功能
 
-### 📋 背包等級總覽
+### 💬 Discord 聊天橋接
 
-| 等級 | 容量 | 行數 | 獲取方式 | 升級材料 |
-|-----|------|------|---------|---------|
-| 🟤 **基礎背包** | 9格 | 1排 | 工作台合成 | 箱子 + 8皮革 |
-| 🟦 **標準背包** | 18格 | 2排 | 鐵砧升級 | 箱子 + 基礎 + 鐵錠 |
-| ⚫ **進階背包** | 27格 | 3排 | 鐵砧升級 | 箱子 + 標準 + 鑽石 |
-| 🟣 **獄髓背包** | 36格 | 4排 | 鐵砧升級 | 獄髓模板 + 進階 + 獄髓錠 |
-| 💀 **死亡背包** | 27格 | 3排 | 死亡自動生成 | 死亡時收集物品 |
+玩家在遊戲中發送的聊天訊息，會**自動轉發到 Discord 頻道**，讓不在線的玩家也能掌握伺服器動態。
 
-### 🔧 合成與升級配方
+#### 運作方式
+- 遊戲內聊天 → Cloudflare Worker API → Discord Webhook → Discord 頻道
+- 傳送格式：`**玩家名稱**: 訊息內容`
+- 使用非同步傳送，不影響遊戲效能
 
-#### 基礎背包製作
-**工作台合成**：
+#### 設定方式（伺服器管理員）
+1. 在伺服器 `config/` 目錄找到 `discord-bridge.json`（首次啟動自動建立）
+2. 編輯設定檔，填入下列欄位：
+```json
+{
+  "enabled": true,
+  "workerUrl": "https://your-worker.workers.dev",
+  "apiKey": "your-api-key"
+}
+```
+| 欄位 | 要填寫什麼 | 範例 |
+|------|------------|------|
+| `enabled` | 是否啟用 Discord 聊天橋接 | `true` |
+| `workerUrl` | 你的 Cloudflare Worker 網址 | `https://your-worker.workers.dev` |
+| `apiKey` | 與 Worker 端一致的 API 金鑰 | `your-api-key` |
+3. 重啟伺服器後生效
+
+#### Cloudflare Worker 設定（管理員）
+將 `cloudflare-worker-example.js` 部署到 Cloudflare Worker，並設定以下環境變數：
+| 環境變數 | 要填寫什麼 | 範例 |
+|----------|------------|------|
+| `MC_API_KEY` | 與 `discord-bridge.json` 中 `apiKey` 相同的金鑰 | `your-api-key` |
+| `DISCORD_WEBHOOK_URLS` | Discord Webhook URL 的 JSON 陣列 | `["https://discord.com/api/webhooks/xxx/yyy"]` |
+
+`DISCORD_WEBHOOK_URLS` 範例：
+  ```
+  ["https://discord.com/api/webhooks/xxx/yyy"]
+  ```
+
+> **注意**：若未啟用或設定不完整，此功能會自動停用，不影響其他功能正常運作。
+
+---
+
+### 💀 死亡背包系統
+
+玩家死亡後，物品**不會散落一地**，而是自動收集進一個特殊的「死亡背包」，並生成在死亡地點。
+
+#### 生存體驗流程
+1. **死亡**：玩家因任何原因死亡
+2. **自動收集**：模組掃描死亡地點附近 **10 格範圍**內的所有掉落物
+3. **生成背包**：死亡背包（物品實體）出現在死亡座標
+4. **收到通知**：聊天欄顯示 `§e你的物品已被收集到死亡背包中！`
+5. **取回物品**：返回死亡地點，等待 **2 秒拾取延遲**後拾起背包，右鍵打開取回物品
+
+#### 死亡背包特性
+| 屬性 | 說明 |
+|------|------|
+| 容量 | 動態（依物品數量，最多 6 排 54 格） |
+| 搜尋範圍 | 10 格立方體 |
+| 拾取延遲 | 2 秒 |
+| 防火 | ✅ 背包本身防火，物品不會被燒毀 |
+| 存活時間 | 永久（不會自然消失） |
+| Tooltip | 顯示物品數量與排數 |
+
+> ⚠️ 若死亡時物品欄為空，或附近沒有掉落物，則不會生成死亡背包。
+
+---
+
+### 🎒 背包系統
+
+模組提供 **4 個等級**的可升級背包，讓玩家在生存中逐步擴充攜帶空間。
+
+#### 背包等級總覽
+
+| 等級 | 物品 ID | 容量 | 防火 | 取得方式 |
+|------|---------|------|------|---------|
+| 🟤 **基礎背包** | `backpack_basic` | 9格（1排） | ❌ | 工作台合成 |
+| 🟦 **標準背包** | `backpack_standard` | 18格（2排） | ❌ | 鍛造台升級 |
+| ⚫ **進階背包** | `backpack_advanced` | 27格（3排） | ❌ | 鍛造台升級 |
+| 🟣 **獄髓背包** | `backpack_netherite` | 36格（4排） | ✅ | 鍛造台升級 |
+
+#### 合成與升級配方
+
+**基礎背包**（工作台）：
 ```
 [皮革] [皮革] [皮革]
 [皮革] [箱子] [皮革]
 [皮革] [皮革] [皮革]
 ```
-**需要材料**：1個箱子 + 8個皮革
 
-#### 高級背包升級
-**鐵砧台升級**：
-
-**標準背包**：
+**標準背包**（鍛造台）：
 - 模板：箱子
-- 基礎：基礎背包
-- 附加：鐵錠
+- 基底：基礎背包
+- 附加材料：鐵錠
 
-**進階背包**：
+**進階背包**（鍛造台）：
 - 模板：箱子
-- 基礎：標準背包
-- 附加：鑽石
+- 基底：標準背包
+- 附加材料：鑽石
 
-**獄髓背包**：
+**獄髓背包**（鍛造台）：
 - 模板：獄髓升級模板
-- 基礎：進階背包
-- 附加：獄髓錠
+- 基底：進階背包
+- 附加材料：獄髓錠
 
-### 🎨 背包特性
+#### 背包特性
+- ✅ 右鍵使用開啟背包界面
+- ✅ 物品保存（關閉後不丟失）
+- ✅ Tooltip 顯示等級與格數
+- ✅ 每次只能堆疊 1 個（不可疊放）
+- ✅ Shift+點擊快速移動物品
 
-#### 通用特性
-- ✅ **物品保存**：關閉界面後物品不會消失
-- ✅ **防止套娃**：背包不能放入背包中
-- ✅ **Tooltip 顯示**：顯示等級和容量信息
-- ✅ **防火保護**：獄髓背包防火
-
-#### 界面特性
-- ✅ **動態大小**：根據等級自動調整界面
-- ✅ **網路同步**：無 IndexOutOfBoundsException 錯誤
-- ✅ **拖拽支援**：支持 Shift+點擊快速移動物品
+#### 整理快捷鍵
+- 預設按鍵：中鍵
+- 會整理你目前開著的物品介面內容，將相同物品盡量堆疊並依物品排序
+- 可到 **設定 → 按鍵綁定 → DeadRecall** 重新指定快捷鍵
 
 ---
 
-## 🚀 安裝與使用指南
+### ⚗️ 煉金配方（新增資源）
 
-### 📦 安裝步驟
+模組加入數種新素材與配方，提供另一種製作火藥的途徑。
 
-1. **設定 Java 環境**
-   ```powershell
-   .\setup-java.ps1
-   ```
-   *這個腳本會自動搜尋並設定 Java 環境*
+#### 新增物品
+| 物品 | 物品 ID | 說明 |
+|------|---------|------|
+| 硫磺 | `sulfur` | Minecraft 原版資源 |
+| 硝石 | `saltpeter` | 煉金合成材料 |
+| 缽 | `stone_bowl` | 對硫磺方塊使用後可裝填硫磺 |
+| 帶硫磺的缽 | `sulfur_bowl` | 作為煉金火藥材料，合成後回傳缽 |
 
-2. **下載模組**
-   ```bash
-   # 編譯模組
-   .\gradlew build
-   ```
+#### 配方
 
-3. **安裝到遊戲**
-   - 將 `build/libs/deadrecall-1.7.2.jar` 複製到 `.minecraft/mods/` 文件夹
-
-4. **啟動遊戲**
-   ```bash
-   .\gradlew runClient
-   ```
-
-### 🛠️ 開發環境設定
-
-#### Java 環境問題
-如果遇到 `JAVA_HOME is not set` 錯誤：
-
-**一鍵解決**：
-```powershell
-.\setup-java.ps1
+**硝石**（工作台，產出 2 個）：
+```
+[礫石] [煤炭/木炭] [礫石]
+[  空  ] [  骨粉  ] [  空  ]
+[礫石] [  礫石  ] [礫石]
 ```
 
-**手動解決**：
-1. 確保安裝了 JDK 25
-2. 設定環境變數：
-   - `JAVA_HOME` = `C:\Program Files\Java\jdk-25`
-   - `PATH` 包含 `%JAVA_HOME%\bin`
-
-#### 常用腳本
-```powershell
-# 設定 Java
-.\setup-java.ps1
-
-# 重新構建
-.\rebuild.ps1
-
-# 驗證 JAR
-.\verify-jar.ps1
-
-# 安全構建
-.\safe-build.ps1
-
-# 快速重新構建
-.\quick-rebuild.ps1
+**裝填硫磺**（對方塊互動）：
+```
+手持缽，右鍵點擊硫磺方塊
+=> 變為「帶硫磺的缽」，硫磺方塊會被消耗
 ```
 
-### 🎮 遊戲中使用
+**缽**（工作台）：
+```
+[石] [空] [石]
+[空] [石] [空]
+[空] [燧石] [空]
+```
 
-#### 生存模式
-1. **收集材料**：箱子和皮革
-2. **製作基礎背包**：工作台合成
-3. **逐步升級**：使用鐵砧台升級
+**火藥 × 4（煉金法 1）**（工作台，需帶硫磺的缽）：
+```
+帶硫磺的缽 + 硝石 + 木炭/煤（無序合成）
+```
 
-#### 創造模式
-1. **開啟物品欄**（E鍵）
-2. **工具標籤** 或 **功能性標籤** 找到背包
-3. **或使用搜索**：輸入 "backpack"
-4. **Shift+點擊** 獲取背包
-
-#### 指令獲取
-```bash
-/give @s deadrecall:backpack_basic
-/give @s deadrecall:backpack_standard
-/give @s deadrecall:backpack_advanced
-/give @s deadrecall:backpack_netherite
+**火藥 × 4（煉金法 2）**（工作台，需原硫磺）：
+```
+[硫磺] [木炭] [硫磺]
+[  空  ] [硝石] [  空  ]
+[硫磺] [木炭] [硫磺]
 ```
 
 ---
 
-## 💀 死亡背包系統
+### 📜 指令
 
-### 🎯 功能概述
-**死亡背包**是一個特殊的死亡物品收集系統，當玩家死亡時會自動收集死亡掉落的物品，並將其存儲在一個特殊的背包實體中，生成在死亡地點。
+| 指令 | 權限 | 說明 |
+|------|------|------|
+| `/back` | 一般玩家 | 傳送回上次死亡地點（使用一次後失效） |
+| `/give @s deadrecall:backpack_basic` | OP | 給予基礎背包 |
+| `/give @s deadrecall:backpack_standard` | OP | 給予標準背包 |
+| `/give @s deadrecall:backpack_advanced` | OP | 給予進階背包 |
+| `/give @s deadrecall:backpack_netherite` | OP | 給予獄髓背包 |
+| `/give @s deadrecall:death_backpack` | OP | 給予死亡背包（測試用） |
+| `/give @s minecraft:sulfur` | OP | 給予硫磺（原版） |
+| `/give @s deadrecall:saltpeter` | OP | 給予硝石 |
+| `/give @s deadrecall:stone_bowl` | OP | 給予缽 |
+| `/give @s deadrecall:sulfur_bowl` | OP | 給予帶硫磺的缽 |
 
-### 🔧 工作原理
-
-#### 自動收集流程
-1. **玩家死亡**：當玩家因任何原因死亡時
-2. **物品掉落**：玩家的物品正常掉落到地上
-3. **系統收集**：模組自動收集附近的掉落物品
-4. **背包生成**：在死亡地點生成死亡背包實體
-5. **物品存儲**：所有收集的物品存儲在背包中
-
-#### 技術實現
-```java
-// 死亡事件監聽
-ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
-    if (entity instanceof ServerPlayerEntity player) {
-        handlePlayerDeath(player);
-    }
-});
-
-// 收集掉落物品
-Box searchBox = new Box(deathPos).expand(10.0);
-List<ItemEntity> droppedItems = world.getEntitiesByClass(ItemEntity.class, searchBox,
-    itemEntity -> itemEntity.getOwner() != null && itemEntity.getOwner().equals(player));
-```
-
-### 🎮 使用方式
-
-#### 生存模式體驗
-1. **正常死亡**：當你死亡時，物品會正常掉落
-2. **系統收集**：模組自動收集附近的掉落物品
-3. **背包生成**：死亡地點會生成一個死亡背包實體
-4. **收到通知**：聊天欄顯示 "你的物品已被收集到死亡背包中！"
-5. **返回取回**：返回死亡地點拾取背包
-
-#### 取回物品
-1. **找到背包**：返回死亡地點找到紅色的死亡背包
-2. **拾取背包**：右鍵點擊拾取死亡背包物品
-3. **打開背包**：手持背包右鍵打開界面
-4. **取回物品**：從27格的背包中取出需要的物品
-
-### 📊 背包特性
-
-#### 基本信息
-- **名稱**：死亡背包 (Death Backpack)
-- **容量**：27格 (3×9 網格)
-- **獲取方式**：死亡時自動生成
-- **特殊屬性**：防火保護
-
-#### 搜尋範圍
-- **搜尋半徑**：10 格立方體範圍
-- **搜尋條件**：只收集屬於死亡玩家的物品
-- **處理延遲**：2 秒（給物品掉落時間）
-
-#### 安全機制
-- **所有者檢查**：只收集屬於死亡玩家的物品
-- **拾取延遲**：背包實體有 2 秒拾取延遲
-- **防火保護**：背包物品不會被火燒毀
-
-### 🎨 外觀特點
-
-#### 物品外觀
-- **圖標**：使用與普通背包相同的 bundle 圖標
-- **顏色**：紅色邊框表示特殊狀態
-- **Tooltip**：顯示 "死亡背包 - 收集死亡掉落物品"
-
-#### 實體外觀
-- **生成位置**：精確的死亡地點
-- **視覺效果**：紅色光暈效果
-- **拾取提示**：2 秒延遲後可拾取
-
-### 🧪 測試指南
-
-#### 基本測試
-1. **創造模式獲取**：獲取死亡背包物品測試界面
-2. **放入物品**：測試物品存儲功能
-3. **死亡測試**：故意死亡測試自動收集功能
-
-#### 邊界測試
-1. **空死亡測試**：空物品欄死亡，確認沒有背包生成
-2. **遠程物品測試**：物品掉落在遠處，確認不會被收集
-3. **多玩家測試**：多人同時死亡，確認各自物品正確收集
-
-### 🐛 故障排除
-
-#### 背包沒有生成
-**可能原因**：
-- 死亡時沒有掉落物品
-- 搜尋範圍內沒有找到物品
-- 服務器延遲導致物品還沒掉落
-
-**解決方案**：
-- 確保死亡時有物品掉落
-- 檢查死亡地點附近是否有物品
-- 等待幾秒鐘讓系統處理
-
-#### 物品沒有被收集
-**可能原因**：
-- 物品掉落在搜尋範圍外
-- 其他玩家或實體干擾
-- 物品被立即拾取或銷毀
-
-**解決方案**：
-- 確保在死亡地點附近死亡
-- 避免在複雜的地形中死亡
-- 檢查是否有其他玩家在場
-
-#### 背包界面無法打開
-**可能原因**：
-- 背包物品損壞
-- 模組版本不匹配
-
-**解決方案**：
-- 重新獲取背包物品
-- 確保使用最新版本的模組
+#### `/back` 指令說明
+- 玩家死亡後，死亡座標會被**自動記錄**
+- 執行 `/back` 後立即傳送至死亡地點
+- **傳送後座標清除**，同一次死亡只能使用一次
+- 若無死亡座標，顯示 `§c沒有死亡座標可傳送！`
 
 ---
 
-## 🔧 技術實現詳解
+## 📈 更新日誌
 
-### 📁 項目結構
+### v1.7.2（當前版本）
+- ✅ 新增背包整理快捷鍵（預設中鍵）
+- ✅ 新增 Discord 聊天橋接功能（Cloudflare Worker 架構）
+- ✅ 新增 `/back` 死亡座標傳送指令
+- ✅ 新增硝石、缽、帶硫磺的缽物品（硫磺改用原版）
+- ✅ 新增缽右鍵硫磺方塊裝填機制（會消耗方塊）
+- ✅ 新增煉金火藥配方
+- ✅ 死亡背包改為動態容量（依物品數最多 54 格）
+- ✅ 死亡背包永久不消失（`setUnlimitedLifetime`）
+- ✅ 修復 IndexOutOfBoundsException 網路同步問題
 
-```
-DeadRecall/
-├── src/main/java/com/adaptor/deadrecall/
-│   ├── Deadrecall.java                 # 主模組類
-│   ├── item/
-│   │   ├── ModItems.java              # 物品註冊
-│   │   ├── TieredBackpackItem.java    # 等級背包實現
-│   │   └── BackpackItem.java          # 舊版背包（已棄用）
-│   ├── inventory/
-│   │   └── BackpackInventory.java     # 背包物品欄邏輯
-│   └── screen/
-│       └── BackpackScreenHandler.java # 界面處理邏輯
-├── src/main/resources/
-│   ├── assets/deadrecall/
-│   │   ├── lang/                      # 多語言支援
-│   │   └── models/item/               # 物品模型
-│   └── data/deadrecall/
-│       └── recipe/                    # 合成配方
-└── build.gradle                       # 構建配置
-```
+### v1.5.0
+- ✅ 實現多等級背包（基礎／標準／進階／獄髓）
+- ✅ 添加鍛造台升級機制
 
-### 🛠️ 核心技術
+### v1.4.1
+- ✅ 解決物品放入背包後丟失的問題
+- ✅ 完善 Data Components API 儲存實作
 
-#### 網路同步解決方案
-```java
-// 使用 ExtendedScreenHandlerType 傳遞等級信息
-public static final ScreenHandlerType<BackpackScreenHandler> SCREEN_HANDLER_TYPE =
-    Registry.register(Registries.SCREEN_HANDLER, Identifier.of("deadrecall", "backpack"),
-        new ExtendedScreenHandlerType<>(
-            (syncId, playerInventory, data) -> {
-                int tierOrdinal = (Integer) data;
-                TieredBackpackItem.BackpackTier tier = TieredBackpackItem.BackpackTier.values()[tierOrdinal];
-                return new BackpackScreenHandler(syncId, playerInventory, tier);
-            },
-            PacketCodecs.INTEGER
-        ));
-```
+### v1.3.0
+- ✅ 修復背包界面顯示問題
+- ✅ 優化槽位佈局
 
-#### 動態界面生成
-```java
-// 根據等級動態生成槽位
-int rows = tier.getRows();
-for (int row = 0; row < rows; row++) {
-    for (int col = 0; col < 9; col++) {
-        this.addSlot(new Slot(inventory, col + row * 9, 8 + col * 18, 18 + row * 18));
-    }
-}
-```
+### v1.2.0
+- ✅ 動態界面大小（依等級調整排數）
 
-#### 物品保存機制
-```java
-// 使用 Data Components API 保存物品
-backpackStack.set(DataComponentTypes.CONTAINER, ContainerComponent.fromStacks(items));
-```
-
----
-
-## 📈 開發歷史
-
-### v1.0.0 - 初始版本
-- ✅ 基本背包功能
-- ✅ 物品保存機制
-
-### v1.1.0 - 背包存儲修復
+### v1.1.0
 - ✅ 修復物品無法保存的問題
 - ✅ 改用 Player+Hand 引用系統
 
-### v1.2.0 - 背包界面優化
-- ✅ 添加動態界面大小
-- ✅ 改善用戶體驗
-
-### v1.3.0 - 背包界面修復
-- ✅ 修復界面顯示問題
-- ✅ 優化槽位佈局
-
-### v1.4.1 - 存儲問題最終修復
-- ✅ 解決物品丟失問題
-- ✅ 完善 Data Components 實現
-
-### v1.5.0 - 背包等級系統
-- ✅ 實現多等級背包
-- ✅ 添加升級機制
-- ✅ 4種不同容量背包
-
-### v1.7.2 - 網路同步與創造模式優化
-- ✅ 修復 IndexOutOfBoundsException
-- ✅ 實現 ExtendedScreenHandlerType 同步
-- ✅ 優化創造模式物品欄註冊
+### v1.0.0
+- ✅ 基本背包功能
+- ✅ 物品保存機制
 
 ---
 
-## 🐛 故障排除
+## 🛠️ 開發提醒
 
-### 網路協定錯誤
-**問題**：`IndexOutOfBoundsException: Index 54 out of bounds for length 54`
-
-**解決方案**：
-- 確保使用最新版本 (v1.6.0)
-- 該錯誤已在網路同步修復中解決
-
-### 背包物品丟失
-**問題**：放入背包的物品消失
-
-**解決方案**：
-- 確保使用 v1.4.1+ 版本
-- 物品保存機制已完善
-
-### 界面顯示異常
-**問題**：背包界面大小不正確
-
-**解決方案**：
-- 檢查模組版本
-- 確保客戶端和服務器使用相同版本
-
-### 創造模式找不到背包
-**問題**：創造模式物品欄中沒有背包
-
-**解決方案**：
-- 檢查工具標籤或功能性標籤
-- 或使用搜索功能輸入 "backpack"
-
----
-
-## 🧪 測試指南
-
-### 單元測試
-```bash
-# 編譯測試
-.\gradlew compileJava
-
-# 完整構建測試
-.\gradlew build
+### 項目結構
+```
+DeadRecall/
+├── src/main/java/com/adaptor/deadrecall/
+│   ├── Deadrecall.java                 # 主入口：物品註冊、事件監聽、指令
+│   ├── DiscordBridge.java              # Discord 橋接（Cloudflare Worker HTTP）
+│   ├── DeathLocationManager.java       # 死亡座標管理（UUID → BlockPos）
+│   ├── item/
+│   │   ├── ModItems.java              # 所有物品的靜態常量與註冊
+│   │   ├── TieredBackpackItem.java    # 等級背包（含 BackpackTier enum）
+│   │   └── DeathBackpackItem.java     # 死亡背包（動態容量）
+│   └── inventory/
+│       └── BackpackInventory.java     # 背包物品欄邏輯（Data Components 儲存）
+├── src/main/resources/data/deadrecall/recipe/
+│   ├── backpack.json                  # 基礎背包工作台配方
+│   ├── backpack_standard_smithing.json
+│   ├── backpack_advanced_smithing.json
+│   ├── backpack_netherite_smithing.json
+│   ├── saltpeter.json
+│   ├── gunpowder_from_sulfur.json
+│   ├── gunpowder_from_alchemy.json
+│   └── stone_bowl.json
+├── src/main/resources/assets/deadrecall/lang/
+│   ├── zh_tw.json
+│   ├── zh_cn.json
+│   └── en_us.json
+├── cloudflare-worker-example.js        # Discord Worker 範例程式碼
+├── discord-bridge.json                 # （執行時於 config/ 自動產生）
+└── fabric.mod.json
 ```
 
-### 遊戲內測試
+### 關鍵技術注意事項
 
-#### 功能測試
-1. **基礎背包製作**：工作台合成
-2. **背包升級**：鐵砧台升級測試
-3. **物品保存**：放入物品後關閉重開
-4. **網路同步**：多人遊戲測試
+#### Discord Bridge
+- 使用單執行緒 `ExecutorService` 非同步傳送，避免阻塞主線程
+- 設定檔路徑：`<server>/config/discord-bridge.json`
+- API 端點：`POST {workerUrl}/api/mc/chat`，Header：`X-API-Key`
+- Worker 端點另有 `/api/mc/server/status` 可供未來擴充伺服器狀態回報
 
-#### 性能測試
-1. **大容量背包**：測試36格背包性能
-2. **頻繁操作**：快速開關背包測試
-3. **物品移動**：大量物品拖拽測試
+#### 死亡背包
+- 使用 `ServerLivingEntityEvents.AFTER_DEATH` 監聽，雙層 `execute()` 確保在物品掉落後才收集
+- 收集範圍：`AABB.inflate(10.0)`，收集所有實體（非僅特定玩家的）
+- 使用 `DataComponents.CONTAINER` + `ItemContainerContents` 儲存物品
+- `setUnlimitedLifetime()` 防止背包自然消失
+- `setPickUpDelay(40)` = 2 秒（20 ticks/秒）
 
----
+#### `/back` 指令
+- `DeathLocationManager` 以 `HashMap<UUID, DeathLocation>` 暫存死亡座標
+- 使用後呼叫 `clearDeathLocation()` 清除，避免重複傳送
+- 注意：目前不處理跨維度死亡傳送（`worldRegistryKey` 已儲存但未使用）
 
-## 📚 相關文檔
+#### 背包儲存
+- 使用原版 `DataComponents.CONTAINER`（`ItemContainerContents`）儲存物品，相容性高
+- `BackpackInventory` 在開啟時從 DataComponent 讀取，關閉時寫回
+- 死亡背包的容量為動態計算：`Math.max(1, Math.min(6, ceil(itemCount / 9.0)))` 排
 
-### 開發文檔
-- `背包系統實現說明.md` - 技術實現詳解
-- `背包系統完成報告.md` - 開發過程記錄
-- `背包存储问题修复报告.md` - 修復歷史
+### 待辦 / 已知問題
+- ⚠️ `/back` 指令未處理跨維度傳送（如從地獄傳回主世界）
+- ⚠️ 死亡背包收集範圍未過濾所有者，多人同時死亡可能互相收集到對方物品
+- ⚠️ Discord Bridge `sendServerStatus` 方法已實作但尚未被呼叫（預留擴充）
+- ⚠️ 舊版 `deadrecall:backpack` 物品 ID 仍保留但標記為 `@Deprecated`
 
-### 使用文檔
-- `背包系統快速開始.md` - 快速入門指南
-- `開始使用-背包等級.md` - 等級系統說明
-- `背包等級-快速參考.md` - 參考手冊
+### 構建指令
+```bash
+# 編譯
+./gradlew compileJava
 
-### 修復記錄
-- `背包網路協定錯誤修復完成.md` - 網路同步修復
-- `創造模式背包訪問優化完成.md` - 創造模式優化
-- `背包鐵砧升級系統完成.md` - 升級系統實現
+# 完整構建（產出 .jar）
+./gradlew build
 
----
-
-## 🤝 貢獻指南
-
-### 代碼貢獻
-1. Fork 此倉庫
-2. 創建功能分支
-3. 提交更改
-4. 發起 Pull Request
-
-### 問題回報
-- 使用 GitHub Issues 回報問題
-- 提供詳細的錯誤信息和重現步驟
-- 包含模組版本和 Minecraft 版本
-
-### 功能請求
-- 在 Issues 中描述新功能需求
-- 說明功能的目的和使用場景
-
----
-
-## 📄 許可證
-
-此項目採用 MIT 許可證。詳見 LICENSE.txt 文件。
-
----
-
-## 🙏 致謝
-
-感謝所有測試者和回報問題的玩家，你們的反饋讓這個模組更加完善！
-
----
-
-## 📞 聯繫方式
-
-- **GitHub**：https://github.com/your-repo/deadrecall
-- **Issues**：https://github.com/your-repo/deadrecall/issues
-- **Wiki**：https://github.com/your-repo/deadrecall/wiki
-
----
-
-**DeadRecall 模組文檔 - 完整整合版**
-
-*最後更新：2026年2月15日*  
-*版本：v1.7.2*
-*狀態：✅ 完整*
+# 資料生成
+./gradlew runDatagen
+```

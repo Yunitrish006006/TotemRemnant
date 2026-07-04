@@ -1,0 +1,18 @@
+name            = "deadrecall-discord-bridge"
+main            = "worker.js"
+compatibility_date = "2024-01-01"
+
+# 在 Cloudflare Dashboard → Workers & Pages → 你的 Worker → Settings → Variables
+# 設定以下兩個 Secret 環境變數（不要直接寫在此檔）：
+#
+#   MC_API_KEY            = "你自訂的金鑰字串"
+#   DISCORD_WEBHOOK_URLS  = '["https://discord.com/api/webhooks/ID/TOKEN"]'
+#
+# 若要用 wrangler CLI 設定 secret（推薦）：
+#   npx wrangler secret put MC_API_KEY
+#   npx wrangler secret put DISCORD_WEBHOOK_URLS
+
+[vars]
+# 僅供本地開發測試使用（dev 環境）；正式部署請改用 Secret
+# MC_API_KEY           = "dev_only_key"
+# DISCORD_WEBHOOK_URLS = '["https://discord.com/api/webhooks/..."]'

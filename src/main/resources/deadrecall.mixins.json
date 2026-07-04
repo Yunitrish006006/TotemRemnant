@@ -2,7 +2,14 @@
   "required": true,
   "package": "com.adaptor.deadrecall.mixin",
   "compatibilityLevel": "JAVA_17",
-  "mixins": [],
+  "mixins": [
+    "EnchantmentHelperMixin",
+    "EnchantmentMenuMixin",
+    "EnchantingTableBlockMixin",
+    "RecipeManagerMixin",
+    "StructureTemplateMixin",
+    "VillagerEntityMixin"
+  ],
   "client": [],
   "injectors": {
     "defaultRequire": 1

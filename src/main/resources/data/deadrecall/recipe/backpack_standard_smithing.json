@@ -1,16 +1,9 @@
 {
   "type": "minecraft:smithing_transform",
-  "addition": {
-    "item": "minecraft:iron_ingot"
-  },
-  "base": {
-    "item": "deadrecall:backpack_basic"
-  },
-  "template": {
-    "item": "minecraft:chest"
-  },
+  "addition": "minecraft:iron_ingot",
+  "base": "deadrecall:backpack_basic",
+  "template": "minecraft:chest",
   "result": {
     "id": "deadrecall:backpack_standard"
   }
 }
-

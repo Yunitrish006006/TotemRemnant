@@ -1,0 +1,53 @@
+{
+  "gui_light": "front",
+  "textures": {
+    "particle": "deadrecall:item/stone_bowl/stone_bowl_back",
+    "back": "deadrecall:item/stone_bowl/stone_bowl_back",
+    "content": "deadrecall:item/saltpeter",
+    "front": "deadrecall:item/stone_bowl/stone_bowl_front"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 7],
+      "to": [16, 16, 7],
+      "faces": {
+        "north": {
+          "uv": [0, 0, 16, 16],
+          "texture": "#back"
+        },
+        "south": {
+          "uv": [0, 0, 16, 16],
+          "texture": "#back"
+        }
+      }
+    },
+    {
+      "from": [2, 4, 7.5],
+      "to": [14, 12, 7.5],
+      "faces": {
+        "north": {
+          "uv": [2, 2, 14, 14],
+          "texture": "#content"
+        },
+        "south": {
+          "uv": [2, 2, 14, 14],
+          "texture": "#content"
+        }
+      }
+    },
+    {
+      "from": [0, 0, 8],
+      "to": [16, 16, 8],
+      "faces": {
+        "north": {
+          "uv": [0, 0, 16, 16],
+          "texture": "#front"
+        },
+        "south": {
+          "uv": [0, 0, 16, 16],
+          "texture": "#front"
+        }
+      }
+    }
+  ]
+}

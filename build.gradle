@@ -3,7 +3,18 @@ plugins {
     id 'maven-publish'
 }
 
-version = project.mod_version
+def buildIteration = System.getenv("BUILD_NUMBER") ?: System.getenv("GITHUB_RUN_NUMBER")
+if (!buildIteration) {
+    try {
+        buildIteration = ["git", "rev-list", "--count", "HEAD"].execute(null, rootDir).text.trim()
+    } catch (Exception ignored) {
+    }
+}
+if (!buildIteration) {
+    buildIteration = new Date().format("yyyyMMddHHmmss")
+}
+
+version = "${project.mod_version}.${buildIteration}"
 group = project.maven_group
 
 base {
@@ -61,6 +72,83 @@ dependencies {
     // Use Minecraft's built-in Gson instead of bundling it
     // This is simpler and avoids version conflicts
     compileOnly 'com.google.code.gson:gson:2.10.1'
+}
+
+tasks.register("normalizeFabricApiTweakers") {
+    group = "fabric"
+    description = "Normalizes Fabric API tweaker namespaces for modern-yarn dev runtime."
+
+    doLast {
+        def jarFiles = configurations.runtimeClasspath.resolve().findAll { file ->
+            file.name.endsWith(".jar") && file.absolutePath.contains("${File.separator}net.fabricmc.fabric-api${File.separator}")
+        }
+
+        int patchedFiles = 0
+        int patchedEntries = 0
+
+        jarFiles.each { File jarFile ->
+            File tempFile = new File(buildDir, "tmp/tweaker-normalized/${jarFile.name}.tmp")
+            tempFile.parentFile.mkdirs()
+            boolean fileChanged = false
+
+            def zipFile = new java.util.zip.ZipFile(jarFile)
+            def zipOut = new java.util.zip.ZipOutputStream(new java.io.BufferedOutputStream(new java.io.FileOutputStream(tempFile)))
+
+            try {
+                def entries = zipFile.entries()
+                while (entries.hasMoreElements()) {
+                    def entry = entries.nextElement()
+                    def outEntry = new java.util.zip.ZipEntry(entry.name)
+                    zipOut.putNextEntry(outEntry)
+
+                    byte[] bytes = entry.isDirectory() ? new byte[0] : zipFile.getInputStream(entry).bytes
+                    if (!entry.isDirectory() && (entry.name.endsWith(".classtweaker") || entry.name.endsWith(".accesswidener"))) {
+                        String text = new String(bytes, java.nio.charset.StandardCharsets.UTF_8)
+                        String normalized = text
+                                .replaceFirst(/(?m)^(classTweaker\s+v\d+\s+)official(\s*)$/, '$1named$2')
+                                .replaceFirst(/(?m)^(accessWidener\s+v\d+\s+)official(\s*)$/, '$1named$2')
+
+                        if (normalized != text) {
+                            bytes = normalized.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+                            fileChanged = true
+                            patchedEntries++
+                        }
+                    }
+
+                    zipOut.write(bytes)
+                    zipOut.closeEntry()
+                }
+            } finally {
+                zipOut.close()
+                zipFile.close()
+            }
+
+            if (fileChanged) {
+                java.nio.file.Files.move(
+                        tempFile.toPath(),
+                        jarFile.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                )
+                patchedFiles++
+            } else {
+                tempFile.delete()
+            }
+        }
+
+        logger.lifecycle("Normalized ${patchedEntries} Fabric API tweaker entries in ${patchedFiles} jars.")
+    }
+}
+
+tasks.named("generateRemapClasspath").configure {
+    dependsOn("normalizeFabricApiTweakers")
+}
+
+tasks.named("runClient").configure {
+    dependsOn("normalizeFabricApiTweakers")
+}
+
+tasks.named("runServer").configure {
+    dependsOn("normalizeFabricApiTweakers")
 }
 
 processResources {

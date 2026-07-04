@@ -1,5 +1,6 @@
 package com.adaptor.deadrecall;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -9,13 +10,14 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
  * Discord 聊天橋接工具
  * 負責將 Minecraft 聊天訊息透過 Cloudflare Worker API 傳送到 Discord
+ * 支援多頻道管理
  */
 public class DiscordBridge {
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor(r -> {
@@ -27,28 +29,155 @@ public class DiscordBridge {
     private static String workerUrl = "";
     private static String apiKey = "";
     private static boolean enabled = false;
+    private static List<DiscordChannel> channels = new ArrayList<>();
+    private static Path configFilePath;
+
+    public static class DiscordChannel {
+        public String id;
+        public String name;
+
+        public DiscordChannel(String id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        public DiscordChannel(String id) {
+            this(id, id);
+        }
+    }
 
     /**
      * 初始化設定（從 config 檔讀取）
      */
     public static void init(Path configDir) {
-        Path configFile = configDir.resolve("discord-bridge.json");
+        configFilePath = configDir.resolve("discord-bridge.json");
 
-        if (!Files.exists(configFile)) {
-            // 建立預設設定檔
-            createDefaultConfig(configFile);
-            Deadrecall.LOGGER.info("[DiscordBridge] 已建立預設設定檔: {}", configFile);
+        if (!Files.exists(configFilePath)) {
+            createDefaultConfig(configFilePath);
+            Deadrecall.LOGGER.info("[DiscordBridge] 已建立預設設定檔: {}", configFilePath);
             Deadrecall.LOGGER.info("[DiscordBridge] 請編輯設定檔填入 Worker URL 和 API Key");
             return;
         }
 
+        loadConfigFromFile();
+    }
+
+    public static synchronized void updateConfig(boolean newEnabled, String newWorkerUrl, String newApiKey) throws IOException {
+        if (configFilePath == null) {
+            throw new IllegalStateException("DiscordBridge 尚未初始化");
+        }
+        String normalizedWorkerUrl = normalizeWorkerUrl(newWorkerUrl);
+        String normalizedApiKey = newApiKey == null ? "" : newApiKey.trim();
+        if (newEnabled && (normalizedWorkerUrl.isEmpty() || normalizedApiKey.isEmpty())) {
+            throw new IllegalArgumentException("啟用 Discord Bridge 時，workerUrl 與 apiKey 不能為空");
+        }
+
+        JsonObject config = new JsonObject();
+        config.addProperty("enabled", newEnabled);
+        config.addProperty("workerUrl", normalizedWorkerUrl);
+        config.addProperty("apiKey", normalizedApiKey);
+
+        // 保留現有的 channels
+        JsonArray channelArray = new JsonArray();
+        for (DiscordChannel ch : channels) {
+            JsonObject chObj = new JsonObject();
+            chObj.addProperty("id", ch.id);
+            chObj.addProperty("name", ch.name);
+            channelArray.add(chObj);
+        }
+        config.add("channels", channelArray);
+
+        Files.createDirectories(configFilePath.getParent());
+        Files.writeString(configFilePath, config.toString(), StandardCharsets.UTF_8);
+        loadConfigFromFile();
+    }
+
+    public static synchronized void addChannel(String channelId, String channelName) throws IOException {
+        if (configFilePath == null) {
+            throw new IllegalStateException("DiscordBridge 尚未初始化");
+        }
+
+        // 檢查是否已存在
+        for (DiscordChannel ch : channels) {
+            if (ch.id.equals(channelId)) {
+                throw new IllegalArgumentException("頻道 " + channelId + " 已存在");
+            }
+        }
+
+        channels.add(new DiscordChannel(channelId, channelName));
+        saveChannelsToFile();
+        Deadrecall.LOGGER.info("[DiscordBridge] 已添加頻道: {} ({})", channelName, channelId);
+    }
+
+    public static synchronized void removeChannel(String channelId) throws IOException {
+        if (configFilePath == null) {
+            throw new IllegalStateException("DiscordBridge 尚未初始化");
+        }
+
+        boolean removed = channels.removeIf(ch -> ch.id.equals(channelId));
+        if (!removed) {
+            throw new IllegalArgumentException("頻道 " + channelId + " 不存在");
+        }
+
+        saveChannelsToFile();
+        Deadrecall.LOGGER.info("[DiscordBridge] 已移除頻道: {}", channelId);
+    }
+
+    public static synchronized void reload() {
+        if (configFilePath == null) {
+            return;
+        }
+        loadConfigFromFile();
+    }
+
+    public static List<DiscordChannel> getChannels() {
+        return new ArrayList<>(channels);
+    }
+
+    private static synchronized void saveChannelsToFile() throws IOException {
+        String content = Files.readString(configFilePath, StandardCharsets.UTF_8);
+        JsonObject config = JsonParser.parseString(content).getAsJsonObject();
+
+        JsonArray channelArray = new JsonArray();
+        for (DiscordChannel ch : channels) {
+            JsonObject chObj = new JsonObject();
+            chObj.addProperty("id", ch.id);
+            chObj.addProperty("name", ch.name);
+            channelArray.add(chObj);
+        }
+        config.add("channels", channelArray);
+
+        Files.writeString(configFilePath, config.toString(), StandardCharsets.UTF_8);
+    }
+
+    private static synchronized void loadConfigFromFile() {
+        if (configFilePath == null) {
+            enabled = false;
+            workerUrl = "";
+            apiKey = "";
+            channels.clear();
+            return;
+        }
         try {
-            String content = Files.readString(configFile, StandardCharsets.UTF_8);
+            String content = Files.readString(configFilePath, StandardCharsets.UTF_8);
             JsonObject config = JsonParser.parseString(content).getAsJsonObject();
 
             enabled = config.has("enabled") && config.get("enabled").getAsBoolean();
-            workerUrl = config.has("workerUrl") ? config.get("workerUrl").getAsString() : "";
+            workerUrl = normalizeWorkerUrl(config.has("workerUrl") ? config.get("workerUrl").getAsString() : "");
             apiKey = config.has("apiKey") ? config.get("apiKey").getAsString() : "";
+
+            channels.clear();
+            if (config.has("channels") && config.get("channels").isJsonArray()) {
+                JsonArray channelArray = config.getAsJsonArray("channels");
+                for (int i = 0; i < channelArray.size(); i++) {
+                    JsonObject chObj = channelArray.get(i).getAsJsonObject();
+                    String id = chObj.has("id") ? chObj.get("id").getAsString() : "";
+                    String name = chObj.has("name") ? chObj.get("name").getAsString() : id;
+                    if (!id.isEmpty()) {
+                        channels.add(new DiscordChannel(id, name));
+                    }
+                }
+            }
 
             if (enabled && (workerUrl.isEmpty() || apiKey.isEmpty())) {
                 Deadrecall.LOGGER.warn("[DiscordBridge] 已啟用但缺少 workerUrl 或 apiKey，停用功能");
@@ -56,13 +185,9 @@ public class DiscordBridge {
                 return;
             }
 
-            // 移除尾部斜線
-            if (workerUrl.endsWith("/")) {
-                workerUrl = workerUrl.substring(0, workerUrl.length() - 1);
-            }
-
             if (enabled) {
                 Deadrecall.LOGGER.info("[DiscordBridge] 已啟用，Worker URL: {}", workerUrl);
+                Deadrecall.LOGGER.info("[DiscordBridge] 已配置 {} 個頻道", channels.size());
             } else {
                 Deadrecall.LOGGER.info("[DiscordBridge] 功能已停用");
             }
@@ -81,15 +206,14 @@ public class DiscordBridge {
         EXECUTOR.submit(() -> {
             try {
                 String json = String.format(
-                        "{\"username\":\"%s\",\"message\":\"%s\"}",
+                        "{\"username\":\"%s\",\"message\":\"%s\",\"channels\":%s}",
                         escapeJson(username),
-                        escapeJson(message)
+                        escapeJson(message),
+                        channelsToJson()
                 );
 
                 String url = workerUrl + "/api/mc/chat";
                 Deadrecall.LOGGER.info("[DiscordBridge] 發送請求到: {}", url);
-                Deadrecall.LOGGER.info("[DiscordBridge] API Key: {}...", apiKey.substring(0, Math.min(10, apiKey.length())));
-                Deadrecall.LOGGER.info("[DiscordBridge] JSON 內容: {}", json);
 
                 HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
                 conn.setRequestMethod("POST");
@@ -103,7 +227,6 @@ public class DiscordBridge {
 
                 int responseCode = conn.getResponseCode();
 
-                // 讀取回應內容
                 InputStream responseStream = (responseCode >= 200 && responseCode < 300)
                     ? conn.getInputStream()
                     : conn.getErrorStream();
@@ -114,7 +237,7 @@ public class DiscordBridge {
                 if (responseCode == 200) {
                     Deadrecall.LOGGER.info("[DiscordBridge] 發送成功 (HTTP 200): {}", responseBody);
                 } else {
-                    Deadrecall.LOGGER.warn("[DiscordBridge] 發送失敗 (HTTP {}): {}", Optional.of(responseCode), responseBody);
+                    Deadrecall.LOGGER.warn("[DiscordBridge] 發送失敗 (HTTP {}): {}", responseCode, responseBody);
                 }
 
                 conn.disconnect();
@@ -132,8 +255,8 @@ public class DiscordBridge {
 
         EXECUTOR.submit(() -> {
             try {
-                String json = String.format("{\"status\":\"%s\",\"players_online\":\"%d\",\"players_max\":\"%d\",\"version\":\"%s\",\"tps\":\"%.1f\"}",
-                        escapeJson(status), (Object) playersOnline, (Object) playersMax, escapeJson(version), (Object) tps
+                String json = String.format("{\"status\":\"%s\",\"players_online\":\"%d\",\"players_max\":\"%d\",\"version\":\"%s\",\"tps\":\"%.1f\",\"channels\":%s}",
+                        escapeJson(status), (Object) playersOnline, (Object) playersMax, escapeJson(version), (Object) tps, channelsToJson()
                 );
 
                 HttpURLConnection conn = (HttpURLConnection) new URL(workerUrl + "/api/mc/server/status").openConnection();
@@ -153,8 +276,35 @@ public class DiscordBridge {
         });
     }
 
+    /**
+     * 通知村民升級到 Discord（非同步）
+     */
+    public static void sendVillagerLevelUp(String villagerName, int oldLevel, int newLevel) {
+        if (!enabled) return;
+
+        String name = (villagerName == null || villagerName.isBlank()) ? "村民" : villagerName.trim();
+        String message = String.format("%s 升級了：等級 %d → %d", name, oldLevel, newLevel);
+        sendChatMessage("系統", message);
+    }
+
     public static boolean isEnabled() {
         return enabled;
+    }
+
+    public static String getWorkerUrl() {
+        return workerUrl;
+    }
+
+    public static String getApiKey() {
+        return apiKey;
+    }
+
+    private static String channelsToJson() {
+        JsonArray arr = new JsonArray();
+        for (DiscordChannel ch : channels) {
+            arr.add(ch.id);
+        }
+        return arr.toString();
     }
 
     private static String escapeJson(String s) {
@@ -166,12 +316,24 @@ public class DiscordBridge {
                 .replace("\t", "\\t");
     }
 
+    private static String normalizeWorkerUrl(String url) {
+        if (url == null) {
+            return "";
+        }
+        String normalized = url.trim();
+        if (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
+    }
+
     private static void createDefaultConfig(Path configFile) {
         String defaultConfig = """
                 {
                   "enabled": false,
-                  "workerUrl": "https://mc-discord-bot.yunitrish0419.workers.dev",
-                  "apiKey": "mc_ak_7Xp9Qm3vKsW2nF8jRtYb6LdA4eHcZu"
+                  "workerUrl": "",
+                  "apiKey": "",
+                  "channels": []
                 }
                 """;
         try {

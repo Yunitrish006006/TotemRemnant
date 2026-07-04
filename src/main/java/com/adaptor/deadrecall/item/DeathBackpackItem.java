@@ -31,7 +31,7 @@ public class DeathBackpackItem extends Item {
     /**
      * 計算死亡背包實際需要的行數
      */
-    private int calculateRows(ItemStack stack) {
+    public static int calculateRows(ItemStack stack) {
         ItemContainerContents container = stack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY);
         int itemCount = (int) container.nonEmptyItemCopyStream().count();
         return Math.max(1, Math.min(6, (int) Math.ceil(itemCount / 9.0)));

@@ -4,6 +4,8 @@
   "package": "com.adaptor.deadrecall.mixin.client",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "OptionsMixin",
+    "AbstractContainerScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -12,5 +12,14 @@
   "item.deadrecall.backpack_netherite": "Netherite Backpack",
   "container.deadrecall.backpack.netherite": "Netherite Backpack",
   "item.deadrecall.death_backpack": "Death Backpack",
-  "container.deadrecall.death_backpack": "Death Backpack"
+  "container.deadrecall.death_backpack": "Death Backpack",
+  "item.deadrecall.stone_bowl": "Stone Bowl",
+  "item.deadrecall.saltpeter": "Saltpeter",
+  "item.deadrecall.sulfur_bowl": "Sulfur Bowl",
+  "key.categories.deadrecall": "DeadRecall",
+  "key.categories.deadrecall.category": "DeadRecall",
+  "key.deadrecall.discord_config": "Open Discord Settings",
+  "key.deadrecall.sort_backpack": "Sort Backpack",
+  "message.deadrecall.sort_backpack.success": "Backpack sorted!",
+  "message.deadrecall.sort_backpack.need_backpack": "Use the sort shortcut while a container screen is open"
 }

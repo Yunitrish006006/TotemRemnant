@@ -13,25 +13,36 @@ import java.util.function.Function;
 public class ModItems {
     // 註冊不同等級的背包
     public static final Item BACKPACK_BASIC = registerItem("backpack_basic",
-        props -> new TieredBackpackItem(props.stacksTo(1), TieredBackpackItem.BackpackTier.BASIC));
+            props -> new TieredBackpackItem(props.stacksTo(1), TieredBackpackItem.BackpackTier.BASIC));
 
     public static final Item BACKPACK_STANDARD = registerItem("backpack_standard",
-        props -> new TieredBackpackItem(props.stacksTo(1), TieredBackpackItem.BackpackTier.STANDARD));
+            props -> new TieredBackpackItem(props.stacksTo(1), TieredBackpackItem.BackpackTier.STANDARD));
 
     public static final Item BACKPACK_ADVANCED = registerItem("backpack_advanced",
-        props -> new TieredBackpackItem(props.stacksTo(1), TieredBackpackItem.BackpackTier.ADVANCED));
+            props -> new TieredBackpackItem(props.stacksTo(1), TieredBackpackItem.BackpackTier.ADVANCED));
 
     public static final Item BACKPACK_NETHERITE = registerItem("backpack_netherite",
-        props -> new TieredBackpackItem(props.stacksTo(1).fireResistant(), TieredBackpackItem.BackpackTier.NETHERITE));
+            props -> new TieredBackpackItem(props.stacksTo(1).fireResistant(), TieredBackpackItem.BackpackTier.NETHERITE));
 
     // 死亡背包 - 特殊的死亡掉落物品收集器
     public static final Item DEATH_BACKPACK = registerItem("death_backpack",
-        props -> new DeathBackpackItem(props.stacksTo(1).fireResistant()));
+            props -> new DeathBackpackItem(props.stacksTo(1).fireResistant()));
+
+    public static final Item SALTPETER = registerItem("saltpeter",
+            props -> new Item(props));
+
+    // 合成器皿（缽）：可對硫磺方塊右鍵填充
+    public static final Item STONE_BOWL = registerItem("stone_bowl",
+            props -> new StoneBowlItem(props.stacksTo(1)));
+
+    // 帶硫磺的缽：作為火藥配方材料，合成後回傳缽
+    public static final Item SULFUR_BOWL = registerItem("sulfur_bowl",
+            props -> new Item(props.stacksTo(1).craftRemainder(STONE_BOWL)));
 
     // 舊版物品 ID 相容（deadrecall:backpack）
     @Deprecated
     public static final Item BACKPACK = registerItem("backpack",
-        props -> new TieredBackpackItem(props.stacksTo(1), TieredBackpackItem.BackpackTier.STANDARD));
+            props -> new TieredBackpackItem(props.stacksTo(1), TieredBackpackItem.BackpackTier.STANDARD));
 
     private static Item registerItem(String name, Function<Item.Properties, Item> itemFactory) {
         Identifier id = Identifier.fromNamespaceAndPath("deadrecall", name);

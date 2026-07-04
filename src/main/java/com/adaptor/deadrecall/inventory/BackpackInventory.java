@@ -4,6 +4,7 @@ import com.adaptor.deadrecall.item.DeathBackpackItem;
 import com.adaptor.deadrecall.item.TieredBackpackItem;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
@@ -12,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class BackpackInventory implements Container {
@@ -154,6 +156,49 @@ public class BackpackInventory implements Container {
                 player.getInventory().setItem(Inventory.SLOT_OFFHAND, ItemStack.EMPTY);
             }
         }
+    }
+
+    public void sortContents() {
+        List<ItemStack> stacks = new ArrayList<>();
+        for (ItemStack stack : items) {
+            if (!stack.isEmpty()) {
+                stacks.add(stack.copy());
+            }
+        }
+
+        stacks.sort(Comparator
+                .comparing((ItemStack stack) -> BuiltInRegistries.ITEM.getKey(stack.getItem()).toString())
+                .thenComparing(Comparator.comparingInt(ItemStack::getCount).reversed()));
+
+        List<ItemStack> compacted = new ArrayList<>();
+        for (ItemStack stack : stacks) {
+            ItemStack remaining = stack.copy();
+
+            if (!compacted.isEmpty()) {
+                ItemStack last = compacted.get(compacted.size() - 1);
+                if (ItemStack.isSameItemSameComponents(last, remaining)) {
+                    int movable = Math.min(last.getMaxStackSize() - last.getCount(), remaining.getCount());
+                    if (movable > 0) {
+                        last.grow(movable);
+                        remaining.shrink(movable);
+                    }
+                }
+            }
+
+            while (!remaining.isEmpty()) {
+                int amount = Math.min(remaining.getCount(), remaining.getMaxStackSize());
+                ItemStack split = remaining.copy();
+                split.setCount(amount);
+                compacted.add(split);
+                remaining.shrink(amount);
+            }
+        }
+
+        for (int slot = 0; slot < size; slot++) {
+            items.set(slot, slot < compacted.size() ? compacted.get(slot) : ItemStack.EMPTY);
+        }
+
+        setChanged();
     }
 
     @Override

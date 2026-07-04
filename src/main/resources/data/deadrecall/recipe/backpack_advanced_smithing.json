@@ -1,16 +1,9 @@
 {
   "type": "minecraft:smithing_transform",
-  "addition": {
-    "item": "minecraft:diamond"
-  },
-  "base": {
-    "item": "deadrecall:backpack_standard"
-  },
-  "template": {
-    "item": "minecraft:chest"
-  },
+  "addition": "minecraft:diamond",
+  "base": "deadrecall:backpack_standard",
+  "template": "minecraft:chest",
   "result": {
     "id": "deadrecall:backpack_advanced"
   }
 }
-

@@ -6,16 +6,11 @@
     "LLL"
   ],
   "key": {
-    "L": {
-      "item": "minecraft:leather"
-    },
-    "C": {
-      "item": "minecraft:chest"
-    }
+    "L": "minecraft:leather",
+    "C": "minecraft:chest"
   },
   "result": {
     "id": "deadrecall:backpack_basic",
     "count": 1
   }
 }
-
