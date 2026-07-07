@@ -1,17 +1,29 @@
 package com.adaptor.deadrecall;
 
+import com.adaptor.deadrecall.alchemy.AlchemyHandler;
+import com.adaptor.deadrecall.block.ModBlocks;
+import com.adaptor.deadrecall.block.entity.ModBlockEntities;
+import com.adaptor.deadrecall.item.BackpackItemHelper;
 import com.adaptor.deadrecall.item.ModItems;
+import com.adaptor.deadrecall.item.copper.CopperGolemLlmService;
+import com.adaptor.deadrecall.item.copper.CopperGolemWrenchHandler;
+import com.adaptor.deadrecall.network.CopperGolemOperationPayload;
+import com.adaptor.deadrecall.network.CopperWrenchBindingsPayload;
 import com.adaptor.deadrecall.network.DiscordConfigSyncPayload;
 import com.adaptor.deadrecall.network.ManageDiscordChannelPayload;
 import com.adaptor.deadrecall.network.RequestDiscordConfigPayload;
+import com.adaptor.deadrecall.network.SaveCopperGolemLlmConfigPayload;
 import com.adaptor.deadrecall.network.SortBackpackPayload;
 import com.adaptor.deadrecall.network.SaveDiscordConfigPayload;
+import com.adaptor.deadrecall.network.TestCopperGolemLlmConnectionPayload;
+import com.adaptor.deadrecall.network.UpdateCopperGolemBindingLlmPayload;
 import com.adaptor.deadrecall.recipe.ModRecipes;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -20,7 +32,9 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
@@ -32,23 +46,38 @@ import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.phys.AABB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 public class Deadrecall implements ModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("DeadRecall");
     private static final int BOOKSHELF_REPLACE_INTERVAL_TICKS = 20;
+    private static final double DEATH_BACKPACK_COLLECTION_RADIUS = 10.0D;
+    private static final String TAG_DEATH_BACKPACK_ID = "deadrecall_death_backpack_id";
+    private static final Map<UUID, PendingDeathCollection> pendingDeathCollections = new HashMap<>();
+    private static final Set<UUID> scheduledDeathBackpackCollections = new HashSet<>();
     private static int bookshelfReplaceTicker = 0;
+    private static MinecraftServer discordStatusOpenServer = null;
 
     @Override
     public void onInitialize() {
-        // 註冊物品
+        // 註冊物品與方塊
+        ModBlocks.registerModBlocks();
+        ModBlockEntities.registerModBlockEntities();
         ModItems.registerModItems();
+        AlchemyHandler.register();
+        CopperGolemWrenchHandler.register();
         ModRecipes.registerModRecipes();
 
         // 初始化 Discord 橋接
@@ -63,8 +92,18 @@ public class Deadrecall implements ModInitializer {
                 ManageDiscordChannelPayload.TYPE, ManageDiscordChannelPayload.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(
                 SortBackpackPayload.TYPE, SortBackpackPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(
+                CopperGolemOperationPayload.TYPE, CopperGolemOperationPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(
+                SaveCopperGolemLlmConfigPayload.TYPE, SaveCopperGolemLlmConfigPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(
+                TestCopperGolemLlmConnectionPayload.TYPE, TestCopperGolemLlmConnectionPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(
+                UpdateCopperGolemBindingLlmPayload.TYPE, UpdateCopperGolemBindingLlmPayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(
                 DiscordConfigSyncPayload.TYPE, DiscordConfigSyncPayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(
+                CopperWrenchBindingsPayload.TYPE, CopperWrenchBindingsPayload.CODEC);
 
         // 收到客戶端請求時，回傳目前設定
         ServerPlayNetworking.registerGlobalReceiver(RequestDiscordConfigPayload.TYPE,
@@ -138,6 +177,61 @@ public class Deadrecall implements ModInitializer {
                     sortOpenContainer(player, payload.target());
                 }));
 
+        ServerPlayNetworking.registerGlobalReceiver(CopperGolemOperationPayload.TYPE,
+                (payload, context) -> context.server().execute(() ->
+                        CopperGolemWrenchHandler.setTransportEnabledFromUi(context.player(), payload.golemId(), payload.running())));
+
+        ServerPlayNetworking.registerGlobalReceiver(SaveCopperGolemLlmConfigPayload.TYPE,
+                (payload, context) -> context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    if (!canManageDiscordBridge(player)) {
+                        player.sendSystemMessage(Component.literal("§c你沒有權限修改 LLM API 設定！"));
+                        LOGGER.warn("[CopperGolemLLM] 玩家 {} 嘗試未授權修改設定", player.getName().getString());
+                        return;
+                    }
+
+                    CopperGolemWrenchHandler.setGolemLlmConfigFromUi(player, payload.golemId(), payload.apiUrl(), payload.apiKey(), payload.model());
+                    player.sendSystemMessage(Component.literal("§a銅魁儡 LLM API 設定已更新"));
+                }));
+
+        ServerPlayNetworking.registerGlobalReceiver(TestCopperGolemLlmConnectionPayload.TYPE,
+                (payload, context) -> context.server().execute(() -> {
+                    ServerPlayer player = context.player();
+                    if (!canManageDiscordBridge(player)) {
+                        player.sendSystemMessage(Component.literal("§c你沒有權限測試 LLM API 設定！"));
+                        LOGGER.warn("[CopperGolemLLM] 玩家 {} 嘗試未授權測試連線", player.getName().getString());
+                        return;
+                    }
+
+                    CopperGolemLlmService.testConnection(
+                            context.server(),
+                            player.getUUID(),
+                            payload.apiUrl(),
+                            payload.apiKey(),
+                            payload.model()
+                    );
+                }));
+
+        ServerPlayNetworking.registerGlobalReceiver(UpdateCopperGolemBindingLlmPayload.TYPE,
+                (payload, context) -> context.server().execute(() ->
+                        CopperGolemWrenchHandler.setBindingLlmFromUi(
+                                context.player(),
+                                payload.golemId(),
+                                payload.dimension(),
+                                payload.x(),
+                                payload.y(),
+                                payload.z(),
+                                payload.enabled(),
+                                payload.prompt()
+                        )));
+
+        ServerLivingEntityEvents.ALLOW_DEATH.register((entity, damageSource, damageAmount) -> {
+            if (entity instanceof ServerPlayer player) {
+                rememberExistingDropsBeforeDeath(player);
+            }
+            return true;
+        });
+
         // 註冊死亡背包功能 - 當玩家死亡時收集掉落物品
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
             if (entity instanceof ServerPlayer player) {
@@ -152,6 +246,17 @@ public class Deadrecall implements ModInitializer {
             String content = message.decoratedContent().getString();
             DiscordBridge.sendChatMessage(username, content);
         });
+
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            if (server.isDedicatedServer()) {
+                notifyServerOpened(server, false);
+            }
+        });
+        ServerLifecycleEvents.SERVER_STOPPING.register(server ->
+                notifyServerClosed(server, true));
+
+        // 清理銅魁儡失效綁定，並在整箱都無法分類時維持原地跳躍
+        ServerTickEvents.END_SERVER_TICK.register(CopperGolemWrenchHandler::tickCopperGolemWrenchState);
 
         // 生存模式不允許持有一般書櫃：統一替換為書本（每個書櫃 3 本）
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -180,7 +285,7 @@ public class Deadrecall implements ModInitializer {
                         return 0;
                     }
 
-                    ServerLevel world = (ServerLevel) player.level();
+                    ServerLevel world = context.getSource().getServer().getLevel(loc.dimension);
                     if (world == null) {
                         player.sendSystemMessage(Component.literal("§c找不到死亡世界！"));
                         return 0;
@@ -276,61 +381,155 @@ public class Deadrecall implements ModInitializer {
         });
     }
 
+    public static void notifyServerOpened(MinecraftServer server, boolean immediate) {
+        if (server == null) {
+            return;
+        }
+
+        synchronized (Deadrecall.class) {
+            if (discordStatusOpenServer == server) {
+                return;
+            }
+            discordStatusOpenServer = server;
+        }
+
+        sendDiscordServerStatus(server, "伺服器已開啟", 20.0D, immediate);
+    }
+
+    public static void notifyServerClosed(MinecraftServer server, boolean immediate) {
+        if (server == null) {
+            return;
+        }
+
+        synchronized (Deadrecall.class) {
+            if (discordStatusOpenServer != server) {
+                return;
+            }
+            discordStatusOpenServer = null;
+        }
+
+        sendDiscordServerStatus(server, "伺服器已關閉", 0.0D, immediate);
+    }
+
+    private static void sendDiscordServerStatus(MinecraftServer server, String status, double tps, boolean immediate) {
+        int playersOnline = server.getPlayerList().getPlayerCount();
+        int playersMax = server.getPlayerList().getMaxPlayers();
+        String version = server.getServerVersion();
+
+        if (immediate) {
+            DiscordBridge.sendServerStatusImmediately(status, playersOnline, playersMax, version, tps);
+        } else {
+            DiscordBridge.sendServerStatus(status, playersOnline, playersMax, version, tps);
+        }
+    }
+
     private void handlePlayerDeath(ServerPlayer player) {
         ServerLevel world = (ServerLevel) player.level();
         BlockPos deathPos = player.blockPosition();
+        UUID playerId = player.getUUID();
+        PendingDeathCollection pendingCollection = pendingDeathCollections.remove(playerId);
+        Set<UUID> existingDropIds = pendingCollection != null
+                && pendingCollection.dimension().equals(world.dimension())
+                ? pendingCollection.existingDropIds()
+                : Set.of();
+
+        if (!scheduledDeathBackpackCollections.add(playerId)) {
+            LOGGER.warn("Death backpack collection already scheduled for player {}, skipping duplicate", player.getName().getString());
+            return;
+        }
 
         LOGGER.info("Player {} died at {}, starting death backpack collection", player.getName().getString(), deathPos);
 
-        // 延遲 2 秒後收集掉落物品（給物品掉落時間）
+        // 延到掉落物生成後再收集。
         world.getServer().execute(() -> {
             world.getServer().execute(() -> {
-                LOGGER.info("Collecting dropped items for player {} at {}", player.getName().getString(), deathPos);
+                try {
+                    LOGGER.info("Collecting dropped items for player {} at {}", player.getName().getString(), deathPos);
 
-                // 收集死亡地點附近的掉落物品
-                AABB searchBox = new AABB(deathPos).inflate(10.0); // 搜尋範圍 10 格
-                List<ItemEntity> droppedItems = world.getEntitiesOfClass(ItemEntity.class, searchBox, entity -> true);
+                    // 收集本次死亡後新產生的掉落物，避免把死亡前地上的物品一起裝進死亡背包。
+                    AABB searchBox = new AABB(deathPos).inflate(DEATH_BACKPACK_COLLECTION_RADIUS);
+                    List<ItemEntity> droppedItems = world.getEntitiesOfClass(ItemEntity.class, searchBox,
+                            entity -> entity.isAlive() && !existingDropIds.contains(entity.getUUID()));
 
-                LOGGER.info("Found {} dropped items for player {}", droppedItems.size(), player.getName().getString());
+                    LOGGER.info("Found {} new dropped items for player {}", droppedItems.size(), player.getName().getString());
 
-                if (!droppedItems.isEmpty()) {
-                    // 創建死亡背包
-                    ItemStack deathBackpack = new ItemStack(ModItems.DEATH_BACKPACK);
-                    List<ItemStack> collectedItems = new ArrayList<>();
+                    if (!droppedItems.isEmpty()) {
+                        // 創建死亡背包
+                        ItemStack deathBackpack = new ItemStack(ModItems.DEATH_BACKPACK);
+                        markDeathBackpackUnique(deathBackpack);
+                        List<ItemStack> collectedItems = new ArrayList<>();
 
-                    // 收集物品並移除實體
-                    for (ItemEntity itemEntity : droppedItems) {
-                        collectedItems.add(itemEntity.getItem().copy());
-                        itemEntity.discard(); // 移除實體
-                        LOGGER.info("Collected item: {} x{}", itemEntity.getItem().getItem().getName(itemEntity.getItem()).getString(), itemEntity.getItem().getCount());
+                        // 收集物品並移除實體
+                        for (ItemEntity itemEntity : droppedItems) {
+                            ItemStack droppedStack = itemEntity.getItem();
+                            if (BackpackItemHelper.isBackpackItem(droppedStack)) {
+                                LOGGER.info("Skipped backpack item from death backpack collection: {} x{}",
+                                        droppedStack.getItem().getName(droppedStack).getString(),
+                                        droppedStack.getCount());
+                                continue;
+                            }
+
+                            if (droppedStack.isEmpty()) {
+                                continue;
+                            }
+
+                            collectedItems.add(droppedStack.copy());
+                            itemEntity.discard(); // 移除實體
+                            LOGGER.info("Collected item: {} x{}", droppedStack.getItem().getName(droppedStack).getString(), droppedStack.getCount());
+                        }
+
+                        // 將物品存儲到背包中
+                        if (!collectedItems.isEmpty()) {
+                            deathBackpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(collectedItems));
+
+                            // 在死亡地點生成背包實體
+                            ItemEntity backpackEntity = new ItemEntity(world,
+                                deathPos.getX() + 0.5, deathPos.getY() + 0.5, deathPos.getZ() + 0.5,
+                                deathBackpack);
+
+                            // 設置物品所有者，防止立即消失
+                            backpackEntity.setPickUpDelay(40); // 2 秒拾取延遲
+                            // 將死亡背包標記為不可被傷害/摧毀（例如仙人掌傷害）的一個額外保護
+                            backpackEntity.setUnlimitedLifetime();
+                            world.addFreshEntity(backpackEntity);
+
+                            LOGGER.info("Created death backpack for player {} with {} items at {}",
+                                player.getName().getString(), collectedItems.size(), deathPos);
+
+                            // 通知玩家
+                            player.sendSystemMessage(Component.literal("§e你的物品已被收集到死亡背包中！"));
+                        }
+                    } else {
+                        LOGGER.info("No new dropped items found for player {} at {}", player.getName().getString(), deathPos);
                     }
-
-                    // 將物品存儲到背包中
-                    if (!collectedItems.isEmpty()) {
-                        deathBackpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(collectedItems));
-
-                        // 在死亡地點生成背包實體
-                        ItemEntity backpackEntity = new ItemEntity(world,
-                            deathPos.getX() + 0.5, deathPos.getY() + 0.5, deathPos.getZ() + 0.5,
-                            deathBackpack);
-
-                        // 設置物品所有者，防止立即消失
-                        backpackEntity.setPickUpDelay(40); // 2 秒拾取延遲
-                        // 將死亡背包標記為不可被傷害/摧毀（例如仙人掌傷害）的一個額外保護
-                        backpackEntity.setUnlimitedLifetime();
-                        world.addFreshEntity(backpackEntity);
-
-                        LOGGER.info("Created death backpack for player {} with {} items at {}",
-                            player.getName().getString(), collectedItems.size(), deathPos);
-
-                        // 通知玩家
-                        player.sendSystemMessage(Component.literal("§e你的物品已被收集到死亡背包中！"));
-                    }
-                } else {
-                    LOGGER.info("No dropped items found for player {} at {}", player.getName().getString(), deathPos);
+                } finally {
+                    scheduledDeathBackpackCollections.remove(playerId);
                 }
             });
         });
+    }
+
+    private static void rememberExistingDropsBeforeDeath(ServerPlayer player) {
+        ServerLevel world = (ServerLevel) player.level();
+        BlockPos deathPos = player.blockPosition();
+        AABB searchBox = new AABB(deathPos).inflate(DEATH_BACKPACK_COLLECTION_RADIUS);
+        Set<UUID> existingDropIds = new HashSet<>();
+        for (ItemEntity itemEntity : world.getEntitiesOfClass(ItemEntity.class, searchBox, ItemEntity::isAlive)) {
+            existingDropIds.add(itemEntity.getUUID());
+        }
+        pendingDeathCollections.put(player.getUUID(), new PendingDeathCollection(world.dimension(), existingDropIds));
+    }
+
+    private static void markDeathBackpackUnique(ItemStack deathBackpack) {
+        CompoundTag tag = new CompoundTag();
+        tag.putString(TAG_DEATH_BACKPACK_ID, UUID.randomUUID().toString());
+        deathBackpack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+    }
+
+    private record PendingDeathCollection(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension, Set<UUID> existingDropIds) {
+        private PendingDeathCollection {
+            existingDropIds = Set.copyOf(existingDropIds);
+        }
     }
 
     private void replaceVanillaBookshelfInInventory(ServerPlayer player) {
@@ -406,9 +605,10 @@ public class Deadrecall implements ModInitializer {
 
     private boolean sortPlayerInventorySlots(AbstractContainerMenu menu, ServerPlayer player) {
         List<Integer> playerSlots = new ArrayList<>();
+        int nonEquipmentSlotCount = player.getInventory().getNonEquipmentItems().size();
         for (int i = 0; i < menu.slots.size(); i++) {
             Slot slot = menu.slots.get(i);
-            if (slot.container == player.getInventory()) {
+            if (slot.container == player.getInventory() && slot.getContainerSlot() < nonEquipmentSlotCount) {
                 playerSlots.add(i);
             }
         }

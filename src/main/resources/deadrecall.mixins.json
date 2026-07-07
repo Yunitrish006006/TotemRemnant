@@ -3,11 +3,17 @@
   "package": "com.adaptor.deadrecall.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "AbstractFurnaceBlockEntityAccessor",
     "EnchantmentHelperMixin",
     "EnchantmentMenuMixin",
     "EnchantingTableBlockMixin",
+    "HopperBlockEntityMixin",
+    "ItemEntityMixin",
+    "MinecraftServerPublishMixin",
+    "PigMixin",
     "RecipeManagerMixin",
     "StructureTemplateMixin",
+    "TransportItemsBetweenContainersMixin",
     "VillagerEntityMixin"
   ],
   "client": [],

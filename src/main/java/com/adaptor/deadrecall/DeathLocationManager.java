@@ -1,6 +1,7 @@
 package com.adaptor.deadrecall;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 
@@ -12,7 +13,7 @@ public class DeathLocationManager {
     private static final Map<UUID, DeathLocation> deathLocations = new HashMap<>();
 
     public static void setDeathLocation(ServerPlayer player, BlockPos pos, Level world) {
-        deathLocations.put(player.getUUID(), new DeathLocation(pos, world.dimension().toString()));
+        deathLocations.put(player.getUUID(), new DeathLocation(pos, world.dimension()));
     }
 
     public static DeathLocation getDeathLocation(ServerPlayer player) {
@@ -25,10 +26,11 @@ public class DeathLocationManager {
 
     public static class DeathLocation {
         public final BlockPos pos;
-        public final String worldRegistryKey;
-        public DeathLocation(BlockPos pos, String worldRegistryKey) {
+        public final ResourceKey<Level> dimension;
+
+        public DeathLocation(BlockPos pos, ResourceKey<Level> dimension) {
             this.pos = pos;
-            this.worldRegistryKey = worldRegistryKey;
+            this.dimension = dimension;
         }
     }
 }

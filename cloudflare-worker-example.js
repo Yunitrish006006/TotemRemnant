@@ -196,14 +196,88 @@ export default {
 
                 const { status, players_online, players_max, version, tps } = await request.json();
 
+                if (!status) {
+                    return new Response(JSON.stringify({
+                        success: false,
+                        error: 'Missing status'
+                    }), {
+                        status: 400,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...corsHeaders
+                        }
+                    });
+                }
+
                 console.log(`伺服器狀態更新 - 狀態: ${status}, 玩家: ${players_online}/${players_max}, TPS: ${tps}`);
 
-                // 這裡可以實作狀態更新的邏輯
-                // 例如：更新 Discord 狀態頻道、發送通知等
+                let webhookUrls = [];
+                try {
+                    webhookUrls = JSON.parse(env.DISCORD_WEBHOOK_URLS || '[]');
+                } catch (e) {
+                    console.error('解析 DISCORD_WEBHOOK_URLS 失敗:', e);
+                    return new Response(JSON.stringify({
+                        success: false,
+                        error: 'Worker configuration error: Invalid DISCORD_WEBHOOK_URLS'
+                    }), {
+                        status: 500,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...corsHeaders
+                        }
+                    });
+                }
+
+                if (!Array.isArray(webhookUrls) || webhookUrls.length === 0) {
+                    console.error('沒有設定 Discord Webhook URLs');
+                    return new Response(JSON.stringify({
+                        success: false,
+                        error: 'No Discord webhooks configured'
+                    }), {
+                        status: 500,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...corsHeaders
+                        }
+                    });
+                }
+
+                const playerText = `${players_online ?? 0}/${players_max ?? 0}`;
+                const discordBody = {
+                    content: `**${status}**\n玩家：${playerText}\n版本：${version || 'unknown'}\nTPS：${tps ?? 0}`,
+                    username: "Minecraft Server",
+                };
+
+                const results = await Promise.allSettled(
+                    webhookUrls.map(async (webhookUrl, index) => {
+                        const response = await fetch(webhookUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(discordBody)
+                        });
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error(`狀態 Webhook ${index + 1} 失敗 (${response.status}):`, errorText);
+                            throw new Error(`HTTP ${response.status}: ${errorText}`);
+                        }
+
+                        return { success: true, index };
+                    })
+                );
+
+                const sent = results.filter(r => r.status === 'fulfilled').length;
+                const failed = results.filter(r => r.status === 'rejected').length;
 
                 return new Response(JSON.stringify({
                     success: true,
-                    message: 'Status received'
+                    data: {
+                        sent,
+                        failed,
+                        total: webhookUrls.length
+                    }
                 }), {
                     headers: {
                         'Content-Type': 'application/json',

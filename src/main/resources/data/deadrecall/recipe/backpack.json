@@ -1,16 +1,9 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "LLL",
-    "LCL",
-    "LLL"
-  ],
-  "key": {
-    "L": "minecraft:leather",
-    "C": "minecraft:chest"
-  },
+  "type": "minecraft:smithing_transform",
+  "addition": "minecraft:leather",
+  "base": "minecraft:bundle",
+  "template": "minecraft:bundle",
   "result": {
-    "id": "deadrecall:backpack_basic",
-    "count": 1
+    "id": "deadrecall:backpack_basic"
   }
 }

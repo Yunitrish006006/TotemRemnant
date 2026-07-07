@@ -1,12 +1,14 @@
 package com.adaptor.deadrecall.inventory;
 
 import com.adaptor.deadrecall.item.DeathBackpackItem;
+import com.adaptor.deadrecall.item.BackpackItemHelper;
 import com.adaptor.deadrecall.item.TieredBackpackItem;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.ContainerUser;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -20,6 +22,7 @@ public class BackpackInventory implements Container {
     private final NonNullList<ItemStack> items;
     private final Player player;
     private final InteractionHand hand;
+    private final ItemStack backpackStack;
     private final int size;
 
     public BackpackInventory(Player player, InteractionHand hand, TieredBackpackItem.BackpackTier tier) {
@@ -30,13 +33,14 @@ public class BackpackInventory implements Container {
     public BackpackInventory(Player player, InteractionHand hand, int size) {
         this.player = player;
         this.hand = hand;
+        this.backpackStack = player.getItemInHand(hand);
         this.size = size;
         this.items = NonNullList.withSize(size, ItemStack.EMPTY);
         loadFromStack();
     }
 
     public ItemStack getBackpackStack() {
-        return player.getItemInHand(hand);
+        return isTrackedBackpackStack() ? backpackStack : ItemStack.EMPTY;
     }
 
     @Override
@@ -95,21 +99,18 @@ public class BackpackInventory implements Container {
     @Override
     public void setChanged() {
         saveToStack();
-        // 檢查是否是空的死亡背包，如果是則立即移除
-        ItemStack backpackStack = getBackpackStack();
-        if (!backpackStack.isEmpty() && backpackStack.getItem() instanceof DeathBackpackItem && isEmpty()) {
-            // 移除空的死亡背包
-            if (hand == InteractionHand.MAIN_HAND) {
-                player.getInventory().setSelectedItem(ItemStack.EMPTY);
-            } else {
-                player.getInventory().setItem(Inventory.SLOT_OFFHAND, ItemStack.EMPTY);
-            }
-        }
     }
 
     @Override
     public boolean stillValid(Player player) {
-        return player == this.player && !getBackpackStack().isEmpty();
+        return player == this.player && isTrackedBackpackStack() && playerHasTrackedBackpackStack();
+    }
+
+    @Override
+    public void stopOpen(ContainerUser user) {
+        if (user instanceof Player closingPlayer) {
+            onClose(closingPlayer);
+        }
     }
 
     @Override
@@ -135,8 +136,7 @@ public class BackpackInventory implements Container {
     }
 
     private void saveToStack() {
-        ItemStack backpackStack = getBackpackStack();
-        if (backpackStack != null && !backpackStack.isEmpty()) {
+        if (isTrackedBackpackStack()) {
             List<ItemStack> toSave = new ArrayList<>(items.size());
             for (ItemStack item : items) {
                 toSave.add(item.copy());
@@ -146,16 +146,7 @@ public class BackpackInventory implements Container {
     }
 
     public void onClose(Player player) {
-        // 檢查是否是死亡背包且為空
-        ItemStack backpackStack = getBackpackStack();
-        if (!backpackStack.isEmpty() && backpackStack.getItem() instanceof DeathBackpackItem && isEmpty()) {
-            // 移除空的死亡背包
-            if (hand == InteractionHand.MAIN_HAND) {
-                player.getInventory().setSelectedItem(ItemStack.EMPTY);
-            } else {
-                player.getInventory().setItem(Inventory.SLOT_OFFHAND, ItemStack.EMPTY);
-            }
-        }
+        removeEmptyDeathBackpack();
     }
 
     public void sortContents() {
@@ -204,5 +195,42 @@ public class BackpackInventory implements Container {
     @Override
     public ItemStack getItem(int slot) {
         return items.get(slot);
+    }
+
+    private boolean isTrackedBackpackStack() {
+        return !backpackStack.isEmpty() && BackpackItemHelper.isBackpackItem(backpackStack);
+    }
+
+    private boolean playerHasTrackedBackpackStack() {
+        Inventory inventory = player.getInventory();
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            if (inventory.getItem(slot) == backpackStack) {
+                return true;
+            }
+        }
+        return player.getItemInHand(hand) == backpackStack;
+    }
+
+    private void removeEmptyDeathBackpack() {
+        if (!(backpackStack.getItem() instanceof DeathBackpackItem) || !isEmpty()) {
+            return;
+        }
+
+        Inventory inventory = player.getInventory();
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            if (inventory.getItem(slot) == backpackStack) {
+                inventory.setItem(slot, ItemStack.EMPTY);
+                inventory.setChanged();
+                return;
+            }
+        }
+
+        if (hand == InteractionHand.MAIN_HAND && player.getItemInHand(InteractionHand.MAIN_HAND) == backpackStack) {
+            inventory.setSelectedItem(ItemStack.EMPTY);
+            inventory.setChanged();
+        } else if (hand == InteractionHand.OFF_HAND && player.getItemInHand(InteractionHand.OFF_HAND) == backpackStack) {
+            inventory.setItem(Inventory.SLOT_OFFHAND, ItemStack.EMPTY);
+            inventory.setChanged();
+        }
     }
 }

@@ -253,27 +253,53 @@ public class DiscordBridge {
     public static void sendServerStatus(String status, int playersOnline, int playersMax, String version, double tps) {
         if (!enabled) return;
 
-        EXECUTOR.submit(() -> {
-            try {
-                String json = String.format("{\"status\":\"%s\",\"players_online\":\"%d\",\"players_max\":\"%d\",\"version\":\"%s\",\"tps\":\"%.1f\",\"channels\":%s}",
-                        escapeJson(status), (Object) playersOnline, (Object) playersMax, escapeJson(version), (Object) tps, channelsToJson()
-                );
+        EXECUTOR.submit(() -> postServerStatus(status, playersOnline, playersMax, version, tps));
+    }
 
-                HttpURLConnection conn = (HttpURLConnection) new URL(workerUrl + "/api/mc/server/status").openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setRequestProperty("X-API-Key", apiKey);
-                conn.setDoOutput(true);
-                conn.setConnectTimeout(5000);
-                conn.setReadTimeout(5000);
+    /**
+     * 回報伺服器狀態到 Discord（同步，供關閉流程使用）
+     */
+    public static void sendServerStatusImmediately(String status, int playersOnline, int playersMax, String version, double tps) {
+        if (!enabled) return;
 
-                conn.getOutputStream().write(json.getBytes(StandardCharsets.UTF_8));
-                conn.getResponseCode();
-                conn.disconnect();
-            } catch (Exception e) {
-                Deadrecall.LOGGER.warn("[DiscordBridge] 回報狀態失敗: {}", e.getMessage());
+        postServerStatus(status, playersOnline, playersMax, version, tps);
+    }
+
+    private static void postServerStatus(String status, int playersOnline, int playersMax, String version, double tps) {
+        try {
+            String json = String.format(Locale.ROOT,
+                    "{\"status\":\"%s\",\"players_online\":%d,\"players_max\":%d,\"version\":\"%s\",\"tps\":%.1f,\"channels\":%s}",
+                    escapeJson(status), playersOnline, playersMax, escapeJson(version), tps, channelsToJson()
+            );
+
+            String url = workerUrl + "/api/mc/server/status";
+            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("X-API-Key", apiKey);
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+
+            conn.getOutputStream().write(json.getBytes(StandardCharsets.UTF_8));
+
+            int responseCode = conn.getResponseCode();
+            InputStream responseStream = (responseCode >= 200 && responseCode < 300)
+                    ? conn.getInputStream()
+                    : conn.getErrorStream();
+            String responseBody = responseStream != null
+                    ? new String(responseStream.readAllBytes(), StandardCharsets.UTF_8)
+                    : "N/A";
+
+            if (responseCode >= 200 && responseCode < 300) {
+                Deadrecall.LOGGER.info("[DiscordBridge] 狀態回報成功 (HTTP {}): {}", responseCode, responseBody);
+            } else {
+                Deadrecall.LOGGER.warn("[DiscordBridge] 狀態回報失敗 (HTTP {}): {}", responseCode, responseBody);
             }
-        });
+            conn.disconnect();
+        } catch (Exception e) {
+            Deadrecall.LOGGER.warn("[DiscordBridge] 回報狀態失敗: {}", e.getMessage());
+        }
     }
 
     /**

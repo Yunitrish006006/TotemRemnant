@@ -1,6 +1,7 @@
 package com.adaptor.deadrecall.client;
 
 import com.adaptor.deadrecall.network.DiscordConfigSyncPayload;
+import com.adaptor.deadrecall.network.CopperWrenchBindingsPayload;
 import com.adaptor.deadrecall.network.RequestDiscordConfigPayload;
 import com.adaptor.deadrecall.network.SortBackpackPayload;
 import net.fabricmc.api.ClientModInitializer;
@@ -58,6 +59,19 @@ public class DeadrecallClient implements ClientModInitializer {
                         if (screen != null) {
                             screen.applyServerConfig(payload.enabled(), payload.workerUrl(), payload.apiKey());
                             screen.applyChannels(payload.channels());
+                        }
+                    });
+                });
+
+        ClientPlayNetworking.registerGlobalReceiver(CopperWrenchBindingsPayload.TYPE,
+                (payload, context) -> {
+                    net.minecraft.client.Minecraft mc = context.client();
+                    mc.execute(() -> {
+                        CopperWrenchBindingsScreen screen = CopperWrenchBindingsScreen.CURRENT;
+                        if (screen != null && screen.isFor(payload.golemId())) {
+                            screen.applyPayload(payload);
+                        } else {
+                            mc.setScreenAndShow(new CopperWrenchBindingsScreen(payload));
                         }
                     });
                 });

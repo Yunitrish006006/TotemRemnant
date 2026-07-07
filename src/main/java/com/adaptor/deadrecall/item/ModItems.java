@@ -1,6 +1,7 @@
 package com.adaptor.deadrecall.item;
 
 import com.adaptor.deadrecall.Deadrecall;
+import com.adaptor.deadrecall.item.copper.CopperWrenchItem;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -31,6 +32,12 @@ public class ModItems {
     public static final Item SALTPETER = registerItem("saltpeter",
             props -> new Item(props));
 
+    public static final Item PIG_MANURE = registerItem("pig_manure",
+            props -> new Item(props));
+
+    public static final Item WOOD_ASH = registerItem("wood_ash",
+            props -> new Item(props));
+
     // 合成器皿（缽）：可對硫磺方塊右鍵填充
     public static final Item STONE_BOWL = registerItem("stone_bowl",
             props -> new StoneBowlItem(props.stacksTo(1)));
@@ -38,6 +45,9 @@ public class ModItems {
     // 帶硫磺的缽：作為火藥配方材料，合成後回傳缽
     public static final Item SULFUR_BOWL = registerItem("sulfur_bowl",
             props -> new Item(props.stacksTo(1).craftRemainder(STONE_BOWL)));
+
+    public static final Item COPPER_WRENCH = registerItem("copper_wrench",
+            props -> new CopperWrenchItem(props.stacksTo(1)));
 
     // 舊版物品 ID 相容（deadrecall:backpack）
     @Deprecated

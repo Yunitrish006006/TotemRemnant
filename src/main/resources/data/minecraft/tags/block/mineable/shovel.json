@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "deadrecall:pig_manure_dirt",
+    "deadrecall:pig_manure_grass_block",
+    "deadrecall:pig_manure_coarse_dirt",
+    "deadrecall:pig_manure_rooted_dirt",
+    "deadrecall:pig_manure_podzol",
+    "deadrecall:pig_manure_mycelium",
+    "deadrecall:pig_manure_mud"
+  ]
+}
