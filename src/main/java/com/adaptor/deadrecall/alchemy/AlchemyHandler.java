@@ -4,22 +4,24 @@ import com.adaptor.deadrecall.block.ModBlocks;
 import com.adaptor.deadrecall.block.entity.AlchemyCauldronBlockEntity;
 import com.adaptor.deadrecall.item.ModItems;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.LayeredCauldronBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -31,13 +33,18 @@ public final class AlchemyHandler {
     private AlchemyHandler() {
     }
 
-    public enum AlchemyIngredient {
-        WOOD_ASH,
-        MUSHROOM,
-        PIG_MANURE
-    }
-
     public static void register() {
+        AlchemyCauldronRecipes.registerReloadListener();
+
+        AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
+            if (player.isSpectator()) {
+                return InteractionResult.PASS;
+            }
+
+            ItemStack stack = player.getItemInHand(hand);
+            return tryHarvestPigManure(player, world, hand, stack, pos);
+        });
+
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
             if (player.isSpectator()) {
                 return InteractionResult.PASS;
@@ -45,30 +52,26 @@ public final class AlchemyHandler {
 
             BlockPos pos = hitResult.getBlockPos();
             ItemStack stack = player.getItemInHand(hand);
-
-            InteractionResult manureResult = tryHarvestPigManure(player, world, hand, stack, pos);
-            if (manureResult != InteractionResult.PASS) {
-                return manureResult;
-            }
-
-            AlchemyIngredient ingredient = getIngredient(stack);
-            if (ingredient == null) {
+            if (stack.isEmpty()) {
                 return InteractionResult.PASS;
             }
 
             if (world.isClientSide()) {
-                return canAcceptIngredient(world, pos, ingredient) ? InteractionResult.SUCCESS : InteractionResult.PASS;
+                return canApplyAlchemyItem(world, pos, stack, false)
+                        ? InteractionResult.SUCCESS
+                        : InteractionResult.PASS;
             }
 
-            if (tryAddIngredient((ServerLevel) world, pos, ingredient)) {
-                if (!player.getAbilities().instabuild) {
-                    stack.shrink(1);
-                }
-                player.sendOverlayMessage(Component.translatable("message.deadrecall.alchemy.ingredient_added"));
-                return InteractionResult.SUCCESS;
+            CauldronAction action = tryApplyAlchemyItem((ServerLevel) world, pos, stack, false);
+            if (action == null) {
+                return InteractionResult.PASS;
             }
 
-            return InteractionResult.PASS;
+            replaceConsumedItem(player, hand, stack, action.output());
+            if (action.messageKey() != null && !action.messageKey().isBlank()) {
+                player.sendOverlayMessage(Component.translatable(action.messageKey()));
+            }
+            return InteractionResult.SUCCESS;
         });
 
         ServerTickEvents.END_SERVER_TICK.register(AlchemyHandler::tickDroppedIngredients);
@@ -114,13 +117,17 @@ public final class AlchemyHandler {
                 }
 
                 ItemStack stack = itemEntity.getItem();
-                AlchemyIngredient ingredient = getIngredient(stack);
-                if (ingredient == null) {
+                if (stack.isEmpty()) {
                     continue;
                 }
 
-                BlockPos cauldronPos = findCauldronForDroppedItem(level, itemEntity);
-                if (cauldronPos == null || !tryAddIngredient(level, cauldronPos, ingredient)) {
+                BlockPos cauldronPos = findCauldronForDroppedItem(level, itemEntity, stack);
+                if (cauldronPos == null) {
+                    continue;
+                }
+
+                CauldronAction action = tryApplyAlchemyItem(level, cauldronPos, stack, true);
+                if (action == null) {
                     continue;
                 }
 
@@ -131,77 +138,170 @@ public final class AlchemyHandler {
                     itemEntity.setItem(stack);
                     itemEntity.setPickUpDelay(20);
                 }
+
+                if (!action.output().isEmpty()) {
+                    spawnItem(level, cauldronPos, action.output());
+                }
             }
         }
     }
 
-    private static BlockPos findCauldronForDroppedItem(ServerLevel level, ItemEntity itemEntity) {
+    private static BlockPos findCauldronForDroppedItem(ServerLevel level, ItemEntity itemEntity, ItemStack stack) {
         BlockPos pos = itemEntity.blockPosition();
-        if (canAcceptAnyIngredient(level, pos)) {
+        if (canApplyAlchemyItem(level, pos, stack, true)) {
             return pos;
         }
 
         BlockPos below = pos.below();
-        if (canAcceptAnyIngredient(level, below)) {
+        if (canApplyAlchemyItem(level, below, stack, true)) {
             return below;
         }
         return null;
     }
 
-    private static boolean canAcceptAnyIngredient(Level level, BlockPos pos) {
-        return canAcceptIngredient(level, pos, AlchemyIngredient.WOOD_ASH)
-                || canAcceptIngredient(level, pos, AlchemyIngredient.MUSHROOM)
-                || canAcceptIngredient(level, pos, AlchemyIngredient.PIG_MANURE);
-    }
-
-    private static boolean canAcceptIngredient(Level level, BlockPos pos, AlchemyIngredient ingredient) {
-        BlockState state = level.getBlockState(pos);
-        if (state.is(Blocks.WATER_CAULDRON)) {
-            return state.getValue(LayeredCauldronBlock.LEVEL) == LayeredCauldronBlock.MAX_FILL_LEVEL
-                    && hasLitCampfireBelow(level, pos);
+    private static boolean canApplyAlchemyItem(Level level, BlockPos pos, ItemStack stack, boolean dropped) {
+        if (findExtractionRecipe(level, pos, stack) != null) {
+            return true;
         }
-        return state.is(ModBlocks.ALCHEMY_CAULDRON)
-                && hasLitCampfireBelow(level, pos)
-                && level.getBlockEntity(pos) instanceof AlchemyCauldronBlockEntity cauldron
-                && cauldron.canAddIngredient(ingredient);
+        return findIngredientMatch(level, pos, stack, dropped) != null;
     }
 
-    private static boolean tryAddIngredient(ServerLevel level, BlockPos pos, AlchemyIngredient ingredient) {
+    private static CauldronAction tryApplyAlchemyItem(ServerLevel level, BlockPos pos, ItemStack stack, boolean dropped) {
+        AlchemyCauldronRecipe extractionRecipe = findExtractionRecipe(level, pos, stack);
+        if (extractionRecipe != null) {
+            BlockEntity blockEntity = level.getBlockEntity(pos);
+            if (blockEntity instanceof AlchemyCauldronBlockEntity cauldron
+                    && cauldron.extractBottledResult(extractionRecipe, level, pos, level.getBlockState(pos), stack)) {
+                playSound(level, pos, extractionRecipe.result().sound(), 1.0F, 1.0F);
+                return new CauldronAction(extractionRecipe.createResultStack(), extractionRecipe.result().messageKey());
+            }
+        }
+
+        IngredientMatch match = findIngredientMatch(level, pos, stack, dropped);
+        if (match == null) {
+            return null;
+        }
+
+        AlchemyCauldronBlockEntity cauldron = ensureAlchemyCauldron(level, pos, match.recipe());
+        if (cauldron == null || !cauldron.addIngredient(match.recipe(), match.ingredient())) {
+            return null;
+        }
+
+        playSound(level, pos, match.ingredient().soundOrDefault(match.recipe().defaultAddSound()), 0.8F, 1.0F);
+        return new CauldronAction(
+                match.ingredient().createRemainderStack(),
+                match.ingredient().messageOrDefault(match.recipe().defaultMessageKey())
+        );
+    }
+
+    private static AlchemyCauldronBlockEntity ensureAlchemyCauldron(ServerLevel level, BlockPos pos, AlchemyCauldronRecipe recipe) {
         BlockState state = level.getBlockState(pos);
-        if (state.is(Blocks.WATER_CAULDRON)) {
-            if (state.getValue(LayeredCauldronBlock.LEVEL) != LayeredCauldronBlock.MAX_FILL_LEVEL
-                    || !hasLitCampfireBelow(level, pos)) {
-                return false;
+        if (!state.is(ModBlocks.ALCHEMY_CAULDRON)) {
+            if (!recipe.canStartFrom(state)) {
+                return null;
             }
             BlockState alchemyState = ModBlocks.ALCHEMY_CAULDRON.defaultBlockState()
-                    .setValue(LayeredCauldronBlock.LEVEL, state.getValue(LayeredCauldronBlock.LEVEL));
+                    .setValue(LayeredCauldronBlock.LEVEL, recipe.initialLevel());
             level.setBlock(pos, alchemyState, 3);
-        } else if (!state.is(ModBlocks.ALCHEMY_CAULDRON) || !hasLitCampfireBelow(level, pos)) {
-            return false;
         }
 
         BlockEntity blockEntity = level.getBlockEntity(pos);
-        if (!(blockEntity instanceof AlchemyCauldronBlockEntity cauldron)) {
-            return false;
-        }
-
-        boolean added = cauldron.addIngredient(ingredient);
-        if (added) {
-            level.playSound(null, pos, SoundEvents.BREWING_STAND_BREW, SoundSource.BLOCKS, 0.7F, 1.0F);
-        }
-        return added;
+        return blockEntity instanceof AlchemyCauldronBlockEntity cauldron ? cauldron : null;
     }
 
-    private static AlchemyIngredient getIngredient(ItemStack stack) {
-        if (stack.is(ModItems.WOOD_ASH)) {
-            return AlchemyIngredient.WOOD_ASH;
+    private static AlchemyCauldronRecipe findExtractionRecipe(Level level, BlockPos pos, ItemStack stack) {
+        if (!level.getBlockState(pos).is(ModBlocks.ALCHEMY_CAULDRON)) {
+            return null;
         }
-        if (stack.is(ModItems.PIG_MANURE)) {
-            return AlchemyIngredient.PIG_MANURE;
+
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (!(blockEntity instanceof AlchemyCauldronBlockEntity cauldron) || cauldron.getRecipeId() == null) {
+            return null;
         }
-        if (stack.is(Items.BROWN_MUSHROOM) || stack.is(Items.RED_MUSHROOM)) {
-            return AlchemyIngredient.MUSHROOM;
+
+        AlchemyCauldronRecipe recipe = AlchemyCauldronRecipes.get(cauldron.getRecipeId());
+        if (cauldron.canExtractBottledResult(recipe, stack)) {
+            return recipe;
         }
         return null;
+    }
+
+    private static IngredientMatch findIngredientMatch(Level level, BlockPos pos, ItemStack stack, boolean dropped) {
+        BlockState state = level.getBlockState(pos);
+        if (state.is(ModBlocks.ALCHEMY_CAULDRON)) {
+            BlockEntity blockEntity = level.getBlockEntity(pos);
+            if (!(blockEntity instanceof AlchemyCauldronBlockEntity cauldron) || cauldron.getRecipeId() == null) {
+                return null;
+            }
+
+            AlchemyCauldronRecipe recipe = AlchemyCauldronRecipes.get(cauldron.getRecipeId());
+            if (recipe == null) {
+                return null;
+            }
+
+            AlchemyCauldronRecipe.IngredientStep ingredient = recipe.findIngredient(stack, dropped);
+            if (cauldron.canAddIngredient(recipe, ingredient)) {
+                return new IngredientMatch(recipe, ingredient);
+            }
+            return null;
+        }
+
+        for (AlchemyCauldronRecipe recipe : AlchemyCauldronRecipes.all()) {
+            if (recipe.requiresLitCampfire() && !hasLitCampfireBelow(level, pos)) {
+                continue;
+            }
+            if (!recipe.canStartFrom(state)) {
+                continue;
+            }
+            AlchemyCauldronRecipe.IngredientStep ingredient = recipe.findIngredient(stack, dropped);
+            if (ingredient != null && ingredient.canStartRecipe()) {
+                return new IngredientMatch(recipe, ingredient);
+            }
+        }
+        return null;
+    }
+
+    private static void replaceConsumedItem(Player player, InteractionHand hand, ItemStack consumedStack, ItemStack replacement) {
+        if (player.getAbilities().instabuild) {
+            if (!replacement.isEmpty()) {
+                ItemStack copy = replacement.copy();
+                if (!player.getInventory().add(copy)) {
+                    player.drop(copy, false);
+                }
+            }
+            return;
+        }
+
+        consumedStack.shrink(1);
+        if (consumedStack.isEmpty()) {
+            player.setItemInHand(hand, replacement);
+            return;
+        }
+
+        if (!replacement.isEmpty()) {
+            ItemStack copy = replacement.copy();
+            if (!player.getInventory().add(copy)) {
+                player.drop(copy, false);
+            }
+        }
+    }
+
+    private static void spawnItem(ServerLevel level, BlockPos pos, ItemStack stack) {
+        ItemEntity output = new ItemEntity(level, pos.getX() + 0.5D, pos.getY() + 1.05D, pos.getZ() + 0.5D, stack.copy());
+        output.setDeltaMovement(0.0D, 0.05D, 0.0D);
+        level.addFreshEntity(output);
+    }
+
+    private static void playSound(ServerLevel level, BlockPos pos, Identifier soundId, float volume, float pitch) {
+        SoundEvent sound = AlchemyCauldronRecipes.getSound(soundId);
+        if (sound != null) {
+            level.playSound(null, pos, sound, SoundSource.BLOCKS, volume, pitch);
+        }
+    }
+
+    private record IngredientMatch(AlchemyCauldronRecipe recipe, AlchemyCauldronRecipe.IngredientStep ingredient) {
+    }
+
+    private record CauldronAction(ItemStack output, String messageKey) {
     }
 }

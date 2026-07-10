@@ -5,7 +5,9 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "OptionsMixin",
-    "AbstractContainerScreenMixin"
+    "AbstractContainerScreenMixin",
+    "ItemEntityRenderStateMixin",
+    "ItemEntityRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

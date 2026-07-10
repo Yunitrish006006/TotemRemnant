@@ -1,6 +1,7 @@
 package com.adaptor.deadrecall.client;
 
 import com.adaptor.deadrecall.network.CopperGolemOperationPayload;
+import com.adaptor.deadrecall.network.CopperGolemFuelSlotPayload;
 import com.adaptor.deadrecall.network.CopperWrenchBindingsPayload;
 import com.adaptor.deadrecall.network.SaveCopperGolemLlmConfigPayload;
 import com.adaptor.deadrecall.network.TestCopperGolemLlmConnectionPayload;
@@ -37,6 +38,9 @@ public class CopperWrenchBindingsScreen extends Screen {
 
     private UUID golemId;
     private boolean running;
+    private String fuelItemId;
+    private int fuelCount;
+    private int fuelTicks;
     private String llmApiUrl;
     private String llmApiKey;
     private String llmModel;
@@ -61,6 +65,9 @@ public class CopperWrenchBindingsScreen extends Screen {
         super(Component.translatable("container.deadrecall.copper_wrench.bindings"));
         this.golemId = payload.golemId();
         this.running = payload.running();
+        this.fuelItemId = payload.fuelItemId();
+        this.fuelCount = payload.fuelCount();
+        this.fuelTicks = payload.fuelTicks();
         this.llmApiUrl = payload.llmApiUrl();
         this.llmApiKey = payload.llmApiKey();
         this.llmModel = payload.llmModel();
@@ -84,6 +91,9 @@ public class CopperWrenchBindingsScreen extends Screen {
     public void applyPayload(CopperWrenchBindingsPayload payload) {
         this.golemId = payload.golemId();
         this.running = payload.running();
+        this.fuelItemId = payload.fuelItemId();
+        this.fuelCount = payload.fuelCount();
+        this.fuelTicks = payload.fuelTicks();
         this.llmApiUrl = payload.llmApiUrl();
         this.llmApiKey = payload.llmApiKey();
         this.llmModel = payload.llmModel();
@@ -182,6 +192,7 @@ public class CopperWrenchBindingsScreen extends Screen {
         extractor.outline(panelX, panelY, panelWidth, panelHeight, 0xFF6A6A6A);
         extractor.text(this.font, this.title, panelX + PANEL_PADDING, panelY + 9, 0xFFFFFFFF);
         extractor.text(this.font, operationStatusText(), panelX + panelWidth - PANEL_PADDING - 162, panelY + 12, operationStatusColor());
+        drawFuelSlot(extractor, mouseX, mouseY);
 
         if (this.activeTab == Tab.BINDINGS) {
             drawBindingsTab(extractor, mouseX, mouseY);
@@ -194,6 +205,11 @@ public class CopperWrenchBindingsScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (isFuelSlotAt(event.x(), event.y())) {
+            clickFuelSlot(event.button());
+            return true;
+        }
+
         if (this.activeTab == Tab.BINDINGS) {
             int index = bindingIndexAt(event.x(), event.y());
             if (index >= 0) {
@@ -209,6 +225,15 @@ public class CopperWrenchBindingsScreen extends Screen {
         }
 
         return super.mouseClicked(event, doubleClick);
+    }
+
+    private void clickFuelSlot(int button) {
+        CopperGolemFuelSlotPayload.Action action = button == 1
+                ? CopperGolemFuelSlotPayload.Action.TAKE_ALL
+                : CopperGolemFuelSlotPayload.Action.INSERT_MAIN_HAND;
+        if (ClientPlayNetworking.canSend(CopperGolemFuelSlotPayload.TYPE)) {
+            ClientPlayNetworking.send(new CopperGolemFuelSlotPayload(this.golemId, action));
+        }
     }
 
     @Override
@@ -541,13 +566,76 @@ public class CopperWrenchBindingsScreen extends Screen {
     }
 
     private Component operationStatusText() {
+        if (this.running && !hasFuelAvailable()) {
+            return Component.translatable("message.deadrecall.copper_wrench.operation_no_fuel");
+        }
         return Component.translatable(this.running
                 ? "message.deadrecall.copper_wrench.operation_running"
                 : "message.deadrecall.copper_wrench.operation_stopped");
     }
 
     private int operationStatusColor() {
+        if (this.running && !hasFuelAvailable()) {
+            return 0xFFFFC857;
+        }
         return this.running ? 0xFF64D26D : 0xFFFF6B6B;
+    }
+
+    private boolean hasFuelAvailable() {
+        return this.fuelTicks > 0 || hasFuelItem();
+    }
+
+    private boolean hasFuelItem() {
+        return this.fuelCount > 0
+                && this.minecraft != null
+                && this.minecraft.level != null
+                && this.minecraft.level.fuelValues().isFuel(iconStack(this.fuelItemId));
+    }
+
+    private void drawFuelSlot(GuiGraphicsExtractor extractor, int mouseX, int mouseY) {
+        int slotX = fuelSlotX();
+        int slotY = fuelSlotY();
+        int labelX = slotX - 74;
+
+        if (labelX > panelX() + PANEL_PADDING + 150) {
+            extractor.text(this.font, Component.translatable("message.deadrecall.copper_wrench.fuel_slot"), labelX, slotY + 2, 0xFFE0E0E0);
+            extractor.text(this.font, fuelTicksText(), labelX, slotY + 13, 0xFFB8B8B8);
+        }
+
+        extractor.fill(slotX, slotY, slotX + 20, slotY + 20, 0xB0000000);
+        extractor.outline(slotX, slotY, 20, 20, hasFuelAvailable() ? 0xFFE2C15A : 0xFF777777);
+        if (this.fuelCount > 0) {
+            extractor.item(iconStack(this.fuelItemId), slotX + 2, slotY + 2);
+            extractor.text(this.font, String.valueOf(this.fuelCount), slotX + 11, slotY + 12, 0xFFFFFFFF);
+        } else {
+            extractor.item(new ItemStack(Items.COAL), slotX + 2, slotY + 2);
+            extractor.fill(slotX + 2, slotY + 2, slotX + 18, slotY + 18, 0x90000000);
+        }
+
+        if (this.fuelTicks > 0) {
+            int barWidth = Math.max(1, Math.min(18, this.fuelTicks * 18 / 1600));
+            extractor.fill(slotX + 1, slotY + 18, slotX + 1 + barWidth, slotY + 19, 0xFFFFB238);
+        }
+
+        if (isFuelSlotAt(mouseX, mouseY)) {
+            extractor.setComponentTooltipForNextFrame(this.font, fuelTooltip(), mouseX, mouseY);
+        }
+    }
+
+    private String fuelTicksText() {
+        return this.fuelTicks > 0 ? this.fuelTicks + " tick" : "-";
+    }
+
+    private List<Component> fuelTooltip() {
+        List<Component> tooltip = new ArrayList<>();
+        tooltip.add(Component.translatable("message.deadrecall.copper_wrench.fuel_slot"));
+        tooltip.add(Component.translatable("message.deadrecall.copper_wrench.fuel_left_click"));
+        tooltip.add(Component.translatable("message.deadrecall.copper_wrench.fuel_right_click"));
+        tooltip.add(Component.translatable("message.deadrecall.copper_wrench.fuel_ticks", this.fuelTicks));
+        if (this.fuelCount > 0) {
+            tooltip.add(Component.literal(this.fuelItemId + " x" + this.fuelCount));
+        }
+        return tooltip;
     }
 
     private String selectedBindingLabel() {
@@ -721,6 +809,20 @@ public class CopperWrenchBindingsScreen extends Screen {
 
     private int getMaxScroll() {
         return Math.max(0, getContentHeight() - getListHeight());
+    }
+
+    private boolean isFuelSlotAt(double mouseX, double mouseY) {
+        int slotX = fuelSlotX();
+        int slotY = fuelSlotY();
+        return mouseX >= slotX && mouseX <= slotX + 20 && mouseY >= slotY && mouseY <= slotY + 20;
+    }
+
+    private int fuelSlotX() {
+        return panelX() + panelWidth() - PANEL_PADDING - 22;
+    }
+
+    private int fuelSlotY() {
+        return panelY() + 26;
     }
 
     private int panelX() {

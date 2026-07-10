@@ -7,11 +7,13 @@
     "EnchantmentHelperMixin",
     "EnchantmentMenuMixin",
     "EnchantingTableBlockMixin",
+    "EntityMixin",
     "HopperBlockEntityMixin",
     "ItemEntityMixin",
     "MinecraftServerPublishMixin",
     "PigMixin",
     "RecipeManagerMixin",
+    "SnowballMixin",
     "StructureTemplateMixin",
     "TransportItemsBetweenContainersMixin",
     "VillagerEntityMixin"

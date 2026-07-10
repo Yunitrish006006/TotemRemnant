@@ -1,0 +1,74 @@
+{
+  "criteria": {
+    "has_bundle": {
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:bundle"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_pig_manure": {
+      "conditions": {
+        "items": [
+          {
+            "items": "deadrecall:pig_manure"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_flint": {
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:flint"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_stone_bowl": {
+      "conditions": {
+        "items": [
+          {
+            "items": "deadrecall:stone_bowl"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "pig_manure_got_hit": {
+      "trigger": "deadrecall:pig_manure_got_hit"
+    },
+    "first_copper_golem_binding": {
+      "trigger": "deadrecall:first_copper_golem_binding"
+    }
+  },
+  "display": {
+    "announce_to_chat": false,
+    "background": "minecraft:gui/advancements/backgrounds/adventure",
+    "description": {
+      "translate": "advancements.deadrecall.root.description"
+    },
+    "icon": {
+      "id": "deadrecall:backpack_basic"
+    },
+    "show_toast": false,
+    "title": {
+      "translate": "advancements.deadrecall.root.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_bundle",
+      "has_pig_manure",
+      "has_flint",
+      "has_stone_bowl",
+      "pig_manure_got_hit",
+      "first_copper_golem_binding"
+    ]
+  ]
+}

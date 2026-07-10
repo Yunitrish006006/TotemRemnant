@@ -15,13 +15,39 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ItemEntity.class)
 public abstract class ItemEntityMixin {
+    @Inject(method = "hurtServer", at = @At("HEAD"), cancellable = true)
+    private void deadrecall$protectDroppedBackpackFromDamage(ServerLevel level, DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
+        ItemEntity self = (ItemEntity) (Object) this;
+        if (BackpackItemHelper.shouldProtectDroppedBackpackFromDamage(self.getItem(), source)) {
+            cir.setReturnValue(false);
+        }
+    }
+
     @Inject(
             method = "hurtServer",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/item/ItemEntity;discard()V")
     )
     private void deadrecall$dropBackpackContentsWhenDestroyed(ServerLevel level, DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
         ItemEntity self = (ItemEntity) (Object) this;
+        if (BackpackItemHelper.isVoidDamage(source)) {
+            return;
+        }
         BackpackItemHelper.dropStoredItems(level, self.position(), self.getItem(), deadrecall$getDamageEjectionDirection(self, source));
+    }
+
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void deadrecall$keepProtectedBackpackFromDespawning(CallbackInfo ci) {
+        ItemEntity self = (ItemEntity) (Object) this;
+        if (BackpackItemHelper.shouldPreventDroppedBackpackDespawn(self.getItem())) {
+            self.setUnlimitedLifetime();
+        }
+        if (BackpackItemHelper.shouldApplyDeathBackpackVoidMomentum(self)) {
+            BackpackItemHelper.applyDeathBackpackVoidMomentum(self);
+        } else if (BackpackItemHelper.shouldApplyDeathBackpackSlowFalling(self)) {
+            BackpackItemHelper.applyDeathBackpackSlowFalling(self);
+        } else if (BackpackItemHelper.shouldStopDeathBackpackVoidMomentum(self)) {
+            BackpackItemHelper.stopDeathBackpackVoidMomentum(self);
+        }
     }
 
     @Inject(

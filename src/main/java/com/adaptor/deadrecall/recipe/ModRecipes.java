@@ -12,6 +12,11 @@ public class ModRecipes {
             Identifier.fromNamespaceAndPath("deadrecall", "flint_from_bowl"),
             FlintFromBowlRecipe.SERIALIZER);
 
+    public static final RecipeSerializer<CocoaPowderRecipe> COCOA_POWDER =
+        Registry.register(BuiltInRegistries.RECIPE_SERIALIZER,
+            Identifier.fromNamespaceAndPath("deadrecall", "cocoa_powder"),
+            CocoaPowderRecipe.SERIALIZER);
+
     public static void registerModRecipes() {
         Deadrecall.LOGGER.info("正在註冊模組配方...");
     }

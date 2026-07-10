@@ -36,7 +36,8 @@ public abstract class TransportItemsBetweenContainersMixin {
         if (mob instanceof CopperGolem golem
                 && (!CopperGolemWrenchHandler.hasBinding(golem)
                 || !CopperGolemWrenchHandler.isTransportEnabled(golem)
-                || CopperGolemWrenchHandler.isSortingBlocked(golem))) {
+                || CopperGolemWrenchHandler.isSortingBlocked(golem)
+                || (golem.getMainHandItem().isEmpty() && !CopperGolemWrenchHandler.hasFuelAvailable(golem, level)))) {
             cir.setReturnValue(false);
         }
     }
@@ -89,6 +90,12 @@ public abstract class TransportItemsBetweenContainersMixin {
             return;
         }
 
+        if (!CopperGolemWrenchHandler.hasFuelAvailable(golem, level)) {
+            stopTargetingCurrentTarget(mob);
+            ci.cancel();
+            return;
+        }
+
         ItemStack picked = CopperGolemWrenchHandler.pickUpNextItem(golem, level, container, target.pos());
         if (picked.isEmpty()) {
             stopTargetingCurrentTarget(mob);
@@ -100,6 +107,32 @@ public abstract class TransportItemsBetweenContainersMixin {
         mob.setGuaranteedDrop(EquipmentSlot.MAINHAND);
         container.setChanged();
         clearMemoriesAfterMatchingTargetFound(mob);
+        ci.cancel();
+    }
+
+    @Inject(method = "putDownItem", at = @At("HEAD"), cancellable = true)
+    private void deadrecall$putDownItemIntoNestedBackpack(PathfinderMob mob, Container container, CallbackInfo ci) {
+        if (!(mob instanceof CopperGolem golem)
+                || !CopperGolemWrenchHandler.hasBinding(golem)
+                || !CopperGolemWrenchHandler.isTransportEnabled(golem)
+                || !(mob.level() instanceof ServerLevel level)
+                || target == null) {
+            return;
+        }
+
+        Optional<ItemStack> remaining = CopperGolemWrenchHandler.putCarriedItemIntoNestedBackpack(golem, level, target.pos(), container);
+        if (remaining.isEmpty()) {
+            return;
+        }
+
+        ItemStack remainingStack = remaining.get();
+        mob.setItemSlot(EquipmentSlot.MAINHAND, remainingStack);
+        if (remainingStack.isEmpty()) {
+            clearMemoriesAfterMatchingTargetFound(mob);
+            CopperGolemWrenchHandler.clearRememberedSource(golem);
+        } else {
+            stopTargetingCurrentTarget(mob);
+        }
         ci.cancel();
     }
 

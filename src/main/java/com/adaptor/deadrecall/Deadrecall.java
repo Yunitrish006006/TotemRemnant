@@ -1,13 +1,19 @@
 package com.adaptor.deadrecall;
 
 import com.adaptor.deadrecall.alchemy.AlchemyHandler;
+import com.adaptor.deadrecall.alchemy.CherryBrewInteractions;
+import com.adaptor.deadrecall.alchemy.PigManureInteractions;
+import com.adaptor.deadrecall.advancement.ModCriteriaTriggers;
 import com.adaptor.deadrecall.block.ModBlocks;
 import com.adaptor.deadrecall.block.entity.ModBlockEntities;
+import com.adaptor.deadrecall.effect.ModMobEffects;
 import com.adaptor.deadrecall.item.BackpackItemHelper;
+import com.adaptor.deadrecall.item.ModItemGroups;
 import com.adaptor.deadrecall.item.ModItems;
 import com.adaptor.deadrecall.item.copper.CopperGolemLlmService;
 import com.adaptor.deadrecall.item.copper.CopperGolemWrenchHandler;
 import com.adaptor.deadrecall.network.CopperGolemOperationPayload;
+import com.adaptor.deadrecall.network.CopperGolemFuelSlotPayload;
 import com.adaptor.deadrecall.network.CopperWrenchBindingsPayload;
 import com.adaptor.deadrecall.network.DiscordConfigSyncPayload;
 import com.adaptor.deadrecall.network.ManageDiscordChannelPayload;
@@ -63,6 +69,7 @@ import java.util.UUID;
 public class Deadrecall implements ModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("DeadRecall");
     private static final int BOOKSHELF_REPLACE_INTERVAL_TICKS = 20;
+    private static final int PLAYER_HOTBAR_SLOT_COUNT = 9;
     private static final double DEATH_BACKPACK_COLLECTION_RADIUS = 10.0D;
     private static final String TAG_DEATH_BACKPACK_ID = "deadrecall_death_backpack_id";
     private static final Map<UUID, PendingDeathCollection> pendingDeathCollections = new HashMap<>();
@@ -75,8 +82,13 @@ public class Deadrecall implements ModInitializer {
         // 註冊物品與方塊
         ModBlocks.registerModBlocks();
         ModBlockEntities.registerModBlockEntities();
+        ModMobEffects.registerModEffects();
+        ModCriteriaTriggers.registerModCriteriaTriggers();
         ModItems.registerModItems();
+        ModItemGroups.registerModItemGroups();
         AlchemyHandler.register();
+        CherryBrewInteractions.register();
+        PigManureInteractions.register();
         CopperGolemWrenchHandler.register();
         ModRecipes.registerModRecipes();
 
@@ -94,6 +106,8 @@ public class Deadrecall implements ModInitializer {
                 SortBackpackPayload.TYPE, SortBackpackPayload.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(
                 CopperGolemOperationPayload.TYPE, CopperGolemOperationPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(
+                CopperGolemFuelSlotPayload.TYPE, CopperGolemFuelSlotPayload.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(
                 SaveCopperGolemLlmConfigPayload.TYPE, SaveCopperGolemLlmConfigPayload.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(
@@ -180,6 +194,10 @@ public class Deadrecall implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(CopperGolemOperationPayload.TYPE,
                 (payload, context) -> context.server().execute(() ->
                         CopperGolemWrenchHandler.setTransportEnabledFromUi(context.player(), payload.golemId(), payload.running())));
+
+        ServerPlayNetworking.registerGlobalReceiver(CopperGolemFuelSlotPayload.TYPE,
+                (payload, context) -> context.server().execute(() ->
+                        CopperGolemWrenchHandler.handleFuelSlotFromUi(context.player(), payload.golemId(), payload.action())));
 
         ServerPlayNetworking.registerGlobalReceiver(SaveCopperGolemLlmConfigPayload.TYPE,
                 (payload, context) -> context.server().execute(() -> {
@@ -608,7 +626,10 @@ public class Deadrecall implements ModInitializer {
         int nonEquipmentSlotCount = player.getInventory().getNonEquipmentItems().size();
         for (int i = 0; i < menu.slots.size(); i++) {
             Slot slot = menu.slots.get(i);
-            if (slot.container == player.getInventory() && slot.getContainerSlot() < nonEquipmentSlotCount) {
+            int containerSlot = slot.getContainerSlot();
+            if (slot.container == player.getInventory()
+                    && containerSlot >= PLAYER_HOTBAR_SLOT_COUNT
+                    && containerSlot < nonEquipmentSlotCount) {
                 playerSlots.add(i);
             }
         }

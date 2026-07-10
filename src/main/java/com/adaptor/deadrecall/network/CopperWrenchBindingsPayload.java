@@ -12,6 +12,9 @@ import java.util.UUID;
 public record CopperWrenchBindingsPayload(
         UUID golemId,
         boolean running,
+        String fuelItemId,
+        int fuelCount,
+        int fuelTicks,
         String llmApiUrl,
         String llmApiKey,
         String llmModel,
@@ -48,6 +51,9 @@ public record CopperWrenchBindingsPayload(
                     (buf, payload) -> {
                         buf.writeUUID(payload.golemId());
                         buf.writeBoolean(payload.running());
+                        buf.writeUtf(payload.fuelItemId(), 128);
+                        buf.writeInt(payload.fuelCount());
+                        buf.writeInt(payload.fuelTicks());
                         buf.writeUtf(payload.llmApiUrl(), 2048);
                         buf.writeUtf(payload.llmApiKey(), 512);
                         buf.writeUtf(payload.llmModel(), 256);
@@ -75,6 +81,9 @@ public record CopperWrenchBindingsPayload(
                     buf -> new CopperWrenchBindingsPayload(
                             buf.readUUID(),
                             buf.readBoolean(),
+                            buf.readUtf(128),
+                            buf.readInt(),
+                            buf.readInt(),
                             buf.readUtf(2048),
                             buf.readUtf(512),
                             buf.readUtf(256),

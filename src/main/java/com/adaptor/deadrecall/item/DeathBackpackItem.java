@@ -2,7 +2,6 @@ package com.adaptor.deadrecall.item;
 
 import com.adaptor.deadrecall.inventory.BackpackInventory;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -17,7 +16,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 
@@ -32,9 +30,8 @@ public class DeathBackpackItem extends Item {
      * 計算死亡背包實際需要的行數
      */
     public static int calculateRows(ItemStack stack) {
-        ItemContainerContents container = stack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY);
-        int itemCount = (int) container.nonEmptyItemCopyStream().count();
-        return Math.max(1, Math.min(6, (int) Math.ceil(itemCount / 9.0)));
+        int storedStacks = BackpackItemHelper.countStoredStacks(stack);
+        return Math.max(1, Math.min(6, (int) Math.ceil(storedStacks / 9.0)));
     }
 
     @Override
@@ -57,11 +54,17 @@ public class DeathBackpackItem extends Item {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay tooltipDisplay, Consumer<Component> tooltipAdder, TooltipFlag tooltipFlag) {
         super.appendHoverText(stack, context, tooltipDisplay, tooltipAdder, tooltipFlag);
         int rows = calculateRows(stack);
-        ItemContainerContents container = stack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY);
-        int itemCount = (int) container.nonEmptyItemCopyStream().count();
-        tooltipAdder.accept(Component.literal("死亡背包 - 收集死亡掉落物品").withStyle(ChatFormatting.RED));
-        tooltipAdder.accept(Component.literal("物品數量: " + itemCount + " (" + rows + "排)").withStyle(ChatFormatting.GRAY));
-        tooltipAdder.accept(Component.literal("防火保護").withStyle(ChatFormatting.GOLD));
+        int capacity = rows * 9;
+        tooltipAdder.accept(Component.translatable("item.deadrecall.death_backpack.tooltip.summary").withStyle(ChatFormatting.RED));
+        tooltipAdder.accept(Component.translatable(
+                "item.deadrecall.death_backpack.tooltip.capacity",
+                BackpackItemHelper.countStoredStacks(stack),
+                capacity,
+                rows
+        ).withStyle(ChatFormatting.GRAY));
+        tooltipAdder.accept(Component.translatable("item.deadrecall.backpack.tooltip.no_nesting").withStyle(ChatFormatting.RED));
+        tooltipAdder.accept(Component.translatable("item.deadrecall.death_backpack.tooltip.persistent").withStyle(ChatFormatting.GOLD));
+        tooltipAdder.accept(Component.translatable(BackpackItemHelper.getDeathBackpackProtectionTooltipKey()).withStyle(ChatFormatting.GOLD));
     }
 
     private static AbstractContainerMenu createChestMenu(int syncId, Inventory playerInventory, BackpackInventory backpackInventory, int rows) {

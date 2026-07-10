@@ -1,0 +1,31 @@
+{
+  "parent": "deadrecall:backpack_basic",
+  "criteria": {
+    "has_backpack_standard": {
+      "conditions": {
+        "items": [
+          {
+            "items": "deadrecall:backpack_standard"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.deadrecall.backpack_standard.description"
+    },
+    "icon": {
+      "id": "deadrecall:backpack_standard"
+    },
+    "title": {
+      "translate": "advancements.deadrecall.backpack_standard.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_backpack_standard"
+    ]
+  ]
+}

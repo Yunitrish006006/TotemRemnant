@@ -1,6 +1,10 @@
 package com.adaptor.deadrecall.item.copper;
 
+import com.adaptor.deadrecall.advancement.ModCriteriaTriggers;
+import com.adaptor.deadrecall.item.BackpackItemHelper;
 import com.adaptor.deadrecall.item.ModItems;
+import com.adaptor.deadrecall.item.TieredBackpackItem;
+import com.adaptor.deadrecall.network.CopperGolemFuelSlotPayload;
 import com.adaptor.deadrecall.network.CopperWrenchBindingsPayload;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
@@ -8,6 +12,7 @@ import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.NonNullList;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -31,6 +36,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -80,7 +86,10 @@ public final class CopperGolemWrenchHandler {
     private static final String TAG_LLM_DENIED_ITEM_IDS = "llm_denied_item_ids";
     private static final String TAG_LLM_ALLOWED_TAGS = "llm_allowed_tags";
     private static final String TAG_LLM_DENIED_TAGS = "llm_denied_tags";
+    private static final String TAG_FUEL_STACK = "deadrecall_fuel_stack";
+    private static final String TAG_FUEL_TICKS = "deadrecall_fuel_ticks";
     private static final int TRANSPORTED_ITEM_MAX_STACK_SIZE = 16;
+    private static final int FUEL_TICKS_PER_TRANSPORT = 200;
     private static final int SORTING_BLOCKED_JUMP_INTERVAL_TICKS = 10;
     private static final int PRUNE_BINDINGS_INTERVAL_TICKS = 20;
     private static int pruneBindingsTicker = 0;
@@ -212,6 +221,9 @@ public final class CopperGolemWrenchHandler {
 
             Binding binding = new Binding(world.dimension(), clickedPos.immutable());
             boolean added = addBinding(golem, binding);
+            if (added && player instanceof ServerPlayer serverPlayer) {
+                ModCriteriaTriggers.FIRST_COPPER_GOLEM_BINDING.trigger(serverPlayer);
+            }
             showParticlePath(serverLevel, golem, clickedPos);
             notify(player, Component.translatable(added
                     ? "message.deadrecall.copper_wrench.bind_success"
@@ -240,6 +252,10 @@ public final class CopperGolemWrenchHandler {
 
     public static boolean isSortingBlocked(CopperGolem golem) {
         return getEntityCustomDataTag(golem).getBooleanOr(TAG_SORTING_BLOCKED, false);
+    }
+
+    public static boolean hasFuelAvailable(CopperGolem golem, ServerLevel level) {
+        return getFuelTicks(golem) > 0 || isFuel(level, getFuelStack(golem));
     }
 
     public static void setTransportEnabledFromUi(ServerPlayer player, UUID golemId, boolean enabled) {
@@ -279,6 +295,21 @@ public final class CopperGolemWrenchHandler {
         }
 
         setGolemLlmConfig(golem, apiUrl, apiKey, model);
+        sendBindingListUi(player, golem);
+    }
+
+    public static void handleFuelSlotFromUi(ServerPlayer player, UUID golemId, CopperGolemFuelSlotPayload.Action action) {
+        Entity entity = player.level().getEntityInAnyDimension(golemId);
+        if (!(entity instanceof CopperGolem golem)) {
+            return;
+        }
+
+        if (action == CopperGolemFuelSlotPayload.Action.INSERT_MAIN_HAND) {
+            insertFuelFromMainHand(player, golem);
+        } else if (action == CopperGolemFuelSlotPayload.Action.TAKE_ALL) {
+            takeFuel(player, golem);
+        }
+
         sendBindingListUi(player, golem);
     }
 
@@ -386,6 +417,10 @@ public final class CopperGolemWrenchHandler {
     }
 
     public static ItemStack pickUpNextItem(CopperGolem golem, ServerLevel level, Container source, BlockPos sourcePos) {
+        if (!hasFuelAvailable(golem, level)) {
+            return ItemStack.EMPTY;
+        }
+
         if (hasItems(source) && !hasAnySortableItem(golem, level, source, sourcePos)) {
             markSortingBlocked(golem, level, sourcePos, source);
             return ItemStack.EMPTY;
@@ -400,6 +435,7 @@ public final class CopperGolemWrenchHandler {
             ItemStack picked = source.removeItem(slot, Math.min(stack.getCount(), TRANSPORTED_ITEM_MAX_STACK_SIZE));
             if (!picked.isEmpty()) {
                 rememberSource(golem, level, sourcePos, slot);
+                consumeFuelForTransport(golem, level);
             }
             return picked;
         }
@@ -433,6 +469,35 @@ public final class CopperGolemWrenchHandler {
         }
 
         return false;
+    }
+
+    public static Optional<ItemStack> putCarriedItemIntoNestedBackpack(CopperGolem golem, ServerLevel level, BlockPos targetPos, Container container) {
+        ItemStack carried = golem.getMainHandItem();
+        if (carried.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Optional<Binding> binding = getBindings(golem).stream()
+                .filter(value -> value.dimension().equals(level.dimension()) && value.containerPos().equals(targetPos))
+                .findFirst();
+        if (binding.isEmpty()) {
+            return Optional.empty();
+        }
+
+        NestedBackpackTarget nestedTarget = findNestedBackpackTarget(golem, binding.get(), container, carried);
+        if (nestedTarget == null) {
+            return Optional.empty();
+        }
+
+        int originalCount = carried.getCount();
+        ItemStack remaining = insertIntoBackpack(nestedTarget.backpackStack(), carried);
+        if (remaining.getCount() == originalCount) {
+            return Optional.empty();
+        }
+
+        container.setItem(nestedTarget.containerSlot(), nestedTarget.backpackStack());
+        container.setChanged();
+        return Optional.of(remaining);
     }
 
     public static void clearRememberedSource(CopperGolem golem) {
@@ -488,6 +553,131 @@ public final class CopperGolemWrenchHandler {
             returnCarriedItemToSource(golem, level);
         }
         resetTransportMemories(golem);
+    }
+
+    private static void insertFuelFromMainHand(ServerPlayer player, CopperGolem golem) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+
+        ItemStack held = player.getMainHandItem();
+        if (held.isEmpty()) {
+            notify(player, Component.translatable("message.deadrecall.copper_wrench.fuel_need_item"));
+            return;
+        }
+        if (!isFuel(level, held)) {
+            notify(player, Component.translatable("message.deadrecall.copper_wrench.fuel_invalid"));
+            return;
+        }
+
+        ItemStack fuelStack = getFuelStack(golem);
+        if (!fuelStack.isEmpty() && !ItemStack.isSameItemSameComponents(fuelStack, held)) {
+            notify(player, Component.translatable("message.deadrecall.copper_wrench.fuel_mismatch"));
+            return;
+        }
+
+        int maxCount = held.getMaxStackSize();
+        int moveCount = Math.min(held.getCount(), maxCount - fuelStack.getCount());
+        if (moveCount <= 0) {
+            notify(player, Component.translatable("message.deadrecall.copper_wrench.fuel_full"));
+            return;
+        }
+
+        ItemStack newFuelStack;
+        if (fuelStack.isEmpty()) {
+            newFuelStack = held.copyWithCount(moveCount);
+        } else {
+            newFuelStack = fuelStack.copy();
+            newFuelStack.grow(moveCount);
+        }
+
+        held.shrink(moveCount);
+        player.getInventory().setChanged();
+        setFuelStack(golem, newFuelStack);
+        resetTransportMemories(golem);
+        notify(player, Component.translatable("message.deadrecall.copper_wrench.fuel_inserted", moveCount));
+    }
+
+    private static void takeFuel(ServerPlayer player, CopperGolem golem) {
+        ItemStack fuelStack = getFuelStack(golem);
+        if (fuelStack.isEmpty()) {
+            notify(player, Component.translatable("message.deadrecall.copper_wrench.fuel_empty"));
+            return;
+        }
+
+        setFuelStack(golem, ItemStack.EMPTY);
+        player.getInventory().placeItemBackInInventory(fuelStack.copy());
+        player.getInventory().setChanged();
+        resetTransportMemories(golem);
+        notify(player, Component.translatable("message.deadrecall.copper_wrench.fuel_taken"));
+    }
+
+    private static boolean consumeFuelForTransport(CopperGolem golem, ServerLevel level) {
+        CompoundTag tag = getEntityCustomDataTag(golem);
+        int fuelTicks = tag.getIntOr(TAG_FUEL_TICKS, 0);
+        if (fuelTicks <= 0) {
+            ItemStack fuelStack = readFuelStack(tag);
+            if (!isFuel(level, fuelStack)) {
+                return false;
+            }
+
+            fuelTicks = Math.max(1, level.fuelValues().burnDuration(fuelStack));
+            writeFuelStack(tag, consumeOneFuelItem(fuelStack));
+        }
+
+        fuelTicks = Math.max(0, fuelTicks - FUEL_TICKS_PER_TRANSPORT);
+        if (fuelTicks > 0) {
+            tag.putInt(TAG_FUEL_TICKS, fuelTicks);
+        } else {
+            tag.remove(TAG_FUEL_TICKS);
+        }
+        removeSortingBlockedTags(tag);
+        setEntityCustomDataTag(golem, tag);
+        return true;
+    }
+
+    private static ItemStack consumeOneFuelItem(ItemStack fuelStack) {
+        Item item = fuelStack.getItem();
+        fuelStack.shrink(1);
+        if (!fuelStack.isEmpty()) {
+            return fuelStack;
+        }
+
+        var craftingRemainder = item.getCraftingRemainder();
+        return craftingRemainder == null ? ItemStack.EMPTY : craftingRemainder.create();
+    }
+
+    private static boolean isFuel(ServerLevel level, ItemStack stack) {
+        return !stack.isEmpty() && level.fuelValues().isFuel(stack);
+    }
+
+    private static ItemStack getFuelStack(CopperGolem golem) {
+        return readFuelStack(getEntityCustomDataTag(golem));
+    }
+
+    private static int getFuelTicks(CopperGolem golem) {
+        return getEntityCustomDataTag(golem).getIntOr(TAG_FUEL_TICKS, 0);
+    }
+
+    private static void setFuelStack(CopperGolem golem, ItemStack fuelStack) {
+        CompoundTag tag = getEntityCustomDataTag(golem);
+        writeFuelStack(tag, fuelStack);
+        removeSortingBlockedTags(tag);
+        setEntityCustomDataTag(golem, tag);
+    }
+
+    private static ItemStack readFuelStack(CompoundTag tag) {
+        return tag.read(TAG_FUEL_STACK, ItemStack.OPTIONAL_CODEC)
+                .orElse(ItemStack.EMPTY)
+                .copy();
+    }
+
+    private static void writeFuelStack(CompoundTag tag, ItemStack fuelStack) {
+        if (fuelStack.isEmpty()) {
+            tag.remove(TAG_FUEL_STACK);
+        } else {
+            tag.store(TAG_FUEL_STACK, ItemStack.OPTIONAL_CODEC, fuelStack.copy());
+        }
     }
 
     private static void resetTransportMemories(CopperGolem golem) {
@@ -588,9 +778,13 @@ public final class CopperGolemWrenchHandler {
 
         boolean canManageLlmConfig = canManageLlmConfig(player);
         GolemLlmConfig llmConfig = getGolemLlmConfig(golem);
+        ItemStack fuelStack = getFuelStack(golem);
         ServerPlayNetworking.send(player, new CopperWrenchBindingsPayload(
                 golem.getUUID(),
                 isTransportEnabled(golem),
+                fuelStack.isEmpty() ? BuiltInRegistries.ITEM.getKey(Items.AIR).toString() : BuiltInRegistries.ITEM.getKey(fuelStack.getItem()).toString(),
+                fuelStack.getCount(),
+                getFuelTicks(golem),
                 llmConfig.apiUrl(),
                 canManageLlmConfig ? llmConfig.apiKey() : "",
                 llmConfig.model(),
@@ -680,13 +874,14 @@ public final class CopperGolemWrenchHandler {
     }
 
     private static boolean canSortInto(CopperGolem golem, ServerLevel level, Binding binding, Container container, ItemStack carried) {
-        if (canSortInto(container, carried)) {
+        if (canSortInto(container, carried) || canSortIntoAnyBackpack(container, carried)) {
             return true;
         }
 
         BindingLlmConfig config = getBindingLlmConfig(golem, binding);
         GolemLlmConfig golemConfig = getGolemLlmConfig(golem);
-        if (!config.enabled() || config.prompt().isBlank() || !golemConfig.isConfigured() || !canPlaceSomewhere(container, carried)) {
+        boolean hasAvailableSpace = canPlaceSomewhere(container, carried) || canPlaceSomewhereInAnyBackpack(container, carried);
+        if (!config.enabled() || config.prompt().isBlank() || !golemConfig.isConfigured() || !hasAvailableSpace) {
             return false;
         }
 
@@ -712,6 +907,20 @@ public final class CopperGolemWrenchHandler {
         return false;
     }
 
+    private static boolean canSortIntoAnyBackpack(Container container, ItemStack carried) {
+        if (BackpackItemHelper.isBackpackItem(carried)) {
+            return false;
+        }
+
+        for (int slot = 0; slot < container.getContainerSize(); slot++) {
+            ItemStack stack = container.getItem(slot);
+            if (isSortableBackpack(stack) && canSortIntoBackpack(stack, carried)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean canPlaceSomewhere(Container container, ItemStack carried) {
         for (int slot = 0; slot < container.getContainerSize(); slot++) {
             ItemStack stack = container.getItem(slot);
@@ -730,6 +939,146 @@ public final class CopperGolemWrenchHandler {
             }
         }
         return false;
+    }
+
+    private static boolean canPlaceSomewhereInAnyBackpack(Container container, ItemStack carried) {
+        if (BackpackItemHelper.isBackpackItem(carried)) {
+            return false;
+        }
+
+        for (int slot = 0; slot < container.getContainerSize(); slot++) {
+            ItemStack stack = container.getItem(slot);
+            if (isSortableBackpack(stack) && canPlaceSomewhereInBackpack(stack, carried)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static NestedBackpackTarget findNestedBackpackTarget(CopperGolem golem, Binding binding, Container container, ItemStack carried) {
+        if (BackpackItemHelper.isBackpackItem(carried)) {
+            return null;
+        }
+
+        NestedBackpackTarget llmAllowedTarget = null;
+        boolean allowLlmFallback = !canSortInto(container, carried);
+
+        for (int slot = 0; slot < container.getContainerSize(); slot++) {
+            ItemStack stack = container.getItem(slot);
+            if (!isSortableBackpack(stack)) {
+                continue;
+            }
+
+            if (canSortIntoBackpack(stack, carried)) {
+                return new NestedBackpackTarget(slot, stack);
+            }
+
+            if (llmAllowedTarget == null
+                    && allowLlmFallback
+                    && canPlaceSomewhereInBackpack(stack, carried)
+                    && hasCachedAllowedLlmDecision(golem, binding, carried)) {
+                llmAllowedTarget = new NestedBackpackTarget(slot, stack);
+            }
+        }
+
+        return llmAllowedTarget;
+    }
+
+    private static boolean hasCachedAllowedLlmDecision(CopperGolem golem, Binding binding, ItemStack carried) {
+        BindingLlmConfig config = getBindingLlmConfig(golem, binding);
+        if (!config.enabled() || config.prompt().isBlank()) {
+            return false;
+        }
+
+        String itemId = CopperGolemLlmService.itemId(carried);
+        List<String> itemTags = CopperGolemLlmService.itemTags(carried);
+        return getCachedLlmDecision(config, itemId, itemTags).orElse(false);
+    }
+
+    private static boolean canSortIntoBackpack(ItemStack backpackStack, ItemStack carried) {
+        boolean hasMatchingItem = false;
+        boolean hasEmptySlot = false;
+
+        for (ItemStack stack : loadBackpackItems(backpackStack)) {
+            if (stack.isEmpty()) {
+                hasEmptySlot = true;
+                continue;
+            }
+
+            if (!ItemStack.isSameItemSameComponents(stack, carried)) {
+                continue;
+            }
+
+            hasMatchingItem = true;
+            if (stack.getCount() < stack.getMaxStackSize()) {
+                return true;
+            }
+        }
+
+        return hasMatchingItem && hasEmptySlot;
+    }
+
+    private static boolean canPlaceSomewhereInBackpack(ItemStack backpackStack, ItemStack carried) {
+        for (ItemStack stack : loadBackpackItems(backpackStack)) {
+            if (stack.isEmpty()) {
+                return true;
+            }
+
+            if (ItemStack.isSameItemSameComponents(stack, carried) && stack.getCount() < stack.getMaxStackSize()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static ItemStack insertIntoBackpack(ItemStack backpackStack, ItemStack carried) {
+        NonNullList<ItemStack> items = loadBackpackItems(backpackStack);
+        ItemStack remaining = carried.copy();
+
+        for (int slot = 0; slot < items.size() && !remaining.isEmpty(); slot++) {
+            ItemStack stack = items.get(slot);
+            if (stack.isEmpty() || !ItemStack.isSameItemSameComponents(stack, remaining)) {
+                continue;
+            }
+
+            int moveCount = Math.min(remaining.getCount(), stack.getMaxStackSize() - stack.getCount());
+            if (moveCount <= 0) {
+                continue;
+            }
+
+            stack.grow(moveCount);
+            remaining.shrink(moveCount);
+            items.set(slot, stack);
+        }
+
+        for (int slot = 0; slot < items.size() && !remaining.isEmpty(); slot++) {
+            if (!items.get(slot).isEmpty()) {
+                continue;
+            }
+
+            int moveCount = Math.min(remaining.getCount(), remaining.getMaxStackSize());
+            ItemStack moved = remaining.copyWithCount(moveCount);
+            remaining.shrink(moveCount);
+            items.set(slot, moved);
+        }
+
+        backpackStack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(items));
+        return remaining.isEmpty() ? ItemStack.EMPTY : remaining;
+    }
+
+    private static NonNullList<ItemStack> loadBackpackItems(ItemStack backpackStack) {
+        int size = backpackSize(backpackStack);
+        NonNullList<ItemStack> items = NonNullList.withSize(size, ItemStack.EMPTY);
+        backpackStack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).copyInto(items);
+        return items;
+    }
+
+    private static int backpackSize(ItemStack backpackStack) {
+        return backpackStack.getItem() instanceof TieredBackpackItem backpackItem ? backpackItem.getTier().getSlots() : 0;
+    }
+
+    private static boolean isSortableBackpack(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem() instanceof TieredBackpackItem;
     }
 
     private static Optional<Boolean> getCachedLlmDecision(BindingLlmConfig config, String itemId, List<String> itemTags) {
@@ -1382,5 +1731,8 @@ public final class CopperGolemWrenchHandler {
     }
 
     private record Source(net.minecraft.resources.ResourceKey<Level> dimension, BlockPos containerPos, int slot) {
+    }
+
+    private record NestedBackpackTarget(int containerSlot, ItemStack backpackStack) {
     }
 }

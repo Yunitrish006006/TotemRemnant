@@ -1,13 +1,21 @@
 package com.adaptor.deadrecall.item;
 
 import com.adaptor.deadrecall.Deadrecall;
+import com.adaptor.deadrecall.effect.ModMobEffects;
 import com.adaptor.deadrecall.item.copper.CopperWrenchItem;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.food.Foods;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.Consumables;
+import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
 
 import java.util.function.Function;
 
@@ -33,10 +41,36 @@ public class ModItems {
             props -> new Item(props));
 
     public static final Item PIG_MANURE = registerItem("pig_manure",
-            props -> new Item(props));
+            props -> new PigManureItem(props));
 
     public static final Item WOOD_ASH = registerItem("wood_ash",
             props -> new Item(props));
+
+    public static final Item COCOA_POWDER = registerItem("cocoa_powder",
+            props -> new Item(props.stacksTo(1)));
+
+    public static final Item HOT_COCOA = registerItem("hot_cocoa",
+            props -> new Item(props.stacksTo(16)
+                    .food(Foods.HONEY_BOTTLE, Consumables.defaultDrink()
+                            .sound(SoundEvents.GENERIC_DRINK)
+                            .build())
+                    .usingConvertsTo(Items.GLASS_BOTTLE)));
+
+    public static final Item CHERRY_BREW = registerItem("cherry_brew",
+            props -> new Item(props.stacksTo(16)
+                    .food(new FoodProperties.Builder()
+                                    .nutrition(4)
+                                    .saturationModifier(0.4F)
+                                    .alwaysEdible()
+                                    .build(),
+                            Consumables.defaultDrink()
+                                    .sound(SoundEvents.GENERIC_DRINK)
+                                    .onConsume(new ApplyStatusEffectsConsumeEffect(
+                                            new MobEffectInstance(ModMobEffects.CHERRY_BLOOM, 20 * 180, 0),
+                                            1.0F
+                                    ))
+                                    .build())
+                    .usingConvertsTo(Items.GLASS_BOTTLE)));
 
     // 合成器皿（缽）：可對硫磺方塊右鍵填充
     public static final Item STONE_BOWL = registerItem("stone_bowl",
@@ -48,11 +82,6 @@ public class ModItems {
 
     public static final Item COPPER_WRENCH = registerItem("copper_wrench",
             props -> new CopperWrenchItem(props.stacksTo(1)));
-
-    // 舊版物品 ID 相容（deadrecall:backpack）
-    @Deprecated
-    public static final Item BACKPACK = registerItem("backpack",
-            props -> new TieredBackpackItem(props.stacksTo(1), TieredBackpackItem.BackpackTier.STANDARD));
 
     private static Item registerItem(String name, Function<Item.Properties, Item> itemFactory) {
         Identifier id = Identifier.fromNamespaceAndPath("deadrecall", name);

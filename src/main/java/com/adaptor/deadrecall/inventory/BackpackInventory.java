@@ -97,6 +97,11 @@ public class BackpackInventory implements Container {
     }
 
     @Override
+    public boolean canPlaceItem(int slot, ItemStack stack) {
+        return !BackpackItemHelper.isBackpackItem(stack);
+    }
+
+    @Override
     public void setChanged() {
         saveToStack();
     }

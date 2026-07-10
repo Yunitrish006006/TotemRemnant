@@ -1,0 +1,24 @@
+{
+  "parent": "deadrecall:root",
+  "criteria": {
+    "first_binding": {
+      "trigger": "deadrecall:first_copper_golem_binding"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.deadrecall.first_copper_golem_binding.description"
+    },
+    "icon": {
+      "id": "deadrecall:copper_wrench"
+    },
+    "title": {
+      "translate": "advancements.deadrecall.first_copper_golem_binding.title"
+    }
+  },
+  "requirements": [
+    [
+      "first_binding"
+    ]
+  ]
+}
