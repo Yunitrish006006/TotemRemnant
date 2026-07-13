@@ -7,7 +7,7 @@ import net.minecraft.resources.Identifier;
 
 import java.util.UUID;
 
-public record CopperGolemFuelSlotPayload(UUID golemId, Action action) implements CustomPacketPayload {
+public record CopperGolemFuelSlotPayload(UUID golemId, Action action, int revision) implements CustomPacketPayload {
     public static final Type<CopperGolemFuelSlotPayload> TYPE =
             new Type<>(Identifier.fromNamespaceAndPath("deadrecall", "copper_golem_fuel_slot"));
 
@@ -21,8 +21,9 @@ public record CopperGolemFuelSlotPayload(UUID golemId, Action action) implements
                     (buf, payload) -> {
                         buf.writeUUID(payload.golemId());
                         buf.writeEnum(payload.action());
+                        buf.writeInt(payload.revision());
                     },
-                    buf -> new CopperGolemFuelSlotPayload(buf.readUUID(), buf.readEnum(Action.class))
+                    buf -> new CopperGolemFuelSlotPayload(buf.readUUID(), buf.readEnum(Action.class), buf.readInt())
             );
 
     @Override

@@ -22,7 +22,10 @@
   },
   "mixins": [
     "deadrecall.mixins.json",
-    "deadrecall.client.mixins.json"
+    {
+      "config": "deadrecall.client.mixins.json",
+      "environment": "client"
+    }
   ],
   "depends": {
     "fabricloader": ">=${loader_version}",

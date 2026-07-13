@@ -7,7 +7,7 @@ import net.minecraft.resources.Identifier;
 
 import java.util.UUID;
 
-public record CopperGolemOperationPayload(UUID golemId, boolean running) implements CustomPacketPayload {
+public record CopperGolemOperationPayload(UUID golemId, boolean running, int revision) implements CustomPacketPayload {
     public static final Type<CopperGolemOperationPayload> TYPE =
             new Type<>(Identifier.fromNamespaceAndPath("deadrecall", "copper_golem_operation"));
 
@@ -16,8 +16,9 @@ public record CopperGolemOperationPayload(UUID golemId, boolean running) impleme
                     (buf, payload) -> {
                         buf.writeUUID(payload.golemId());
                         buf.writeBoolean(payload.running());
+                        buf.writeInt(payload.revision());
                     },
-                    buf -> new CopperGolemOperationPayload(buf.readUUID(), buf.readBoolean())
+                    buf -> new CopperGolemOperationPayload(buf.readUUID(), buf.readBoolean(), buf.readInt())
             );
 
     @Override

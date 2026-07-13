@@ -4,6 +4,9 @@ import com.adaptor.deadrecall.network.DiscordConfigSyncPayload;
 import com.adaptor.deadrecall.network.CopperWrenchBindingsPayload;
 import com.adaptor.deadrecall.network.RequestDiscordConfigPayload;
 import com.adaptor.deadrecall.network.SortBackpackPayload;
+import com.adaptor.deadrecall.network.SpaceUnitFriendsPayload;
+import com.adaptor.deadrecall.network.SpaceUnitMapPayload;
+import com.adaptor.deadrecall.network.SpaceUnitRegistrationPreviewPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -19,12 +22,13 @@ import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 public class DeadrecallClient implements ClientModInitializer {
-
     public static KeyMapping openDiscordConfigKey;
     public static KeyMapping sortBackpackKey;
 
     @Override
     public void onInitializeClient() {
+        CopperGolemVisualizationClient.initialize();
+
         KeyMapping.Category category = KeyMapping.Category.register(
                 Identifier.fromNamespaceAndPath("deadrecall", "category")
         );
@@ -74,6 +78,38 @@ public class DeadrecallClient implements ClientModInitializer {
                             mc.setScreenAndShow(new CopperWrenchBindingsScreen(payload));
                         }
                     });
+                });
+
+        ClientPlayNetworking.registerGlobalReceiver(SpaceUnitMapPayload.TYPE,
+                (payload, context) -> {
+                    net.minecraft.client.Minecraft mc = context.client();
+                    mc.execute(() -> {
+                        SpaceUnitMapScreen screen = SpaceUnitMapScreen.CURRENT;
+                        if (screen != null && screen.isFor(payload.sourceType(), payload.sourceUnitId())) {
+                            screen.applyPayload(payload);
+                        } else {
+                            mc.setScreenAndShow(new SpaceUnitMapScreen(payload));
+                        }
+                    });
+                });
+
+        ClientPlayNetworking.registerGlobalReceiver(SpaceUnitFriendsPayload.TYPE,
+                (payload, context) -> {
+                    net.minecraft.client.Minecraft mc = context.client();
+                    mc.execute(() -> {
+                        SpaceUnitFriendsScreen screen = SpaceUnitFriendsScreen.CURRENT;
+                        if (screen != null) {
+                            screen.applyPayload(payload);
+                        } else {
+                            mc.setScreenAndShow(new SpaceUnitFriendsScreen(null, payload));
+                        }
+                    });
+                });
+
+        ClientPlayNetworking.registerGlobalReceiver(SpaceUnitRegistrationPreviewPayload.TYPE,
+                (payload, context) -> {
+                    net.minecraft.client.Minecraft mc = context.client();
+                    mc.execute(() -> mc.setScreenAndShow(new SpaceUnitRegistrationPreviewScreen(payload)));
                 });
 
         // 保留指令方式開啟

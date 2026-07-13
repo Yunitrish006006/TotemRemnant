@@ -1,11 +1,13 @@
 package com.adaptor.deadrecall.inventory;
 
+import com.adaptor.deadrecall.space.SpaceUnitHandler;
 import com.adaptor.deadrecall.item.DeathBackpackItem;
 import com.adaptor.deadrecall.item.BackpackItemHelper;
 import com.adaptor.deadrecall.item.TieredBackpackItem;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ContainerUser;
@@ -219,6 +221,10 @@ public class BackpackInventory implements Container {
     private void removeEmptyDeathBackpack() {
         if (!(backpackStack.getItem() instanceof DeathBackpackItem) || !isEmpty()) {
             return;
+        }
+
+        if (player instanceof ServerPlayer serverPlayer) {
+            SpaceUnitHandler.disableDeathNodeFromBackpack(serverPlayer, backpackStack);
         }
 
         Inventory inventory = player.getInventory();

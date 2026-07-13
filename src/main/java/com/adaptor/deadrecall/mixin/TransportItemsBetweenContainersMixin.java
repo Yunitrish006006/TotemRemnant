@@ -34,17 +34,20 @@ public abstract class TransportItemsBetweenContainersMixin {
     @Inject(method = "checkExtraStartConditions(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/entity/PathfinderMob;)Z", at = @At("HEAD"), cancellable = true)
     private void deadrecall$requireBindingBeforeTransport(ServerLevel level, PathfinderMob mob, CallbackInfoReturnable<Boolean> cir) {
         if (mob instanceof CopperGolem golem
-                && (!CopperGolemWrenchHandler.hasBinding(golem)
+                && (!CopperGolemWrenchHandler.isSortingMode(golem)
+                || !CopperGolemWrenchHandler.hasBinding(golem)
                 || !CopperGolemWrenchHandler.isTransportEnabled(golem)
                 || CopperGolemWrenchHandler.isSortingBlocked(golem)
-                || (golem.getMainHandItem().isEmpty() && !CopperGolemWrenchHandler.hasFuelAvailable(golem, level)))) {
+                || (golem.getMainHandItem().isEmpty()
+                && (!CopperGolemWrenchHandler.hasSourceContainer(golem)
+                || !CopperGolemWrenchHandler.hasFuelAvailable(golem, level))))) {
             cir.setReturnValue(false);
         }
     }
 
     @Inject(method = "getTransportTarget", at = @At("HEAD"), cancellable = true)
     private void deadrecall$useBoundCopperGolemTarget(ServerLevel level, PathfinderMob mob, CallbackInfoReturnable<Optional<TransportItemTarget>> cir) {
-        if (!(mob instanceof CopperGolem golem) || mob.getMainHandItem().isEmpty()) {
+        if (!(mob instanceof CopperGolem golem) || !CopperGolemWrenchHandler.isSortingMode(golem) || mob.getMainHandItem().isEmpty()) {
             return;
         }
 
@@ -74,6 +77,7 @@ public abstract class TransportItemsBetweenContainersMixin {
     private void deadrecall$acceptBoundCopperGolemTargetState(PathfinderMob mob, BlockState state, CallbackInfoReturnable<Boolean> cir) {
         if (mob instanceof CopperGolem golem
                 && !mob.getMainHandItem().isEmpty()
+                && CopperGolemWrenchHandler.isSortingMode(golem)
                 && CopperGolemWrenchHandler.hasBinding(golem)
                 && CopperGolemWrenchHandler.isTransportEnabled(golem)) {
             cir.setReturnValue(true);
@@ -83,10 +87,18 @@ public abstract class TransportItemsBetweenContainersMixin {
     @Inject(method = "pickUpItems", at = @At("HEAD"), cancellable = true)
     private void deadrecall$pickUpSortableItem(PathfinderMob mob, Container container, CallbackInfo ci) {
         if (!(mob instanceof CopperGolem golem)
+                || !CopperGolemWrenchHandler.isSortingMode(golem)
+                || !CopperGolemWrenchHandler.hasSourceContainer(golem)
                 || !CopperGolemWrenchHandler.hasBinding(golem)
                 || !CopperGolemWrenchHandler.isTransportEnabled(golem)
                 || !(mob.level() instanceof ServerLevel level)
                 || target == null) {
+            return;
+        }
+
+        if (!CopperGolemWrenchHandler.isSourceContainer(golem, level, target.pos())) {
+            stopTargetingCurrentTarget(mob);
+            ci.cancel();
             return;
         }
 
@@ -111,8 +123,9 @@ public abstract class TransportItemsBetweenContainersMixin {
     }
 
     @Inject(method = "putDownItem", at = @At("HEAD"), cancellable = true)
-    private void deadrecall$putDownItemIntoNestedBackpack(PathfinderMob mob, Container container, CallbackInfo ci) {
+    private void deadrecall$putDownItemIntoDestination(PathfinderMob mob, Container container, CallbackInfo ci) {
         if (!(mob instanceof CopperGolem golem)
+                || !CopperGolemWrenchHandler.isSortingMode(golem)
                 || !CopperGolemWrenchHandler.hasBinding(golem)
                 || !CopperGolemWrenchHandler.isTransportEnabled(golem)
                 || !(mob.level() instanceof ServerLevel level)
@@ -120,7 +133,7 @@ public abstract class TransportItemsBetweenContainersMixin {
             return;
         }
 
-        Optional<ItemStack> remaining = CopperGolemWrenchHandler.putCarriedItemIntoNestedBackpack(golem, level, target.pos(), container);
+        Optional<ItemStack> remaining = CopperGolemWrenchHandler.putCarriedItemIntoDestination(golem, level, target.pos(), container);
         if (remaining.isEmpty()) {
             return;
         }
@@ -138,7 +151,9 @@ public abstract class TransportItemsBetweenContainersMixin {
 
     @Inject(method = "putDownItem", at = @At("TAIL"))
     private void deadrecall$clearSourceAfterPuttingDownItem(PathfinderMob mob, Container container, CallbackInfo ci) {
-        if (mob instanceof CopperGolem golem && mob.getItemInHand(InteractionHand.MAIN_HAND).isEmpty()) {
+        if (mob instanceof CopperGolem golem
+                && CopperGolemWrenchHandler.isSortingMode(golem)
+                && mob.getItemInHand(InteractionHand.MAIN_HAND).isEmpty()) {
             CopperGolemWrenchHandler.clearRememberedSource(golem);
         }
     }

@@ -33,6 +33,7 @@ public final class CopperGolemLlmService {
         return thread;
     });
     private static final Set<String> PENDING_QUERIES = ConcurrentHashMap.newKeySet();
+    private static final Set<String> PENDING_BLOCK_QUERIES = ConcurrentHashMap.newKeySet();
     private static final Set<UUID> PENDING_CONNECTION_TESTS = ConcurrentHashMap.newKeySet();
     private static final ConcurrentHashMap<String, Long> RETRY_AFTER_MS = new ConcurrentHashMap<>();
     private static final long FAILURE_RETRY_DELAY_MS = 60_000L;
@@ -96,6 +97,67 @@ public final class CopperGolemLlmService {
         });
     }
 
+    public static void requestBlockClassification(
+            MinecraftServer server,
+            UUID golemId,
+            String blockId,
+            String blockName,
+            List<String> blockTags,
+            List<String> expectedDrops,
+            String toolSummary,
+            String prompt,
+            int promptRevision,
+            String apiUrl,
+            String apiKey,
+            String model
+    ) {
+        if (apiUrl == null || apiUrl.isBlank() || model == null || model.isBlank() || prompt == null || prompt.isBlank()) {
+            return;
+        }
+
+        String queryKey = blockQueryKey(golemId, blockId, blockTags, promptRevision);
+        long now = System.currentTimeMillis();
+        if (PENDING_BLOCK_QUERIES.contains(queryKey) || RETRY_AFTER_MS.getOrDefault(queryKey, 0L) > now) {
+            return;
+        }
+
+        PENDING_BLOCK_QUERIES.add(queryKey);
+        EXECUTOR.submit(() -> {
+            try {
+                LlmDecision decision = askBlockLlm(
+                        apiUrl,
+                        apiKey,
+                        model,
+                        prompt,
+                        blockId,
+                        blockName,
+                        blockTags,
+                        expectedDrops,
+                        toolSummary
+                );
+                server.execute(() -> {
+                    CopperGolem golem = findCopperGolem(server, golemId);
+                    if (golem != null) {
+                        CopperGolemWrenchHandler.recordGatheringLlmDecision(
+                                golem,
+                                blockId,
+                                blockTags,
+                                decision.matches(),
+                                decision.tags(),
+                                promptRevision
+                        );
+                    }
+                });
+                RETRY_AFTER_MS.remove(queryKey);
+            } catch (Exception e) {
+                RETRY_AFTER_MS.put(queryKey, System.currentTimeMillis() + FAILURE_RETRY_DELAY_MS);
+                Deadrecall.LOGGER.warn("[CopperGolemLLM] 採集方塊分類請求失敗: {}", e.getMessage());
+            } finally {
+                PENDING_BLOCK_QUERIES.remove(queryKey);
+            }
+        });
+    }
+
     public static void testConnection(MinecraftServer server, UUID playerId, String apiUrl, String apiKey, String model) {
         String normalizedApiUrl = apiUrl == null ? "" : apiUrl.trim();
         String normalizedApiKey = apiKey == null ? "" : apiKey.trim();
@@ -154,6 +216,47 @@ public final class CopperGolemLlmService {
 
         JsonObject response = postChatCompletions(apiUrl, apiKey, body);
         return parseDecision(firstChoiceContent(response), itemTags);
+    }
+
+    private static LlmDecision askBlockLlm(
+            String apiUrl,
+            String apiKey,
+            String model,
+            String prompt,
+            String blockId,
+            String blockName,
+            List<String> blockTags,
+            List<String> expectedDrops,
+            String toolSummary) throws Exception {
+        JsonObject body = new JsonObject();
+        body.addProperty("model", model);
+        body.addProperty("temperature", 0);
+        body.addProperty("max_tokens", 256);
+        body.addProperty("stream", false);
+
+        JsonArray messages = new JsonArray();
+        messages.add(message("system", """
+                You are a Minecraft block gathering classifier for a copper golem.
+                Return only JSON with this schema:
+                {"match":true|false,"tags":["tag_id"]}
+                The tags array must contain only tag ids from the provided block tags that are useful for future matching.
+                If no provided tag is useful, return an empty tags array.
+                The mod already rejected unsafe blocks, containers, unbreakable blocks, wrong tools, and drops that cannot fit.
+                Do not include markdown, explanations, or thinking text.
+                """));
+        messages.add(message("user", String.format(
+                "Gathering prompt: %s%nBlock id: %s%nBlock name: %s%nBlock tags: %s%nExpected drops: %s%nTool: %s%nShould this block type be gathered?%n/no_think",
+                prompt,
+                blockId,
+                blockName,
+                blockTags,
+                expectedDrops,
+                toolSummary
+        )));
+        body.add("messages", messages);
+
+        JsonObject response = postChatCompletions(apiUrl, apiKey, body);
+        return parseDecision(firstChoiceContent(response), blockTags);
     }
 
     private static void askConnectionTest(String apiUrl, String apiKey, String model) throws Exception {
@@ -328,6 +431,10 @@ public final class CopperGolemLlmService {
 
     private static String queryKey(UUID golemId, CopperGolemWrenchHandler.Binding binding, String itemId, List<String> itemTags) {
         return golemId + "|" + binding.dimension().identifier() + "|" + binding.containerPos().asLong() + "|" + itemId + "|" + String.join(",", itemTags);
+    }
+
+    private static String blockQueryKey(UUID golemId, String blockId, List<String> blockTags, int promptRevision) {
+        return golemId + "|block|" + promptRevision + "|" + blockId + "|" + String.join(",", blockTags);
     }
 
     public static String itemId(ItemStack stack) {

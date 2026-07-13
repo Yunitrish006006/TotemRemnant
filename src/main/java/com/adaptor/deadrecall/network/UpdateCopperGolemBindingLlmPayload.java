@@ -7,7 +7,7 @@ import net.minecraft.resources.Identifier;
 
 import java.util.UUID;
 
-public record UpdateCopperGolemBindingLlmPayload(UUID golemId, String dimension, int x, int y, int z, boolean enabled, String prompt)
+public record UpdateCopperGolemBindingLlmPayload(UUID golemId, String dimension, int x, int y, int z, boolean enabled, String prompt, int revision)
         implements CustomPacketPayload {
     public static final Type<UpdateCopperGolemBindingLlmPayload> TYPE =
             new Type<>(Identifier.fromNamespaceAndPath("deadrecall", "update_copper_golem_binding_llm"));
@@ -22,6 +22,7 @@ public record UpdateCopperGolemBindingLlmPayload(UUID golemId, String dimension,
                         buf.writeInt(payload.z());
                         buf.writeBoolean(payload.enabled());
                         buf.writeUtf(payload.prompt(), 2048);
+                        buf.writeInt(payload.revision());
                     },
                     buf -> new UpdateCopperGolemBindingLlmPayload(
                             buf.readUUID(),
@@ -30,7 +31,8 @@ public record UpdateCopperGolemBindingLlmPayload(UUID golemId, String dimension,
                             buf.readInt(),
                             buf.readInt(),
                             buf.readBoolean(),
-                            buf.readUtf(2048)
+                            buf.readUtf(2048),
+                            buf.readInt()
                     )
             );
 
