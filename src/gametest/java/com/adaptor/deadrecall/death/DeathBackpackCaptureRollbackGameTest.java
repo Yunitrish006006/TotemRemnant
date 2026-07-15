@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -108,6 +109,43 @@ public final class DeathBackpackCaptureRollbackGameTest {
         }
     }
 
+    @SuppressWarnings("removal")
+    @GameTest(maxTicks = 60)
+    public void failedDirectCaptureFallsBackToVanillaDropsWithoutLegacyScanner(GameTestHelper helper) {
+        helper.setBlock(CAPTURE_POS.below(), Blocks.STONE);
+        BlockPos absolutePos = helper.absolutePos(CAPTURE_POS);
+        ServerPlayer player = createPlayerAt(helper, absolutePos);
+        player.getInventory().setItem(0, new ItemStack(Items.DIAMOND, 9));
+
+        Set<UUID> nodeIdsBefore = deathNodeIds(helper, player.getUUID());
+        DeathBackpackCaptureService.forceFailureForTesting(
+                player.getUUID(),
+                DeathBackpackCaptureService.CaptureFailurePoint.AFTER_ENTITY_ADD
+        );
+        player.die(helper.getLevel().damageSources().generic());
+
+        helper.runAtTickTime(5, () -> {
+            try {
+                List<ItemEntity> drops = itemDropsAround(helper, absolutePos);
+                require(helper, drops.stream().noneMatch(entity ->
+                                BackpackItemHelper.isDeathBackpackItem(entity.getItem())),
+                        "Legacy nearby-drop collector created a death backpack after direct capture failed");
+                require(helper, drops.stream().anyMatch(entity ->
+                                entity.getItem().is(Items.DIAMOND)
+                                        && entity.getItem().getCount() == 9),
+                        "Transactional rollback did not return the stack to vanilla death drops");
+                require(helper, player.getInventory().isEmpty(),
+                        "Vanilla dropAll did not clear the restored inventory after failed capture");
+                require(helper, deathNodeIds(helper, player.getUUID()).equals(nodeIdsBefore),
+                        "Failed capture created a death node during vanilla fallback");
+                helper.succeed();
+            } finally {
+                DeathBackpackCaptureService.clearForcedFailureForTesting(player.getUUID());
+                player.discard();
+            }
+        });
+    }
+
     private static ServerPlayer createPlayerAt(GameTestHelper helper, BlockPos absolutePos) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         player.snapTo(
@@ -121,11 +159,17 @@ public final class DeathBackpackCaptureRollbackGameTest {
     }
 
     private static Set<ItemEntity> deathBackpacksAround(GameTestHelper helper, BlockPos absolutePos) {
-        return new HashSet<>(helper.getLevel().getEntitiesOfClass(
+        return new HashSet<>(itemDropsAround(helper, absolutePos).stream()
+                .filter(entity -> BackpackItemHelper.isDeathBackpackItem(entity.getItem()))
+                .toList());
+    }
+
+    private static List<ItemEntity> itemDropsAround(GameTestHelper helper, BlockPos absolutePos) {
+        return helper.getLevel().getEntitiesOfClass(
                 ItemEntity.class,
                 new AABB(absolutePos).inflate(4.0),
-                entity -> entity.isAlive() && BackpackItemHelper.isDeathBackpackItem(entity.getItem())
-        ));
+                ItemEntity::isAlive
+        );
     }
 
     private static Set<UUID> deathNodeIds(GameTestHelper helper, UUID ownerId) {

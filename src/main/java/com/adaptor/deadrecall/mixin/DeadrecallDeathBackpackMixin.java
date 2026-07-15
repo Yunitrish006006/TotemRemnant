@@ -3,34 +3,28 @@ package com.adaptor.deadrecall.mixin;
 import com.adaptor.deadrecall.Deadrecall;
 import com.adaptor.deadrecall.death.DeathBackpackCaptureService;
 import net.minecraft.server.level.ServerPlayer;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.Map;
-import java.util.UUID;
-
 /**
- * Temporary compatibility bridge while the old post-drop collector remains in Deadrecall.
- * Successful pre-drop captures cancel that legacy path; failed captures still fall back to it.
+ * Disables the legacy nearby-ItemEntity death collector.
+ *
+ * <p>Direct pre-drop capture is now the only death-backpack creation path. If that transactional
+ * capture fails, restored inventory is left to vanilla {@code Inventory.dropAll()} rather than
+ * scanning nearby world entities and risking cross-player or unrelated-item collection.</p>
  */
 @Mixin(Deadrecall.class)
 public abstract class DeadrecallDeathBackpackMixin {
-    @Shadow
-    @Final
-    private static Map<UUID, ?> pendingDeathCollections;
+    @Inject(method = "rememberExistingDropsBeforeDeath", at = @At("HEAD"), cancellable = true)
+    private static void deadrecall$disableLegacyPreDeathItemScan(ServerPlayer player, CallbackInfo ci) {
+        ci.cancel();
+    }
 
     @Inject(method = "handlePlayerDeath", at = @At("HEAD"), cancellable = true)
-    private void deadrecall$skipLegacyCollectorAfterDirectCapture(ServerPlayer player, CallbackInfo ci) {
-        UUID playerId = player.getUUID();
-        if (!DeathBackpackCaptureService.consumeCompletedCapture(playerId)) {
-            return;
-        }
-
-        pendingDeathCollections.remove(playerId);
+    private void deadrecall$disableLegacyPostDeathCollector(ServerPlayer player, CallbackInfo ci) {
+        DeathBackpackCaptureService.consumeCompletedCapture(player.getUUID());
         ci.cancel();
     }
 }
