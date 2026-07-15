@@ -1,8 +1,8 @@
 package com.adaptor.deadrecall.client;
 
+import com.adaptor.deadrecall.item.copper.CopperGolemMenu;
+import com.adaptor.deadrecall.mixin.client.SlotAccessor;
 import com.adaptor.deadrecall.network.CopperGolemOperationPayload;
-import com.adaptor.deadrecall.network.CopperGolemFuelSlotPayload;
-import com.adaptor.deadrecall.network.CopperGolemGatheringSlotPayload;
 import com.adaptor.deadrecall.network.CopperGolemGatheringTargetPayload;
 import com.adaptor.deadrecall.network.CopperGolemModePayload;
 import com.adaptor.deadrecall.network.CopperWrenchBindingsPayload;
@@ -16,11 +16,13 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -31,8 +33,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-public class CopperWrenchBindingsScreen extends Screen {
+public class CopperWrenchBindingsScreen extends AbstractContainerScreen<CopperGolemMenu> {
     public static CopperWrenchBindingsScreen CURRENT = null;
+    private static CopperWrenchBindingsPayload pendingPayload = null;
 
     private static final int PANEL_WIDTH = 520;
     private static final int PANEL_HEIGHT = 304;
@@ -44,6 +47,15 @@ public class CopperWrenchBindingsScreen extends Screen {
     private static final int CARD_GAP = 4;
     private static final int FOOTER_HEIGHT = 24;
     private static final int SCREEN_MARGIN = 6;
+    private static final int MIN_PANEL_WIDTH = 400;
+    private static final int MIN_PANEL_HEIGHT = 236;
+    private static final int PLAYER_INVENTORY_WIDTH = 162;
+    private static final int PLAYER_INVENTORY_ROWS_HEIGHT = 54;
+    private static final int PLAYER_HOTBAR_HEIGHT = 18;
+    private static final int PLAYER_INVENTORY_GAP = 4;
+    private static final int STATUS_ICON_SIZE = 20;
+    private static final Identifier VANILLA_SLOT_SPRITE =
+            Identifier.fromNamespaceAndPath("minecraft", "container/slot");
 
     private UUID golemId;
     private int revision;
@@ -93,39 +105,59 @@ public class CopperWrenchBindingsScreen extends Screen {
     private int scrollOffset = 0;
     private String promptFieldContext = "";
 
-    public CopperWrenchBindingsScreen(CopperWrenchBindingsPayload payload) {
-        super(Component.translatable("container.deadrecall.copper_wrench.bindings"));
-        this.golemId = payload.golemId();
-        this.revision = payload.revision();
-        this.running = payload.running();
-        this.mode = payload.mode();
-        this.activity = payload.activity();
-        this.fuelItemId = payload.fuelItemId();
-        this.fuelCount = payload.fuelCount();
-        this.fuelTicks = payload.fuelTicks();
-        this.gatheringToolItemId = payload.gatheringToolItemId();
-        this.gatheringToolCount = payload.gatheringToolCount();
-        this.gatheringToolDamage = payload.gatheringToolDamage();
-        this.gatheringToolMaxDamage = payload.gatheringToolMaxDamage();
-        this.gatheringStorageItemId = payload.gatheringStorageItemId();
-        this.gatheringStorageCount = payload.gatheringStorageCount();
-        this.llmApiUrl = payload.llmApiUrl();
-        this.llmApiKey = payload.llmApiKey();
-        this.llmModel = payload.llmModel();
-        this.llmActiveCount = payload.llmActiveCount();
-        this.sourceContainer = payload.sourceContainer();
-        this.gatheringArea = payload.gatheringArea();
-        this.gatheringManualTargets = new ArrayList<>(payload.gatheringManualTargets());
-        this.gatheringLlmEnabled = payload.gatheringLlmEnabled();
-        this.gatheringLlmPrompt = payload.gatheringLlmPrompt();
-        this.gatheringLlmCachedBlockIds = payload.gatheringLlmCachedBlockIds();
-        this.gatheringLlmCachedTags = payload.gatheringLlmCachedTags();
-        this.gatheringLlmAllowedBlockIds = new ArrayList<>(payload.gatheringLlmAllowedBlockIds());
-        this.gatheringLlmDeniedBlockIds = new ArrayList<>(payload.gatheringLlmDeniedBlockIds());
-        this.gatheringLlmAllowedTags = new ArrayList<>(payload.gatheringLlmAllowedTags());
-        this.gatheringLlmDeniedTags = new ArrayList<>(payload.gatheringLlmDeniedTags());
-        this.bindings = new ArrayList<>(payload.bindings());
+    public CopperWrenchBindingsScreen(CopperGolemMenu menu, Inventory playerInventory, Component title) {
+        super(menu, playerInventory, title, PANEL_WIDTH, PANEL_HEIGHT);
+        initializeEmptyPayloadState(menu.golemId());
         CURRENT = this;
+
+        if (pendingPayload != null && isFor(pendingPayload.golemId())) {
+            CopperWrenchBindingsPayload payload = pendingPayload;
+            pendingPayload = null;
+            applyPayload(payload);
+        }
+    }
+
+    public static void receivePayload(CopperWrenchBindingsPayload payload) {
+        CopperWrenchBindingsScreen screen = CURRENT;
+        if (screen != null && screen.isFor(payload.golemId())) {
+            screen.applyPayload(payload);
+        } else {
+            pendingPayload = payload;
+        }
+    }
+
+    private void initializeEmptyPayloadState(UUID initialGolemId) {
+        this.golemId = initialGolemId;
+        this.revision = 0;
+        this.running = false;
+        this.mode = "sorting";
+        this.activity = "stopped";
+        this.fuelItemId = "minecraft:air";
+        this.fuelCount = 0;
+        this.fuelTicks = 0;
+        this.gatheringToolItemId = "minecraft:air";
+        this.gatheringToolCount = 0;
+        this.gatheringToolDamage = 0;
+        this.gatheringToolMaxDamage = 0;
+        this.gatheringStorageItemId = "minecraft:air";
+        this.gatheringStorageCount = 0;
+        this.llmApiUrl = "";
+        this.llmApiKey = "";
+        this.llmModel = "";
+        this.llmActiveCount = 0;
+        this.sourceContainer = null;
+        this.gatheringArea = null;
+        this.gatheringManualTargets = new ArrayList<>();
+        this.gatheringLlmEnabled = false;
+        this.gatheringLlmPrompt = "";
+        this.gatheringLlmCachedBlockIds = 0;
+        this.gatheringLlmCachedTags = 0;
+        this.gatheringLlmAllowedBlockIds = new ArrayList<>();
+        this.gatheringLlmDeniedBlockIds = new ArrayList<>();
+        this.gatheringLlmAllowedTags = new ArrayList<>();
+        this.gatheringLlmDeniedTags = new ArrayList<>();
+        this.bindings = new ArrayList<>();
+        this.menu.setGatheringSlotsVisible(isGatheringMode());
     }
 
     @Override
@@ -137,7 +169,7 @@ public class CopperWrenchBindingsScreen extends Screen {
     }
 
     public boolean isFor(UUID targetGolemId) {
-        return this.golemId.equals(targetGolemId);
+        return this.golemId != null && this.golemId.equals(targetGolemId);
     }
 
     public void applyPayload(CopperWrenchBindingsPayload payload) {
@@ -171,6 +203,7 @@ public class CopperWrenchBindingsScreen extends Screen {
         this.gatheringLlmAllowedTags = new ArrayList<>(payload.gatheringLlmAllowedTags());
         this.gatheringLlmDeniedTags = new ArrayList<>(payload.gatheringLlmDeniedTags());
         this.bindings = new ArrayList<>(payload.bindings());
+        this.menu.setGatheringSlotsVisible(isGatheringMode());
         this.scrollOffset = Math.min(this.scrollOffset, getMaxScroll());
         if (this.selectedBindingIndex >= this.bindings.size()) {
             this.selectedBindingIndex = this.bindings.isEmpty() ? -1 : this.bindings.size() - 1;
@@ -182,7 +215,19 @@ public class CopperWrenchBindingsScreen extends Screen {
     }
 
     @Override
+    public void resize(int width, int height) {
+        super.resize(width, height);
+        this.leftPos = panelXForCurrentWindow();
+        this.topPos = panelYForCurrentWindow();
+        updateWidgetLayout();
+    }
+
+    @Override
     protected void init() {
+        super.init();
+        this.leftPos = panelXForCurrentWindow();
+        this.topPos = panelYForCurrentWindow();
+        updateMenuSlotLayout();
         int panelX = panelX();
         int panelY = panelY();
         int panelWidth = panelWidth();
@@ -197,22 +242,22 @@ public class CopperWrenchBindingsScreen extends Screen {
                 .build();
         this.addRenderableWidget(this.modeButton);
 
-        this.bindingsTabButton = Button.builder(Component.literal("箱子"), button -> setActiveTab(Tab.BINDINGS))
+        this.bindingsTabButton = Button.builder(tabButtonText("tab_bindings", this.activeTab == Tab.BINDINGS), button -> setActiveTab(Tab.BINDINGS))
                 .bounds(panelX + PANEL_PADDING, panelY + 26, 70, 18)
                 .build();
         this.addRenderableWidget(this.bindingsTabButton);
 
-        this.llmTabButton = Button.builder(Component.literal("LLM"), button -> setActiveTab(Tab.LLM))
+        this.llmTabButton = Button.builder(tabButtonText("tab_llm", this.activeTab == Tab.LLM), button -> setActiveTab(Tab.LLM))
                 .bounds(panelX + PANEL_PADDING + 76, panelY + 26, 70, 18)
                 .build();
         this.addRenderableWidget(this.llmTabButton);
 
         this.promptField = new EditBox(this.font, promptEditorX(), promptEditorY(), promptFieldWidth(), 18, Component.literal("LLM Prompt"));
         this.promptField.setMaxLength(2048);
-        this.promptField.setHint(Component.literal("例：這個箱子只收礦物、金屬與礦石相關物品"));
+        this.promptField.setHint(copperWrenchText("prompt_hint"));
         this.addRenderableWidget(this.promptField);
 
-        this.savePromptButton = Button.builder(Component.literal("儲存"), button -> saveSelectedPrompt())
+        this.savePromptButton = Button.builder(copperWrenchText("save"), button -> saveSelectedPrompt())
                 .bounds(promptSaveButtonX(), promptSaveButtonY(), promptSaveButtonWidth(), 18)
                 .build();
         this.addRenderableWidget(this.savePromptButton);
@@ -240,12 +285,12 @@ public class CopperWrenchBindingsScreen extends Screen {
         this.modelField.setHint(Component.literal("gpt-4o-mini"));
         this.addRenderableWidget(this.modelField);
 
-        this.saveApiButton = Button.builder(Component.literal("儲存這隻魁儡的 API 設定"), button -> saveApiConfig())
+        this.saveApiButton = Button.builder(copperWrenchText("save_api"), button -> saveApiConfig())
                 .bounds(apiX, apiY + 106, 180, 20)
                 .build();
         this.addRenderableWidget(this.saveApiButton);
 
-        this.testApiButton = Button.builder(Component.literal("測試連線"), button -> testApiConnection())
+        this.testApiButton = Button.builder(copperWrenchText("test_connection"), button -> testApiConnection())
                 .bounds(apiX + 188, apiY + 106, 78, 20)
                 .build();
         this.addRenderableWidget(this.testApiButton);
@@ -261,7 +306,7 @@ public class CopperWrenchBindingsScreen extends Screen {
 
     @Override
     public void extractBackground(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float partialTick) {
-        extractor.fill(0, 0, this.width, this.height, 0xA0000000);
+        extractor.fill(0, 0, this.width, this.height, 0xC0000000);
     }
 
     @Override
@@ -271,12 +316,12 @@ public class CopperWrenchBindingsScreen extends Screen {
         int panelY = panelY();
         int panelWidth = panelWidth();
         int panelHeight = panelHeight();
-        extractor.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xE0181818);
+        extractor.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xFF181818);
         extractor.outline(panelX, panelY, panelWidth, panelHeight, 0xFF6A6A6A);
         extractor.text(this.font, this.title, panelX + PANEL_PADDING, panelY + 9, 0xFFFFFFFF);
-        extractor.text(this.font, operationStatusText(), panelX + PANEL_PADDING + 154, panelY + 31, operationStatusColor());
         drawSourceIcon(extractor, mouseX, mouseY);
         drawFuelSlot(extractor, mouseX, mouseY);
+        drawOperationStatusIcon(extractor, mouseX, mouseY);
 
         if (this.activeTab == Tab.BINDINGS) {
             if (isGatheringMode()) {
@@ -288,29 +333,66 @@ public class CopperWrenchBindingsScreen extends Screen {
             drawLlmTab(extractor);
         }
 
+        drawMenuSlotBackings(extractor);
+        extractor.text(this.font, this.playerInventoryTitle,
+                panelX + playerInventoryRelativeX(),
+                panelY + playerInventoryRelativeY() - 12,
+                0xFFE0E0E0);
         super.extractRenderState(extractor, mouseX, mouseY, partialTick);
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (isFuelSlotAt(event.x(), event.y())) {
-            clickFuelSlot(event.button());
-            return true;
-        }
+    protected void extractLabels(GuiGraphicsExtractor extractor, int mouseX, int mouseY) {
+    }
 
+    private void drawMenuSlotBackings(GuiGraphicsExtractor extractor) {
+        drawVanillaPlayerInventoryBackings(extractor);
+        drawGolemSlotBackings(extractor);
+    }
+
+    private void drawVanillaPlayerInventoryBackings(GuiGraphicsExtractor extractor) {
+        for (int i = CopperGolemMenu.GOLEM_SLOT_COUNT; i < this.menu.slots.size(); i++) {
+            Slot slot = this.menu.slots.get(i);
+            if (!slot.isActive()) {
+                continue;
+            }
+            drawVanillaSlotBacking(extractor, slot);
+        }
+    }
+
+    private void drawGolemSlotBackings(GuiGraphicsExtractor extractor) {
+        int slotCount = Math.min(CopperGolemMenu.GOLEM_SLOT_COUNT, this.menu.slots.size());
+        for (int i = 0; i < slotCount; i++) {
+            Slot slot = this.menu.slots.get(i);
+            if (!slot.isActive()) {
+                continue;
+            }
+            drawVanillaSlotBacking(extractor, slot);
+        }
+    }
+
+    private void drawVanillaSlotBacking(GuiGraphicsExtractor extractor, Slot slot) {
+        extractor.blitSprite(
+                net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
+                VANILLA_SLOT_SPRITE,
+                this.leftPos + slot.x - 1,
+                this.topPos + slot.y - 1,
+                18,
+                18
+        );
+    }
+
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (isPromptWidgetAt(event.x(), event.y())) {
             return super.mouseClicked(event, doubleClick);
         }
 
+        if (isContainerSlotAt(event.x(), event.y())) {
+            return super.mouseClicked(event, doubleClick);
+        }
+
         if (this.activeTab == Tab.BINDINGS && isGatheringMode()) {
-            if (isGatheringToolSlotAt(event.x(), event.y())) {
-                clickGatheringSlot(CopperGolemGatheringSlotPayload.Slot.TOOL, event.button());
-                return true;
-            }
-            if (isGatheringStorageSlotAt(event.x(), event.y())) {
-                clickGatheringSlot(CopperGolemGatheringSlotPayload.Slot.STORAGE, event.button());
-                return true;
-            }
             GatheringTargetHit targetHit = gatheringTargetHitAt(event.x(), event.y());
             if (event.button() == 1 && targetHit != null) {
                 removeGatheringTarget(targetHit);
@@ -339,22 +421,12 @@ public class CopperWrenchBindingsScreen extends Screen {
         return super.mouseClicked(event, doubleClick);
     }
 
-    private void clickFuelSlot(int button) {
-        CopperGolemFuelSlotPayload.Action action = button == 1
-                ? CopperGolemFuelSlotPayload.Action.TAKE_ALL
-                : CopperGolemFuelSlotPayload.Action.INSERT_MAIN_HAND;
-        if (ClientPlayNetworking.canSend(CopperGolemFuelSlotPayload.TYPE)) {
-            ClientPlayNetworking.send(new CopperGolemFuelSlotPayload(this.golemId, action, this.revision));
-        }
-    }
-
-    private void clickGatheringSlot(CopperGolemGatheringSlotPayload.Slot slot, int button) {
-        CopperGolemGatheringSlotPayload.Action action = button == 1
-                ? CopperGolemGatheringSlotPayload.Action.TAKE_ALL
-                : CopperGolemGatheringSlotPayload.Action.INSERT_MAIN_HAND;
-        if (ClientPlayNetworking.canSend(CopperGolemGatheringSlotPayload.TYPE)) {
-            ClientPlayNetworking.send(new CopperGolemGatheringSlotPayload(this.golemId, slot, action, this.revision));
-        }
+    @Override
+    protected boolean hasClickedOutside(double mouseX, double mouseY, int left, int top) {
+        return mouseX < panelX()
+                || mouseX >= panelX() + panelWidth()
+                || mouseY < panelY()
+                || mouseY >= panelY() + panelHeight();
     }
 
     private void removeGatheringTarget(GatheringTargetHit hit) {
@@ -605,6 +677,7 @@ public class CopperWrenchBindingsScreen extends Screen {
     }
 
     private void updateWidgetLayout() {
+        updateMenuSlotLayout();
         int panelX = panelX();
         int panelY = panelY();
         int panelWidth = panelWidth();
@@ -690,10 +763,10 @@ public class CopperWrenchBindingsScreen extends Screen {
     private void updateFields() {
         updateWidgetLayout();
         if (this.bindingsTabButton != null) {
-            this.bindingsTabButton.setMessage(Component.literal(this.activeTab == Tab.BINDINGS ? "[箱子]" : "箱子"));
+            this.bindingsTabButton.setMessage(tabButtonText("tab_bindings", this.activeTab == Tab.BINDINGS));
         }
         if (this.llmTabButton != null) {
-            this.llmTabButton.setMessage(Component.literal(this.activeTab == Tab.LLM ? "[LLM]" : "LLM"));
+            this.llmTabButton.setMessage(tabButtonText("tab_llm", this.activeTab == Tab.LLM));
         }
         updateModeButton();
 
@@ -714,7 +787,7 @@ public class CopperWrenchBindingsScreen extends Screen {
         if (this.savePromptButton != null) {
             this.savePromptButton.visible = promptVisible;
             this.savePromptButton.active = promptVisible;
-            this.savePromptButton.setMessage(Component.literal("儲存"));
+            this.savePromptButton.setMessage(copperWrenchText("save"));
         }
         if (this.gatheringLlmToggleButton != null) {
             this.gatheringLlmToggleButton.visible = bindingsVisible && isGatheringMode();
@@ -771,7 +844,7 @@ public class CopperWrenchBindingsScreen extends Screen {
         int panelX = panelX();
         int listX = panelX + PANEL_PADDING;
         int listY = sortingListY();
-        int listWidth = panelWidth() - PANEL_PADDING * 2;
+        int listWidth = settingsWidth();
         int listHeight = getListHeight();
 
         extractor.fill(listX, listY, listX + listWidth, listY + listHeight, 0x80101010);
@@ -779,7 +852,7 @@ public class CopperWrenchBindingsScreen extends Screen {
 
         if (this.bindings.isEmpty()) {
             extractor.centeredText(this.font, Component.translatable("message.deadrecall.copper_wrench.binding_list_empty"),
-                    panelX + panelWidth() / 2, listY + listHeight / 2 - 4, 0xFFB8B8B8);
+                    listX + listWidth / 2, listY + listHeight / 2 - 4, 0xFFB8B8B8);
         } else {
             extractor.enableScissor(listX + 1, listY + 1, listX + listWidth - 1, listY + listHeight - 1);
             for (int i = 0; i < this.bindings.size(); i++) {
@@ -800,7 +873,7 @@ public class CopperWrenchBindingsScreen extends Screen {
 
     private void drawGatheringTab(GuiGraphicsExtractor extractor, int mouseX, int mouseY) {
         int x = panelX() + PANEL_PADDING;
-        int width = panelWidth() - PANEL_PADDING * 2;
+        int width = settingsWidth();
         int contentY = gatheringContentY();
         int height = Math.max(24, panelY() + panelHeight() - FOOTER_HEIGHT - 4 - contentY);
 
@@ -810,17 +883,21 @@ public class CopperWrenchBindingsScreen extends Screen {
         extractor.text(this.font, gatheringCornerText(true), x + 10, contentY + 24, gatheringCornerColor(true));
         extractor.text(this.font, gatheringCornerText(false), x + 10, contentY + 38, gatheringCornerColor(false));
         extractor.text(this.font, gatheringAreaRangeText(), x + 10, contentY + 54, hasCompleteGatheringArea() ? 0xFF64D26D : 0xFFFFC857);
-        drawGatheringInventorySlots(extractor, x + width - 142, contentY + 8, mouseX, mouseY);
+        drawGatheringInventorySlots(extractor, mouseX, mouseY);
         extractor.text(this.font, Component.translatable("message.deadrecall.copper_wrench.gathering_targets"), x + 10, contentY + 78, 0xFFFFFFFF);
         drawGatheringManualTargets(extractor, x + 10, contentY + 94, width - 20, height - 100, mouseX, mouseY);
     }
 
-    private void drawGatheringInventorySlots(GuiGraphicsExtractor extractor, int x, int y, int mouseX, int mouseY) {
-        drawGatheringSlot(extractor, x, y, Component.translatable("message.deadrecall.copper_wrench.gathering_tool_slot"),
-                this.gatheringToolItemId, this.gatheringToolCount, this.gatheringToolDamage, this.gatheringToolMaxDamage,
+    private void drawGatheringInventorySlots(GuiGraphicsExtractor extractor, int mouseX, int mouseY) {
+        drawGatheringSlot(extractor,
+                gatheringToolSlotX(),
+                gatheringSlotY(),
+                new ItemStack(Items.IRON_PICKAXE),
                 isGatheringToolSlotAt(mouseX, mouseY), gatheringToolTooltip(), mouseX, mouseY);
-        drawGatheringSlot(extractor, x + 66, y, Component.translatable("message.deadrecall.copper_wrench.gathering_storage_slot"),
-                this.gatheringStorageItemId, this.gatheringStorageCount, 0, 0,
+        drawGatheringSlot(extractor,
+                gatheringStorageSlotX(),
+                gatheringSlotY(),
+                new ItemStack(Items.CHEST),
                 isGatheringStorageSlotAt(mouseX, mouseY), gatheringStorageTooltip(), mouseX, mouseY);
     }
 
@@ -828,32 +905,12 @@ public class CopperWrenchBindingsScreen extends Screen {
             GuiGraphicsExtractor extractor,
             int x,
             int y,
-            Component label,
-            String itemId,
-            int count,
-            int damage,
-            int maxDamage,
+            ItemStack labelIcon,
             boolean hovered,
             List<Component> tooltip,
             int mouseX,
             int mouseY) {
-        extractor.text(this.font, label, x, y, 0xFFE0E0E0);
-        extractor.fill(x, y + 12, x + 22, y + 34, 0xB0000000);
-        extractor.outline(x, y + 12, 22, 22, count > 0 ? 0xFFE2C15A : 0xFF777777);
-        if (count > 0) {
-            extractor.item(iconStack(itemId), x + 3, y + 15);
-            if (count > 1) {
-                extractor.text(this.font, String.valueOf(count), x + 13, y + 26, 0xFFFFFFFF);
-            }
-            if (maxDamage > 0) {
-                int remaining = Math.max(0, maxDamage - damage);
-                int barWidth = Math.max(1, Math.min(20, remaining * 20 / maxDamage));
-                extractor.fill(x + 1, y + 33, x + 1 + barWidth, y + 34, 0xFF64D26D);
-            }
-        } else {
-            extractor.item(new ItemStack(Items.BARRIER), x + 3, y + 15);
-            extractor.fill(x + 3, y + 15, x + 19, y + 31, 0x90000000);
-        }
+        extractor.item(labelIcon, x + 1, y - 19);
         if (hovered) {
             extractor.setComponentTooltipForNextFrame(this.font, tooltip, mouseX, mouseY);
         }
@@ -864,12 +921,14 @@ public class CopperWrenchBindingsScreen extends Screen {
         List<GatheringTargetEntry> denied = gatheringDeniedTargetEntries();
         extractor.text(this.font, Component.translatable("message.deadrecall.copper_wrench.gathering_llm_prompt"),
                 x, y, 0xFFFFFFFF);
-        extractor.text(this.font, Component.literal("快取方塊: " + this.gatheringLlmCachedBlockIds + " / 快取 Tag: " + this.gatheringLlmCachedTags),
+        extractor.text(this.font, Component.translatable("message.deadrecall.copper_wrench.gathering_cache_summary",
+                        this.gatheringLlmCachedBlockIds,
+                        this.gatheringLlmCachedTags),
                 x + 70, y + 5, 0xFFB8B8B8);
         extractor.text(this.font,
                 Component.translatable("message.deadrecall.copper_wrench.gathering_targets_count", accepted.size() + denied.size()),
                 x, gatheringTargetHeaderY(), 0xFFB8B8B8);
-        extractor.text(this.font, Component.literal("右鍵圖示移除目標"), x + 100, gatheringTargetHeaderY(), 0xFF909090);
+        extractor.text(this.font, Component.translatable("message.deadrecall.copper_wrench.remove_target_hint"), x + 100, gatheringTargetHeaderY(), 0xFF909090);
 
         if (accepted.isEmpty() && denied.isEmpty()) {
             extractor.text(this.font, Component.translatable("message.deadrecall.copper_wrench.gathering_targets_empty"), x, gatheringTargetRowsStartY(), 0xFFFFC857);
@@ -879,8 +938,10 @@ public class CopperWrenchBindingsScreen extends Screen {
         int startY = gatheringTargetRowsStartY();
         int gap = 8;
         int groupWidth = (width - gap) / 2;
-        drawGatheringTargetGroup(extractor, accepted, x, startY, groupWidth, 0xFF4C8A53, "接受目標", mouseX, mouseY);
-        drawGatheringTargetGroup(extractor, denied, x + groupWidth + gap, startY, groupWidth, 0xFF9A4D4D, "拒絕", mouseX, mouseY);
+        drawGatheringTargetGroup(extractor, accepted, x, startY, groupWidth, 0xFF4C8A53,
+                copperWrenchText("accepted_targets"), mouseX, mouseY);
+        drawGatheringTargetGroup(extractor, denied, x + groupWidth + gap, startY, groupWidth, 0xFF9A4D4D,
+                copperWrenchText("denied_targets"), mouseX, mouseY);
     }
 
     private List<GatheringTargetEntry> gatheringAcceptedTargetEntries() {
@@ -928,14 +989,14 @@ public class CopperWrenchBindingsScreen extends Screen {
             int y,
             int width,
             int color,
-            String label,
+            Component label,
             int mouseX,
             int mouseY) {
         extractor.outline(x, y, width, 18, color);
         extractor.text(this.font, label, x + 4, y + 5, color);
 
-        int iconX = gatheringTargetGroupIconX(x, width, label);
-        int maxIcons = gatheringTargetGroupMaxIcons(x, width, label);
+        int iconX = gatheringTargetGroupIconX(x, width, label.getString());
+        int maxIcons = gatheringTargetGroupMaxIcons(x, width, label.getString());
         int shown = Math.min(entries.size(), maxIcons);
         for (int i = 0; i < shown; i++) {
             GatheringTargetEntry entry = entries.get(i);
@@ -945,9 +1006,13 @@ public class CopperWrenchBindingsScreen extends Screen {
             extractor.item(entry.tag() ? new ItemStack(Items.NAME_TAG) : iconStack(entry.value()), slotX + 1, y + 2);
             if (mouseX >= slotX && mouseX <= slotX + 17 && mouseY >= y + 1 && mouseY <= y + 18) {
                 extractor.setComponentTooltipForNextFrame(this.font, List.of(
-                        Component.literal(label + (entry.tag() ? " Tag" : "方塊")),
+                        Component.translatable("message.deadrecall.copper_wrench.target_tooltip_type",
+                                label,
+                                Component.translatable(entry.tag()
+                                        ? "message.deadrecall.copper_wrench.entry_type_tag"
+                                        : "message.deadrecall.copper_wrench.entry_type_block")),
                         Component.literal(entry.value()),
-                        Component.literal("右鍵移除")
+                        Component.translatable("message.deadrecall.copper_wrench.remove_icon_hint")
                 ), mouseX, mouseY);
             }
         }
@@ -981,14 +1046,14 @@ public class CopperWrenchBindingsScreen extends Screen {
                     0xFFE0E0E0
             ));
         }
-        addGatheringCacheRows(rows, this.gatheringLlmAllowedBlockIds, "Prompt 允許", true, 0xFF64D26D);
-        addGatheringCacheRows(rows, this.gatheringLlmDeniedBlockIds, "Prompt 拒絕", true, 0xFFFF8A8A);
-        addGatheringCacheRows(rows, this.gatheringLlmAllowedTags, "Prompt 允許 #", false, 0xFF64D26D);
-        addGatheringCacheRows(rows, this.gatheringLlmDeniedTags, "Prompt 拒絕 #", false, 0xFFFF8A8A);
+        addGatheringCacheRows(rows, this.gatheringLlmAllowedBlockIds, "message.deadrecall.copper_wrench.prompt_allowed_tag", true, 0xFF64D26D);
+        addGatheringCacheRows(rows, this.gatheringLlmDeniedBlockIds, "message.deadrecall.copper_wrench.prompt_denied_tag", true, 0xFFFF8A8A);
+        addGatheringCacheRows(rows, this.gatheringLlmAllowedTags, "message.deadrecall.copper_wrench.prompt_allowed_tag", false, 0xFF64D26D);
+        addGatheringCacheRows(rows, this.gatheringLlmDeniedTags, "message.deadrecall.copper_wrench.prompt_denied_tag", false, 0xFFFF8A8A);
         return rows;
     }
 
-    private void addGatheringCacheRows(List<GatheringPreviewRow> rows, List<String> values, String prefix, boolean blockId, int color) {
+    private void addGatheringCacheRows(List<GatheringPreviewRow> rows, List<String> values, String tagLabelKey, boolean blockId, int color) {
         if (values == null) {
             return;
         }
@@ -996,7 +1061,7 @@ public class CopperWrenchBindingsScreen extends Screen {
             if (value == null || value.isBlank()) {
                 continue;
             }
-            String label = blockId ? blockDisplayName(value).getString() : prefix + value;
+            String label = blockId ? blockDisplayName(value).getString() : Component.translatable(tagLabelKey, value).getString();
             rows.add(new GatheringPreviewRow(
                     label,
                     value,
@@ -1013,17 +1078,17 @@ public class CopperWrenchBindingsScreen extends Screen {
         int panelY = panelY();
         int x = panelX + PANEL_PADDING;
         int y = panelY + HEADER_HEIGHT + 8;
-        int width = panelWidth() - PANEL_PADDING * 2;
+        int width = settingsWidth();
         int height = panelHeight() - HEADER_HEIGHT - FOOTER_HEIGHT - 20;
         int apiY = apiControlsY();
         extractor.fill(x, y, x + width, y + height, 0x80101010);
         extractor.outline(x, y, width, height, 0xFF3A3A3A);
-        extractor.text(this.font, "這隻銅魁儡共用的 LLM API 設定", x + 10, y + 8, 0xFFFFFFFF);
-        extractor.text(this.font, "每個箱子的 prompt 在「箱子」分頁設定", x + 10, y + 22, 0xFFB8B8B8);
+        extractor.text(this.font, Component.translatable("message.deadrecall.copper_wrench.llm_api_title"), x + 10, y + 8, 0xFFFFFFFF);
+        extractor.text(this.font, Component.translatable("message.deadrecall.copper_wrench.llm_api_hint"), x + 10, y + 22, 0xFFB8B8B8);
         extractor.text(this.font, "API URL", x + 10, apiY + 6, 0xFFB8B8B8);
         extractor.text(this.font, "API Key", x + 10, apiY + 42, 0xFFB8B8B8);
         extractor.text(this.font, "Model", x + 10, apiY + 78, 0xFFB8B8B8);
-        extractor.text(this.font, "目前啟用 LLM 的箱子: " + this.llmActiveCount, x + 10, apiY + 132, 0xFFE0E0E0);
+        extractor.text(this.font, Component.translatable("message.deadrecall.copper_wrench.llm_active_count", this.llmActiveCount), x + 10, apiY + 132, 0xFFE0E0E0);
     }
 
     private void drawBindingCard(GuiGraphicsExtractor extractor, CopperWrenchBindingsPayload.BindingEntry entry, int index,
@@ -1038,7 +1103,7 @@ public class CopperWrenchBindingsScreen extends Screen {
         extractor.fill(x + 8, y + 7, x + 28, y + 27, 0xB0000000);
         extractor.item(iconStack(entry.itemId()), x + 10, y + 9);
 
-        String title = "目標容器 #" + (index + 1);
+        String title = Component.translatable("message.deadrecall.copper_wrench.target_container_number", index + 1).getString();
         extractor.text(this.font, trimToWidth(title, width - 48), x + 38, selected ? y + 5 : y + 9, 0xFFFFFFFF);
         extractor.text(this.font, trimToWidth(blockDisplayName(entry.blockId()).getString(), width - 48), x + 38, selected ? y + 18 : y + 25, 0xFFB8B8B8);
 
@@ -1051,7 +1116,7 @@ public class CopperWrenchBindingsScreen extends Screen {
             int buttonY = y + 28;
             extractor.fill(buttonX, buttonY, buttonX + 52, buttonY + 16, entry.llmEnabled() ? 0xFF326A3D : 0xFF4A4A4A);
             extractor.outline(buttonX, buttonY, 52, 16, entry.llmEnabled() ? 0xFF74D17B : 0xFF7A7A7A);
-            extractor.centeredText(this.font, Component.literal(entry.llmEnabled() ? "LLM 開" : "LLM 關"), buttonX + 26, buttonY + 4, 0xFFFFFFFF);
+            extractor.centeredText(this.font, llmToggleText(entry.llmEnabled()), buttonX + 26, buttonY + 4, 0xFFFFFFFF);
             drawBindingCachePreview(extractor, entry, x + 38, bindingCachePreviewY(y, selected), width - 48, mouseX, mouseY);
         }
 
@@ -1071,7 +1136,7 @@ public class CopperWrenchBindingsScreen extends Screen {
     }
 
     private Component gatheringLlmToggleText() {
-        return Component.literal(this.gatheringLlmEnabled ? "LLM 開" : "LLM 關");
+        return llmToggleText(this.gatheringLlmEnabled);
     }
 
     private Component operationStatusText() {
@@ -1092,6 +1157,23 @@ public class CopperWrenchBindingsScreen extends Screen {
         return this.running ? 0xFF64D26D : 0xFFFF6B6B;
     }
 
+    private ItemStack operationStatusIcon() {
+        if (!this.running) {
+            return new ItemStack(Items.BARRIER);
+        }
+
+        return switch (normalizedActivity()) {
+            case "blocked_no_fuel" -> new ItemStack(Items.COAL);
+            case "blocked_no_tool", "blocked_tool_broken", "working" -> new ItemStack(Items.IRON_PICKAXE);
+            case "blocked_no_home", "blocked_home_unavailable", "blocked_home_full", "depositing" -> new ItemStack(Items.CHEST);
+            case "blocked_sorting" -> new ItemStack(Items.HOPPER);
+            case "moving_to_target" -> new ItemStack(Items.MINECART);
+            case "returning_home", "searching" -> new ItemStack(Items.COMPASS);
+            case "idle" -> new ItemStack(Items.CLOCK);
+            default -> new ItemStack(Items.EMERALD);
+        };
+    }
+
     private String normalizedMode() {
         return "gathering".equals(this.mode) ? "gathering" : "sorting";
     }
@@ -1104,6 +1186,26 @@ public class CopperWrenchBindingsScreen extends Screen {
         return "message.deadrecall.copper_wrench.mode_" + normalizedMode();
     }
 
+    private Component copperWrenchText(String key) {
+        return Component.translatable("message.deadrecall.copper_wrench." + key);
+    }
+
+    private Component tabButtonText(String key, boolean selected) {
+        Component label = copperWrenchText(key);
+        if (!selected) {
+            return label;
+        }
+        return Component.literal("[")
+                .append(label)
+                .append(Component.literal("]"));
+    }
+
+    private Component llmToggleText(boolean enabled) {
+        return Component.translatable(enabled
+                ? "message.deadrecall.copper_wrench.llm_on"
+                : "message.deadrecall.copper_wrench.llm_off");
+    }
+
     private boolean hasFuelAvailable() {
         return this.fuelTicks > 0 || hasFuelItem();
     }
@@ -1113,6 +1215,22 @@ public class CopperWrenchBindingsScreen extends Screen {
                 && this.minecraft != null
                 && this.minecraft.level != null
                 && this.minecraft.level.fuelValues().isFuel(iconStack(this.fuelItemId));
+    }
+
+    private void drawOperationStatusIcon(GuiGraphicsExtractor extractor, int mouseX, int mouseY) {
+        int x = operationStatusIconX();
+        int y = operationStatusIconY();
+        int color = operationStatusColor();
+        extractor.fill(x, y, x + STATUS_ICON_SIZE, y + STATUS_ICON_SIZE, 0xB0000000);
+        extractor.outline(x, y, STATUS_ICON_SIZE, STATUS_ICON_SIZE, color);
+        extractor.item(operationStatusIcon(), x + 2, y + 2);
+
+        if (isOperationStatusIconAt(mouseX, mouseY)) {
+            List<Component> tooltip = new ArrayList<>();
+            tooltip.add(Component.translatable("message.deadrecall.copper_wrench.current_activity"));
+            tooltip.add(operationStatusText());
+            extractor.setComponentTooltipForNextFrame(this.font, tooltip, mouseX, mouseY);
+        }
     }
 
     private void drawSourceIcon(GuiGraphicsExtractor extractor, int mouseX, int mouseY) {
@@ -1136,26 +1254,15 @@ public class CopperWrenchBindingsScreen extends Screen {
     private void drawFuelSlot(GuiGraphicsExtractor extractor, int mouseX, int mouseY) {
         int slotX = fuelSlotX();
         int slotY = fuelSlotY();
-        int labelX = sourceIconX() - 74;
+        int labelX = sourceIconX() - 18;
 
-        if (labelX > panelX() + PANEL_PADDING + 150) {
-            extractor.text(this.font, Component.translatable("message.deadrecall.copper_wrench.fuel_slot"), labelX, slotY + 2, 0xFFE0E0E0);
-            extractor.text(this.font, fuelTicksText(), labelX, slotY + 13, 0xFFB8B8B8);
-        }
-
-        extractor.fill(slotX, slotY, slotX + 20, slotY + 20, 0xB0000000);
-        extractor.outline(slotX, slotY, 20, 20, hasFuelAvailable() ? 0xFFE2C15A : 0xFF777777);
-        if (this.fuelCount > 0) {
-            extractor.item(iconStack(this.fuelItemId), slotX + 2, slotY + 2);
-            extractor.text(this.font, String.valueOf(this.fuelCount), slotX + 11, slotY + 12, 0xFFFFFFFF);
-        } else {
-            extractor.item(new ItemStack(Items.COAL), slotX + 2, slotY + 2);
-            extractor.fill(slotX + 2, slotY + 2, slotX + 18, slotY + 18, 0x90000000);
+        if (labelX >= panelX() + PANEL_PADDING) {
+            extractor.item(new ItemStack(Items.COAL), labelX, slotY + 1);
         }
 
         if (this.fuelTicks > 0) {
-            int barWidth = Math.max(1, Math.min(18, this.fuelTicks * 18 / 1600));
-            extractor.fill(slotX + 1, slotY + 18, slotX + 1 + barWidth, slotY + 19, 0xFFFFB238);
+            int barWidth = Math.max(1, Math.min(16, this.fuelTicks * 16 / 1600));
+            extractor.fill(slotX, slotY + 17, slotX + barWidth, slotY + 18, 0xFFFFB238);
         }
 
         if (isFuelSlotAt(mouseX, mouseY)) {
@@ -1163,15 +1270,9 @@ public class CopperWrenchBindingsScreen extends Screen {
         }
     }
 
-    private String fuelTicksText() {
-        return this.fuelTicks > 0 ? this.fuelTicks + " tick" : "-";
-    }
-
     private List<Component> fuelTooltip() {
         List<Component> tooltip = new ArrayList<>();
         tooltip.add(Component.translatable("message.deadrecall.copper_wrench.fuel_slot"));
-        tooltip.add(Component.translatable("message.deadrecall.copper_wrench.fuel_left_click"));
-        tooltip.add(Component.translatable("message.deadrecall.copper_wrench.fuel_right_click"));
         tooltip.add(Component.translatable("message.deadrecall.copper_wrench.fuel_ticks", this.fuelTicks));
         if (this.fuelCount > 0) {
             tooltip.add(Component.literal(this.fuelItemId + " x" + this.fuelCount));
@@ -1182,8 +1283,6 @@ public class CopperWrenchBindingsScreen extends Screen {
     private List<Component> gatheringToolTooltip() {
         List<Component> tooltip = new ArrayList<>();
         tooltip.add(Component.translatable("message.deadrecall.copper_wrench.gathering_tool_slot"));
-        tooltip.add(Component.translatable("message.deadrecall.copper_wrench.gathering_tool_left_click"));
-        tooltip.add(Component.translatable("message.deadrecall.copper_wrench.gathering_tool_right_click"));
         if (this.gatheringToolCount > 0) {
             tooltip.add(itemDisplayName(this.gatheringToolItemId));
             if (this.gatheringToolMaxDamage > 0) {
@@ -1199,7 +1298,6 @@ public class CopperWrenchBindingsScreen extends Screen {
     private List<Component> gatheringStorageTooltip() {
         List<Component> tooltip = new ArrayList<>();
         tooltip.add(Component.translatable("message.deadrecall.copper_wrench.gathering_storage_slot"));
-        tooltip.add(Component.translatable("message.deadrecall.copper_wrench.gathering_storage_right_click"));
         tooltip.add(Component.translatable("message.deadrecall.copper_wrench.gathering_storage_count", this.gatheringStorageCount, 16));
         if (this.gatheringStorageCount > 0) {
             tooltip.add(itemDisplayName(this.gatheringStorageItemId));
@@ -1211,16 +1309,16 @@ public class CopperWrenchBindingsScreen extends Screen {
         if (this.selectedBindingIndex < 0 || this.selectedBindingIndex >= this.bindings.size()) {
             return "Prompt";
         }
-        return "箱子 #" + (this.selectedBindingIndex + 1);
+        return Component.translatable("message.deadrecall.copper_wrench.target_container_number", this.selectedBindingIndex + 1).getString();
     }
 
     private void drawBindingCachePreview(GuiGraphicsExtractor extractor, CopperWrenchBindingsPayload.BindingEntry entry, int x, int y, int width, int mouseX, int mouseY) {
         int gap = 8;
         int groupWidth = (width - gap) / 2;
         drawCacheItemGroup(extractor, cachePreviewEntries(entry.llmAllowedItemIds(), entry.llmAllowedTags()),
-                x, y, groupWidth, 0xFF4C8A53, "接受", mouseX, mouseY);
+                x, y, groupWidth, 0xFF4C8A53, true, mouseX, mouseY);
         drawCacheItemGroup(extractor, cachePreviewEntries(entry.llmDeniedItemIds(), entry.llmDeniedTags()),
-                x + groupWidth + gap, y, groupWidth, 0xFF9A4D4D, "拒絕", mouseX, mouseY);
+                x + groupWidth + gap, y, groupWidth, 0xFF9A4D4D, false, mouseX, mouseY);
     }
 
     private List<CachePreviewEntry> cachePreviewEntries(List<String> itemIds, List<String> tagIds) {
@@ -1243,7 +1341,7 @@ public class CopperWrenchBindingsScreen extends Screen {
         }
 
         int listX = panelX() + PANEL_PADDING;
-        int listWidth = panelWidth() - PANEL_PADDING * 2;
+        int listWidth = settingsWidth();
         int cardX = listX + 8;
         int cardY = bindingCardY(bindingIndex);
         int cardWidth = listWidth - 16;
@@ -1308,7 +1406,10 @@ public class CopperWrenchBindingsScreen extends Screen {
         return new CachePreviewHit(bindingIndex, entry.value(), entry.tag(), acceptedSide);
     }
 
-    private void drawCacheItemGroup(GuiGraphicsExtractor extractor, List<CachePreviewEntry> entries, int x, int y, int width, int color, String label, int mouseX, int mouseY) {
+    private void drawCacheItemGroup(GuiGraphicsExtractor extractor, List<CachePreviewEntry> entries, int x, int y, int width, int color, boolean acceptedSide, int mouseX, int mouseY) {
+        Component label = Component.translatable(acceptedSide
+                ? "message.deadrecall.copper_wrench.cache_side_accepted"
+                : "message.deadrecall.copper_wrench.cache_side_denied");
         extractor.outline(x, y, width, 18, color);
         extractor.text(this.font, label, x + 4, y + 5, color);
 
@@ -1322,10 +1423,17 @@ public class CopperWrenchBindingsScreen extends Screen {
             extractor.outline(slotX, y + 1, 17, 17, color);
             extractor.item(entry.tag() ? new ItemStack(Items.NAME_TAG) : iconStack(entry.value()), slotX + 1, y + 2);
             if (mouseX >= slotX && mouseX <= slotX + 17 && mouseY >= y + 1 && mouseY <= y + 18) {
+                Component moveTarget = Component.translatable(acceptedSide
+                        ? "message.deadrecall.copper_wrench.cache_side_denied"
+                        : "message.deadrecall.copper_wrench.cache_side_accepted");
                 extractor.setComponentTooltipForNextFrame(this.font, List.of(
-                        Component.literal(label + (entry.tag() ? " Tag" : "物品")),
+                        Component.translatable("message.deadrecall.copper_wrench.target_tooltip_type",
+                                label,
+                                Component.translatable(entry.tag()
+                                        ? "message.deadrecall.copper_wrench.entry_type_tag"
+                                        : "message.deadrecall.copper_wrench.entry_type_item")),
                         Component.literal(entry.value()),
-                        Component.literal("右鍵移到" + ("接受".equals(label) ? "拒絕" : "接受"))
+                        Component.translatable("message.deadrecall.copper_wrench.cache_move_to", moveTarget)
                 ), mouseX, mouseY);
             }
         }
@@ -1342,10 +1450,13 @@ public class CopperWrenchBindingsScreen extends Screen {
         tooltip.add(Component.literal("ID: " + entry.blockId()));
         tooltip.add(Component.translatable("message.deadrecall.copper_wrench.binding_position", entry.x(), entry.y(), entry.z()));
         tooltip.add(Component.translatable("message.deadrecall.copper_wrench.binding_status", Component.literal(statusText(entry))));
-        tooltip.add(Component.literal("LLM: " + (entry.llmEnabled() ? "啟用" : "停用")));
-        tooltip.add(Component.literal("快取物品: " + entry.llmCachedItemIds() + " / 快取 Tag: " + entry.llmCachedTags()));
-        tooltip.add(Component.literal("接受/拒絕圖示包含物品與 Tag；Tag 以命名牌顯示"));
-        tooltip.add(Component.literal("右鍵快取圖示可移到另一邊"));
+        tooltip.add(Component.translatable("message.deadrecall.copper_wrench.llm_state",
+                Component.translatable(entry.llmEnabled()
+                        ? "message.deadrecall.copper_wrench.enabled"
+                        : "message.deadrecall.copper_wrench.disabled")));
+        tooltip.add(Component.translatable("message.deadrecall.copper_wrench.cached_items_and_tags", entry.llmCachedItemIds(), entry.llmCachedTags()));
+        tooltip.add(Component.translatable("message.deadrecall.copper_wrench.cache_icon_hint"));
+        tooltip.add(Component.translatable("message.deadrecall.copper_wrench.cache_move_hint"));
         return tooltip;
     }
 
@@ -1354,7 +1465,7 @@ public class CopperWrenchBindingsScreen extends Screen {
             return false;
         }
         int listX = panelX() + PANEL_PADDING;
-        int listWidth = panelWidth() - PANEL_PADDING * 2;
+        int listWidth = settingsWidth();
         int cardX = listX + 8;
         int cardY = bindingCardY(index);
         int buttonX = cardX + listWidth - 16 - 62;
@@ -1369,7 +1480,7 @@ public class CopperWrenchBindingsScreen extends Screen {
     private int bindingIndexAt(double mouseX, double mouseY) {
         int listX = panelX() + PANEL_PADDING;
         int listY = sortingListY();
-        int listWidth = panelWidth() - PANEL_PADDING * 2;
+        int listWidth = settingsWidth();
         int listHeight = getListHeight();
         if (mouseX < listX + 1 || mouseX > listX + listWidth - 1 || mouseY < listY + 1 || mouseY > listY + listHeight - 1) {
             return -1;
@@ -1469,7 +1580,7 @@ public class CopperWrenchBindingsScreen extends Screen {
     private boolean isFuelSlotAt(double mouseX, double mouseY) {
         int slotX = fuelSlotX();
         int slotY = fuelSlotY();
-        return mouseX >= slotX && mouseX <= slotX + 20 && mouseY >= slotY && mouseY <= slotY + 20;
+        return mouseX >= slotX && mouseX < slotX + 18 && mouseY >= slotY && mouseY < slotY + 18;
     }
 
     private boolean isSourceIconAt(double mouseX, double mouseY) {
@@ -1478,16 +1589,22 @@ public class CopperWrenchBindingsScreen extends Screen {
         return mouseX >= slotX && mouseX <= slotX + 20 && mouseY >= slotY && mouseY <= slotY + 20;
     }
 
+    private boolean isOperationStatusIconAt(double mouseX, double mouseY) {
+        int x = operationStatusIconX();
+        int y = operationStatusIconY();
+        return mouseX >= x && mouseX < x + STATUS_ICON_SIZE && mouseY >= y && mouseY < y + STATUS_ICON_SIZE;
+    }
+
     private boolean isGatheringToolSlotAt(double mouseX, double mouseY) {
         int slotX = gatheringToolSlotX();
         int slotY = gatheringSlotY();
-        return mouseX >= slotX && mouseX <= slotX + 22 && mouseY >= slotY && mouseY <= slotY + 22;
+        return mouseX >= slotX && mouseX < slotX + 18 && mouseY >= slotY && mouseY < slotY + 18;
     }
 
     private boolean isGatheringStorageSlotAt(double mouseX, double mouseY) {
         int slotX = gatheringStorageSlotX();
         int slotY = gatheringSlotY();
-        return mouseX >= slotX && mouseX <= slotX + 22 && mouseY >= slotY && mouseY <= slotY + 22;
+        return mouseX >= slotX && mouseX < slotX + 18 && mouseY >= slotY && mouseY < slotY + 18;
     }
 
     private boolean isPromptWidgetAt(double mouseX, double mouseY) {
@@ -1505,6 +1622,21 @@ public class CopperWrenchBindingsScreen extends Screen {
                 && mouseY <= widget.getY() + widget.getHeight();
     }
 
+    private boolean isContainerSlotAt(double mouseX, double mouseY) {
+        for (Slot slot : this.menu.slots) {
+            int x = this.leftPos + slot.x;
+            int y = this.topPos + slot.y;
+            if (slot.isActive()
+                    && mouseX >= x
+                    && mouseX < x + 18
+                    && mouseY >= y
+                    && mouseY < y + 18) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private GatheringTargetHit gatheringTargetHitAt(double mouseX, double mouseY) {
         int x = gatheringTargetsX();
         int y = gatheringTargetRowsStartY();
@@ -1517,7 +1649,7 @@ public class CopperWrenchBindingsScreen extends Screen {
                 x,
                 y,
                 groupWidth,
-                "接受目標",
+                copperWrenchText("accepted_targets").getString(),
                 mouseX,
                 mouseY);
         if (acceptedHit != null) {
@@ -1529,7 +1661,7 @@ public class CopperWrenchBindingsScreen extends Screen {
                 x + groupWidth + gap,
                 y,
                 groupWidth,
-                "拒絕",
+                copperWrenchText("denied_targets").getString(),
                 mouseX,
                 mouseY);
     }
@@ -1587,11 +1719,11 @@ public class CopperWrenchBindingsScreen extends Screen {
     }
 
     private int fuelSlotX() {
-        return panelX() + panelWidth() - PANEL_PADDING - 22;
+        return panelX() + fuelSlotRelativeX();
     }
 
     private int fuelSlotY() {
-        return panelY() + 26;
+        return panelY() + fuelSlotRelativeY();
     }
 
     private int sourceIconX() {
@@ -1602,16 +1734,24 @@ public class CopperWrenchBindingsScreen extends Screen {
         return fuelSlotY();
     }
 
+    private int operationStatusIconX() {
+        return panelX() + panelWidth() - PANEL_PADDING - 182;
+    }
+
+    private int operationStatusIconY() {
+        return panelY() + 26;
+    }
+
     private int gatheringToolSlotX() {
-        return panelX() + panelWidth() - PANEL_PADDING - 142;
+        return panelX() + gatheringToolSlotRelativeX();
     }
 
     private int gatheringStorageSlotX() {
-        return gatheringToolSlotX() + 66;
+        return panelX() + gatheringStorageSlotRelativeX();
     }
 
     private int gatheringSlotY() {
-        return gatheringContentY() + 20;
+        return panelY() + gatheringSlotRelativeY();
     }
 
     private int gatheringTargetsX() {
@@ -1623,7 +1763,7 @@ public class CopperWrenchBindingsScreen extends Screen {
     }
 
     private int gatheringTargetsWidth() {
-        return panelWidth() - PANEL_PADDING * 2 - 20;
+        return settingsWidth() - 20;
     }
 
     private int gatheringTargetsHeight() {
@@ -1659,7 +1799,7 @@ public class CopperWrenchBindingsScreen extends Screen {
     }
 
     private int selectedBindingCardWidth() {
-        return panelWidth() - PANEL_PADDING * 2 - 16;
+        return settingsWidth() - 16;
     }
 
     private int bindingCardHeight(int index) {
@@ -1755,10 +1895,18 @@ public class CopperWrenchBindingsScreen extends Screen {
     }
 
     private int panelX() {
-        return Math.max(0, (this.width - panelWidth()) / 2);
+        return this.leftPos;
     }
 
     private int panelY() {
+        return this.topPos;
+    }
+
+    private int panelXForCurrentWindow() {
+        return Math.max(0, (this.width - panelWidth()) / 2);
+    }
+
+    private int panelYForCurrentWindow() {
         return Math.max(0, (this.height - panelHeight()) / 2);
     }
 
@@ -1768,12 +1916,79 @@ public class CopperWrenchBindingsScreen extends Screen {
 
     private int panelWidth() {
         int availableWidth = Math.max(1, this.width - SCREEN_MARGIN * 2);
-        return Math.min(PANEL_WIDTH, availableWidth);
+        return Math.max(MIN_PANEL_WIDTH, availableWidth);
     }
 
     private int panelHeight() {
         int availableHeight = Math.max(1, this.height - SCREEN_MARGIN * 2);
-        return Math.min(PANEL_HEIGHT, availableHeight);
+        return Math.max(MIN_PANEL_HEIGHT, availableHeight);
+    }
+
+    private int settingsWidth() {
+        return Math.max(120, playerInventoryRelativeX() - PANEL_PADDING - 14);
+    }
+
+    private int playerInventoryRelativeX() {
+        return Math.max(PANEL_PADDING + 168, panelWidth() - PANEL_PADDING - PLAYER_INVENTORY_WIDTH);
+    }
+
+    private int playerInventoryRelativeY() {
+        return playerHotbarRelativeY() - PLAYER_INVENTORY_GAP - PLAYER_INVENTORY_ROWS_HEIGHT;
+    }
+
+    private int playerHotbarRelativeY() {
+        return Math.max(HEADER_HEIGHT + PLAYER_INVENTORY_ROWS_HEIGHT + 34,
+                panelHeight() - FOOTER_HEIGHT - PLAYER_HOTBAR_HEIGHT - 58);
+    }
+
+    private int fuelSlotRelativeX() {
+        return Math.max(PANEL_PADDING + 148, playerInventoryRelativeX() - 56);
+    }
+
+    private int fuelSlotRelativeY() {
+        return 26;
+    }
+
+    private int gatheringToolSlotRelativeX() {
+        return Math.max(PANEL_PADDING + 108, playerInventoryRelativeX() - 106);
+    }
+
+    private int gatheringStorageSlotRelativeX() {
+        return gatheringToolSlotRelativeX() + 46;
+    }
+
+    private int gatheringSlotRelativeY() {
+        return Math.max(contentStartY() - panelY() + 20, playerInventoryRelativeY() - 72);
+    }
+
+    private void updateMenuSlotLayout() {
+        if (this.menu.slots.size() < CopperGolemMenu.GOLEM_SLOT_COUNT) {
+            return;
+        }
+
+        setSlotPosition(this.menu.slots.get(CopperGolemMenu.SLOT_FUEL), fuelSlotRelativeX(), fuelSlotRelativeY());
+        setSlotPosition(this.menu.slots.get(CopperGolemMenu.SLOT_GATHERING_TOOL), gatheringToolSlotRelativeX(), gatheringSlotRelativeY());
+        setSlotPosition(this.menu.slots.get(CopperGolemMenu.SLOT_GATHERING_STORAGE), gatheringStorageSlotRelativeX(), gatheringSlotRelativeY());
+
+        int index = CopperGolemMenu.GOLEM_SLOT_COUNT;
+        int inventoryX = playerInventoryRelativeX();
+        int inventoryY = playerInventoryRelativeY();
+        for (int row = 0; row < 3; row++) {
+            for (int column = 0; column < 9 && index < this.menu.slots.size(); column++) {
+                setSlotPosition(this.menu.slots.get(index++), inventoryX + column * 18, inventoryY + row * 18);
+            }
+        }
+
+        int hotbarY = playerHotbarRelativeY();
+        for (int column = 0; column < 9 && index < this.menu.slots.size(); column++) {
+            setSlotPosition(this.menu.slots.get(index++), inventoryX + column * 18, hotbarY);
+        }
+    }
+
+    private static void setSlotPosition(Slot slot, int x, int y) {
+        SlotAccessor accessor = (SlotAccessor) slot;
+        accessor.deadrecall$setX(x);
+        accessor.deadrecall$setY(y);
     }
 
     private int promptFieldWidth() {
@@ -1783,7 +1998,7 @@ public class CopperWrenchBindingsScreen extends Screen {
         if (hasSelectedBinding()) {
             return Math.max(80, selectedBindingCardWidth() - 38 - promptSaveButtonWidth() - 18);
         }
-        return Math.max(80, panelWidth() - PANEL_PADDING * 2 - promptSaveButtonWidth() - 24);
+        return Math.max(80, settingsWidth() - promptSaveButtonWidth() - 24);
     }
 
     private int promptSaveButtonWidth() {
@@ -1791,7 +2006,7 @@ public class CopperWrenchBindingsScreen extends Screen {
     }
 
     private int apiFieldWidth() {
-        return Math.max(120, Math.min(300, panelWidth() - PANEL_PADDING * 2 - 98));
+        return Math.max(120, Math.min(220, settingsWidth() - 98));
     }
 
     private int apiControlsY() {
@@ -1806,7 +2021,7 @@ public class CopperWrenchBindingsScreen extends Screen {
 
     private int testApiButtonWidth() {
         int buttonX = panelX() + PANEL_PADDING + 86 + saveApiButtonWidth() + 8;
-        int right = panelX() + panelWidth() - PANEL_PADDING;
+        int right = panelX() + PANEL_PADDING + settingsWidth();
         return Math.max(54, Math.min(78, right - buttonX));
     }
 

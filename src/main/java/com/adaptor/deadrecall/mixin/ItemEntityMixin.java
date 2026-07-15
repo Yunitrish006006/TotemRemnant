@@ -1,6 +1,7 @@
 package com.adaptor.deadrecall.mixin;
 
 import com.adaptor.deadrecall.item.BackpackItemHelper;
+import com.adaptor.deadrecall.item.ConcretePowderItemHardening;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
@@ -48,6 +49,11 @@ public abstract class ItemEntityMixin {
         } else if (BackpackItemHelper.shouldStopDeathBackpackVoidMomentum(self)) {
             BackpackItemHelper.stopDeathBackpackVoidMomentum(self);
         }
+    }
+
+    @Inject(method = "tick", at = @At("TAIL"))
+    private void deadrecall$hardenConcretePowderInWater(CallbackInfo ci) {
+        ConcretePowderItemHardening.tryHarden((ItemEntity) (Object) this);
     }
 
     @Inject(

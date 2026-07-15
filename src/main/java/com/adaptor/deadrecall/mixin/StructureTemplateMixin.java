@@ -1,16 +1,18 @@
 package com.adaptor.deadrecall.mixin;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.RandomSource;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.ChiseledBookShelfBlock;
 import net.minecraft.world.level.block.entity.ChiseledBookShelfBlockEntity;
-import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.level.storage.TagValueOutput;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -21,6 +23,7 @@ import java.util.List;
 
 @Mixin(StructureTemplate.class)
 public abstract class StructureTemplateMixin {
+    private static final int CHISELED_BOOKSHELF_SLOT_COUNT = 6;
 
     @Inject(
             method = "processBlockInfos",
@@ -39,52 +42,51 @@ public abstract class StructureTemplateMixin {
         List<StructureTemplate.StructureBlockInfo> replaced = new ArrayList<>(original.size());
 
         for (StructureTemplate.StructureBlockInfo info : original) {
-            if (info.state().is(Blocks.BOOKSHELF)) {
-                replaced.add(new StructureTemplate.StructureBlockInfo(
-                        info.pos(),
-                        Blocks.CHISELED_BOOKSHELF.defaultBlockState(),
-                        null
-                ));
-            } else {
+            boolean convertedBookshelf = info.state().is(Blocks.BOOKSHELF);
+            boolean emptyGeneratedChiseledBookshelf = info.state().is(Blocks.CHISELED_BOOKSHELF) && info.nbt() == null;
+            if (!convertedBookshelf && !emptyGeneratedChiseledBookshelf) {
                 replaced.add(info);
+                continue;
             }
+
+            BlockState bookshelfState = deadrecall$filledBookshelfState();
+            CompoundTag bookshelfNbt = deadrecall$filledBookshelfNbt(level, info.pos(), bookshelfState);
+            replaced.add(new StructureTemplate.StructureBlockInfo(
+                    info.pos(),
+                    bookshelfState,
+                    bookshelfNbt
+            ));
         }
 
         cir.setReturnValue(replaced);
     }
 
-    @Inject(method = "placeInWorld", at = @At("RETURN"))
-    private void deadrecall$fillChiseledBookshelves(
+    private static BlockState deadrecall$filledBookshelfState() {
+        BlockState state = Blocks.CHISELED_BOOKSHELF.defaultBlockState();
+        for (var occupiedProperty : ChiseledBookShelfBlock.SLOT_OCCUPIED_PROPERTIES) {
+            state = state.setValue(occupiedProperty, true);
+        }
+        return state;
+    }
+
+    private static CompoundTag deadrecall$filledBookshelfNbt(
             ServerLevelAccessor level,
-            BlockPos origin,
-            BlockPos pivot,
-            StructurePlaceSettings settings,
-            RandomSource random,
-            int flags,
-            CallbackInfoReturnable<Boolean> cir
+            BlockPos pos,
+            BlockState state
     ) {
-        if (!cir.getReturnValue()) {
-            return;
+        ChiseledBookShelfBlockEntity shelf = new ChiseledBookShelfBlockEntity(pos, state);
+        int slotCount = Math.min(CHISELED_BOOKSHELF_SLOT_COUNT, shelf.getItems().size());
+        for (int slot = 0; slot < slotCount; slot++) {
+            // This BlockEntity is detached from the world. Mutating its backing list is safe;
+            // setItem() is deliberately avoided because it calls updateState() and requires a live Level.
+            shelf.getItems().set(slot, new ItemStack(Items.BOOK));
         }
 
-        StructureTemplate self = (StructureTemplate) (Object) this;
-        BoundingBox box = self.getBoundingBox(settings, origin);
-
-        for (int x = box.minX(); x <= box.maxX(); x++) {
-            for (int y = box.minY(); y <= box.maxY(); y++) {
-                for (int z = box.minZ(); z <= box.maxZ(); z++) {
-                    BlockEntity be = level.getBlockEntity(new BlockPos(x, y, z));
-                    if (!(be instanceof ChiseledBookShelfBlockEntity shelf)) {
-                        continue;
-                    }
-
-                    for (int slot = 0; slot < shelf.getItems().size(); slot++) {
-                        if (shelf.getItems().get(slot).isEmpty()) {
-                            shelf.setItem(slot, new ItemStack(Items.BOOK));
-                        }
-                    }
-                }
-            }
-        }
+        TagValueOutput output = TagValueOutput.createWithContext(
+                ProblemReporter.DISCARDING,
+                level.registryAccess()
+        );
+        shelf.saveWithId(output);
+        return output.buildResult();
     }
 }

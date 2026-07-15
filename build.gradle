@@ -40,9 +40,19 @@ fabricApi {
     configureDataGeneration {
         client = true
     }
+
+    configureTests {
+        createSourceSet = true
+        modId = "deadrecall-gametest"
+        enableGameTests = true
+        enableClientGameTests = false
+        eula = true
+    }
 }
 
 repositories {
+    mavenCentral()
+
     maven {
         url = "https://repo.codemc.io/repository/relativitymc/"
     }
@@ -61,6 +71,9 @@ dependencies {
     // Use Minecraft's built-in Gson instead of bundling it
     // This is simpler and avoids version conflicts
     compileOnly 'com.google.code.gson:gson:2.10.1'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.register("normalizeFabricApiTweakersForNamedDevRuntime") {
@@ -139,7 +152,7 @@ tasks.register("normalizeFabricApiTweakersForNamedDevRuntime") {
 }
 
 tasks.matching { task ->
-    task.name in ["runClient", "runServer", "runDatagen"]
+    task.name in ["runClient", "runServer", "runDatagen", "runGameTest"]
 }.configureEach {
     dependsOn("normalizeFabricApiTweakersForNamedDevRuntime")
 }
@@ -162,12 +175,16 @@ def targetJavaVersion = 25
 tasks.withType(JavaCompile).configureEach {
     // ensure that the encoding is set to UTF-8, no matter what the system default is
     // this fixes some edge cases with special characters not displaying correctly
-    // see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
+    // see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems.html
     // If Javadoc is generated, this must be specified in that task too.
     it.options.encoding = "UTF-8"
     if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
         it.options.release.set(targetJavaVersion)
     }
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
 }
 
 java {
@@ -197,7 +214,6 @@ publishing {
     repositories {
         // Add repositories to publish to here.
         // Notice: This block does NOT have the same function as the block in the top level.
-        // The repositories here will be used for publishing your artifact, not for
-        // retrieving dependencies.
+        // The repositories here are for publishing your artifact, not for retrieving dependencies.
     }
 }

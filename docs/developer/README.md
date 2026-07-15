@@ -1,6 +1,6 @@
 # 開發者文件
 
-本區說明程式碼入口、資料安全、網路與渲染維護原則。正式需求、資料模型與驗收條件以 `openspec/` 為準。
+本區說明程式碼入口、資料安全、網路、測試與渲染維護原則。正式需求、資料模型與驗收條件以 `openspec/` 為準。
 
 ## 文件
 
@@ -8,6 +8,7 @@
 - [Data Components 與背包資料](data-components.md)
 - [網路與執行緒](networking.md)
 - [Mixin 參考](mixins.md)
+- [測試與回歸驗證](testing.md)
 - [Client Rendering](rendering.md)
 - [OpenSpec 索引](../../OPENSPEC_INDEX.md)
 - [系統架構](../../openspec/architecture.md)
@@ -21,3 +22,4 @@
 3. 尚未完成的設計放入 `openspec/changes/`。
 4. 不在 README、玩家文件與 OpenSpec 中複製同一份完整技術內容。
 5. API Key、Webhook URL 與其他秘密不得提交到版本控制。
+6. Mixin、Entity、BlockEntity、SavedData 或網路生命週期修改應優先加入可重現的 JUnit／GameTest。

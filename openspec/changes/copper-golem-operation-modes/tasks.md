@@ -3,12 +3,12 @@
 ## 1. Data model and migration
 
 - [x] 1.1 新增 `CopperGolemMode` 與 `CopperGolemActivity`。
-- [ ] 1.2 建立 `CopperGolemData`，集中讀寫 common、sorting、gathering。
+- [x] 1.2 建立 `CopperGolemData`，集中讀寫 common、sorting、gathering。
 - [x] 1.3 加入 `data_version = 2`。
 - [x] 1.4 無 mode 的舊銅傀儡遷移為 `SORTING`。
-- [ ] 1.5 遷移 running、fuel、bindings、LLM、source、blocked。
+- [x] 1.5 遷移 running、fuel、bindings、LLM、source、blocked。
 - [x] 1.6 保留板手 `deadrecall_selected_golem` UUID 相容性。
-- [ ] 1.7 為資料 codec 與遷移加入測試。
+- [x] 1.7 為資料 codec 與遷移加入測試。
 
 ## 2. Wrench interaction
 
@@ -18,19 +18,19 @@
 - [x] 2.4 移除 Shift＋左鍵銅傀儡的粒子路徑操作。
 - [x] 2.5 依模式分派方塊左鍵、右鍵、Shift＋右鍵。
 - [x] 2.6 銅箱互動在 GATHERING 優先設定 Home。
-- [ ] 2.7 防止實體互動與背景方塊互動同時觸發。
+- [x] 2.7 防止實體互動與背景方塊互動同時觸發。
 - [x] 2.8 加入 UUID 失效、跨維度、距離與權限提示。
 - [x] 2.9 銅箱右鍵綁定為單一來源銅箱，左鍵來源銅箱解除。
 - [x] 2.10 一般容器右鍵只在 SORTING 加入分類目的地。
 
 ## 3. Controller refactor
 
-- [ ] 3.1 建立 `CopperGolemController`。
-- [ ] 3.2 將現有分類邏輯移入 `SortingModeController`。
-- [ ] 3.3 將燃料移入 `CopperGolemFuelService`。
-- [ ] 3.4 將容器綁定移入 `SortingBindingService`。
-- [ ] 3.5 保留舊 API 的暫時轉接方法。
-- [ ] 3.6 改善 tick 查找，避免每 tick 掃描所有實體。
+- [x] 3.1 建立 `CopperGolemController`。
+- [x] 3.2 將現有分類邏輯移入 `SortingModeController`。
+- [x] 3.3 將燃料移入 `CopperGolemFuelService`。
+- [x] 3.4 將容器綁定移入 `SortingBindingService`。
+- [x] 3.5 保留舊 API 的暫時轉接方法。
+- [x] 3.6 改善 tick 查找，避免每 tick 掃描所有實體。
 
 ## 4. Sorting mode isolation and regression
 
@@ -40,7 +40,7 @@
 - [x] 4.4 保留 source slot、return、tried destinations、blocked。
 - [x] 4.5 停止、解除最後綁定或切換前嘗試退回來源。
 - [x] 4.6 無法退回時保持貨物，不得刪除或掉落。
-- [ ] 4.7 回歸測試容器內 DeadRecall 背包分類。
+- [x] 4.7 回歸測試容器內 DeadRecall 背包分類。
 
 ## 5. Mode switching
 
@@ -59,7 +59,7 @@
 - [x] 6.3 強制 storage count ≤ 16。
 - [x] 6.4 實作工具合法性、插入、取出與耐久保存。
 - [x] 6.5 實作倉庫取出與相同 Components 合併。
-- [ ] 6.6 定義銅傀儡死亡／移除時工具與倉庫掉落規則。（死亡掉落已完成；非死亡移除仍待安全事件入口）
+- [x] 6.6 定義銅傀儡死亡／移除時工具與倉庫掉落規則。
 - [x] 6.7 所有物品變更只在 server thread 執行。
 
 ## 7. Gathering configuration
@@ -74,8 +74,8 @@
 
 ## 8. Block LLM classifier
 
-- [ ] 8.1 從現有 LLM service 抽出共用 HTTP client。
-- [ ] 8.2 建立 `BlockLlmClassifier`。
+- [x] 8.1 從現有 LLM service 抽出共用 HTTP client。
+- [x] 8.2 建立 `BlockLlmClassifier`。
 - [x] 8.3 固定 JSON schema 與安全解析。
 - [x] 8.4 請求包含 Block ID、名稱、Tags、掉落、工具摘要。
 - [x] 8.5 加入 Prompt revision。
@@ -90,16 +90,16 @@
 - [x] 9.2 每 tick 使用固定掃描 budget。
 - [x] 9.3 只處理已載入區塊。
 - [x] 9.4 排除容器、Home、分類綁定箱、不可破壞與危險方塊。
-- [ ] 9.5 候選目標通過工具、掉落容量及可達性預檢。
+- [x] 9.5 候選目標通過工具、掉落容量及可達性預檢。
 - [x] 9.6 保存 scan cursor，設定變更時重設。
 - [x] 9.7 無目標時低頻重試。
 - [x] 9.8 抵達後重新驗證 BlockState。
 
 ## 10. Breaking and deposit
 
-- [ ] 10.1 建立原子方塊破壞交易。
+- [x] 10.1 建立原子方塊破壞交易。
 - [x] 10.2 破壞前計算掉落並驗證單格 16 容量。
-- [ ] 10.3 尊重伺服器保護與破壞事件。
+- [x] 10.3 尊重伺服器保護與破壞事件。
 - [x] 10.4 成功後才扣工具耐久與燃料。
 - [x] 10.5 倉庫滿或工作完成時返回 Home。
 - [x] 10.6 Home 存放先合併再用空 slot。
@@ -141,8 +141,8 @@
 ## 14. Documentation
 
 - [x] 14.1 更新 DeadRecall 完整文檔。
-- [ ] 14.2 更新銅板手 Tooltip 與操作說明。
+- [x] 14.2 更新銅板手 Tooltip 與操作說明。
 - [x] 14.3 更新語言檔。
-- [ ] 14.4 記錄舊資料遷移。
+- [x] 14.4 記錄舊資料遷移。
 - [x] 14.5 說明單格 16 個、同 Item＋Components、無區塊載入等限制。
 - [x] 14.6 整理 v2.2.1 銅魁儡採集掃描、碰撞箱站位與銅錠修復文件。

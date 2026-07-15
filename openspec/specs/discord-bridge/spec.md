@@ -45,6 +45,10 @@ Bridge 是管理與觀測功能，不得影響遊戲邏輯。Discord API、Worke
 
 Discord Bridge 關閉、設定不完整或傳送失敗時必須安全 no-op 或記錄非敏感錯誤，不得中止事件流程。
 
+Discord Bridge 設定查詢、儲存與頻道管理 payload 都必須經由 Server 權限檢查；未授權玩家不得讀取 Worker URL、API Key 或頻道清單。Client 端管理 GUI 必須在收到授權的 Server 設定同步後才開啟，不得先顯示空管理畫面。Server 不得將既有 API Key 同步回 Client；管理 GUI 中 API Key 留空時應保留 Server 既有值，只有輸入新值才覆寫。
+
+頻道管理必須由 Server 驗證 Discord channel ID 為 snowflake 格式、去除重複值並限制最多 10 個頻道。新增、移除或儲存設定成功後，Server 必須回傳最新設定同步 payload；Client 不得用樂觀更新取代 Server authoritative 狀態。
+
 ## 4. Worker 與路由
 
 Minecraft Server 只呼叫 Cloudflare Worker，不直接呼叫 Discord API。
@@ -101,6 +105,10 @@ HTTP 逾時、Discord rate limit、Worker misconfiguration 或單一頻道失敗
 - Server 停止流程會送出關服狀態。
 - 使用 Bot Token 與頻道 ID 時，聊天與狀態訊息都能送到指定頻道。
 - 只有 Webhook 設定時，聊天與狀態訊息都能送到 webhook。
+- 未授權玩家不能透過任何 Client payload 讀取 Discord Bridge 設定、API Key 或頻道清單。
+- 未授權玩家執行 Discord Bridge GUI 指令或快捷鍵時，Client 不得開啟管理 GUI。
+- 即使是授權管理 GUI，Server 也不得把既有 API Key 回傳給 Client；API Key 欄位留空儲存時必須保留既有值。
+- 頻道管理只接受 Discord snowflake ID、最多 10 個頻道，且 GUI 清單必須以 Server 回傳同步為準。
 - Worker response 與 log 不包含完整 Webhook URL、Webhook token、Bot Token 或 API Key。
 - 無效或重複頻道 ID 不會被送往 Discord API，且不會破壞 Webhook fallback。
 - Worker 或 Discord 失敗時，Minecraft Server 不崩潰。

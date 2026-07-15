@@ -8,6 +8,7 @@ DeadRecall 的銅板手可選取並管理銅魁儡。每隻銅魁儡保存自己
 - [分類模式](classify-mode.md)
 - [採集模式](gather-mode.md)
 - [LLM 設定](llm.md)
+- [資料遷移](migration.md)
 - [故障排除](troubleshooting.md)
 - [完整技術規格](../../openspec/specs/copper-golem/spec.md)
 
@@ -34,7 +35,7 @@ DeadRecall 的銅板手可選取並管理銅魁儡。每隻銅魁儡保存自己
 
 1. 在 GUI 停止銅魁儡並切換到分類模式。
 2. 右鍵一般容器加入目的地。
-3. 放入燃料。
+3. 在 GUI 用原版拖曳或 Shift-click 放入燃料。
 4. 切換為運作。
 
 ### 採集
@@ -42,7 +43,7 @@ DeadRecall 的銅板手可選取並管理銅魁儡。每隻銅魁儡保存自己
 1. 在 GUI 停止銅魁儡並切換到採集模式。
 2. 右鍵方塊設定 Corner A，Shift+右鍵設定 Corner B。
 3. 左鍵方塊新增手動採集目標。
-4. 放入工具與燃料。
+4. 在 GUI 用原版拖曳或 Shift-click 放入工具與燃料。
 5. 切換為運作。
 
 ## 基本操作
@@ -58,5 +59,6 @@ DeadRecall 的銅板手可選取並管理銅魁儡。每隻銅魁儡保存自己
 | 採集模式右鍵方塊 | 設定 Corner A |
 | 採集模式 Shift+右鍵方塊 | 設定 Corner B |
 | 採集模式左鍵普通方塊 | 切換手動採集目標 |
+| GUI 中拖曳／Shift-click 燃料或工具 | 透過原版 slot transaction 放入或取回物品 |
 
 跨維度綁定不被允許。銅魁儡、來源、目的地與工作區必須位於同一維度。

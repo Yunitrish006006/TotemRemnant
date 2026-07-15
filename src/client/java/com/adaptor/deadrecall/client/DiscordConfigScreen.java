@@ -3,11 +3,13 @@ package com.adaptor.deadrecall.client;
 import com.adaptor.deadrecall.network.DiscordConfigSyncPayload;
 import com.adaptor.deadrecall.network.SaveDiscordConfigPayload;
 import com.adaptor.deadrecall.network.ManageDiscordChannelPayload;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
 import java.util.ArrayList;
@@ -27,6 +29,8 @@ public class DiscordConfigScreen extends Screen {
     private static final int CHANNEL_DELETE_WIDTH = 40;
     private static final int CONTENT_TOP_PADDING = 20;
     private static final int CONTENT_BOTTOM_PADDING = 24;
+    private static final int MAX_DISCORD_CHANNELS = 10;
+    private static final String TRANSLATION_PREFIX = "message.deadrecall.discord_config.";
 
     private EditBox workerUrlField;
     private EditBox apiKeyField;
@@ -41,12 +45,12 @@ public class DiscordConfigScreen extends Screen {
     private List<DiscordConfigSyncPayload.ChannelData> channels = new ArrayList<>();
     private int scrollOffset = 0;
 
-    private static final Component DESC_LINE1 = Component.literal("§7此介面用於設定 Discord Bridge 功能：");
-    private static final Component DESC_LINE2 = Component.literal("§7將 Minecraft 伺服器聊天訊息同步到 Discord 頻道。");
-    private static final Component DESC_LINE3 = Component.literal("§7需要填入 Cloudflare Worker 的 URL 與 API Key。");
+    private static final Component DESC_LINE1 = discordText("description_1");
+    private static final Component DESC_LINE2 = discordText("description_2");
+    private static final Component DESC_LINE3 = discordText("description_3");
 
     public DiscordConfigScreen() {
-        super(Component.literal("Discord Bridge 設定"));
+        super(discordText("title"));
         CURRENT = this;
     }
 
@@ -72,19 +76,19 @@ public class DiscordConfigScreen extends Screen {
         this.addRenderableWidget(this.workerUrlField);
 
         this.apiKeyField = new EditBox(this.font, contentX, y + 56, contentWidth, 20, Component.literal("API Key"));
-        this.apiKeyField.setHint(Component.literal("mc_ak_xxx"));
+        this.apiKeyField.setHint(discordText("api_key_hint"));
         this.apiKeyField.setMaxLength(512);
         this.addRenderableWidget(this.apiKeyField);
 
-        this.enabledButton = Button.builder(Component.literal("啟用: 否"), button -> {
+        this.enabledButton = Button.builder(enabledButtonText(), button -> {
                     this.enabled = !this.enabled;
-                    button.setMessage(Component.literal(this.enabled ? "啟用: 是" : "啟用: 否"));
+                    button.setMessage(enabledButtonText());
                 })
                 .bounds(contentX, y + 88, halfWidth, 20)
                 .build();
         this.addRenderableWidget(this.enabledButton);
 
-        this.saveButton = Button.builder(Component.literal("儲存"), button -> saveToServer())
+        this.saveButton = Button.builder(discordText("save"), button -> saveToServer())
                 .bounds(contentX + halfWidth + FIELD_GAP, y + 88, halfWidth, 20)
                 .build();
         this.addRenderableWidget(this.saveButton);
@@ -100,12 +104,12 @@ public class DiscordConfigScreen extends Screen {
         this.channelNameField.setMaxLength(64);
         this.addRenderableWidget(this.channelNameField);
 
-        this.addChannelButton = Button.builder(Component.literal("添加頻道"), button -> addChannel())
+        this.addChannelButton = Button.builder(discordText("add_channel"), button -> addChannel())
                 .bounds(contentX, channelStartY + 48, halfWidth, 20)
                 .build();
         this.addRenderableWidget(this.addChannelButton);
 
-        this.cancelButton = Button.builder(Component.literal("取消"), button -> this.onClose())
+        this.cancelButton = Button.builder(Component.translatable("gui.cancel"), button -> this.onClose())
                 .bounds(centerX - 50, 296, 100, 20)
                 .build();
         this.addRenderableWidget(this.cancelButton);
@@ -145,27 +149,27 @@ public class DiscordConfigScreen extends Screen {
 
         // 標題與說明
         drawCenteredText(extractor, this.title.getString(), centerX, 10 + yOffset, 0xFFFFFFFF);
-        drawCenteredText(extractor, DESC_LINE1.getString().replace("§7", ""), centerX, 28 + yOffset, 0xFFB8B8B8);
-        drawCenteredText(extractor, DESC_LINE2.getString().replace("§7", ""), centerX, 40 + yOffset, 0xFFB8B8B8);
-        drawCenteredText(extractor, DESC_LINE3.getString().replace("§7", ""), centerX, 52 + yOffset, 0xFFB8B8B8);
+        drawCenteredText(extractor, DESC_LINE1.getString(), centerX, 28 + yOffset, 0xFFB8B8B8);
+        drawCenteredText(extractor, DESC_LINE2.getString(), centerX, 40 + yOffset, 0xFFB8B8B8);
+        drawCenteredText(extractor, DESC_LINE3.getString(), centerX, 52 + yOffset, 0xFFB8B8B8);
 
         // 基礎設定標籤
-        extractor.text(this.font, "基本設定", panelX + 10, TOP_SECTION_Y - 8 + yOffset, 0xFFFFFFFF);
+        extractor.text(this.font, discordText("basic_settings"), panelX + 10, TOP_SECTION_Y - 8 + yOffset, 0xFFFFFFFF);
         extractor.text(this.font, "Worker URL", contentX, TOP_SECTION_Y + 8 + yOffset, 0xFFFFFFFF);
         extractor.text(this.font, "API Key", contentX, TOP_SECTION_Y + 46 + yOffset, 0xFFFFFFFF);
-        extractor.text(this.font, "填入 Worker 網址與 API Key 後按儲存", contentX, TOP_SECTION_Y + 114 + yOffset, 0xFFFFFFFF);
+        extractor.text(this.font, discordText("api_key_note"), contentX, TOP_SECTION_Y + 114 + yOffset, 0xFFFFFFFF);
 
         // 頻道管理標籤
-        extractor.text(this.font, "頻道管理", panelX + 10, CHANNEL_SECTION_Y - 8 + yOffset, 0xFFFFFFFF);
+        extractor.text(this.font, discordText("channel_management"), panelX + 10, CHANNEL_SECTION_Y - 8 + yOffset, 0xFFFFFFFF);
         extractor.text(this.font, "Channel ID", contentX, CHANNEL_SECTION_Y + 8 + yOffset, 0xFFFFFFFF);
         extractor.text(this.font, "Channel Name", contentX + halfWidth + FIELD_GAP, CHANNEL_SECTION_Y + 8 + yOffset, 0xFFFFFFFF);
-        extractor.text(this.font, "新增後會即時顯示在下方清單", contentX, CHANNEL_SECTION_Y + 76 + yOffset, 0xFFFFFFFF);
+        extractor.text(this.font, discordText("channel_add_note"), contentX, CHANNEL_SECTION_Y + 76 + yOffset, 0xFFFFFFFF);
 
         // 頻道列表
-        extractor.text(this.font, "已配置的頻道", listX + 5, gridTop + 3, 0xFFFFFFFF);
+        extractor.text(this.font, discordText("configured_channels"), listX + 5, gridTop + 3, 0xFFFFFFFF);
 
         if (channels.isEmpty()) {
-            drawChannelRowText(extractor, listX, gridTop + 18, contentWidth, "(無配置頻道)", "");
+            drawChannelRowText(extractor, listX, gridTop + 18, contentWidth, discordText("no_channels").getString(), "");
         } else {
             for (int i = 0; i < channels.size(); i++) {
                 DiscordConfigSyncPayload.ChannelData ch = channels.get(i);
@@ -224,13 +228,13 @@ public class DiscordConfigScreen extends Screen {
     public void applyServerConfig(boolean serverEnabled, String serverWorkerUrl, String serverApiKey) {
         this.enabled = serverEnabled;
         if (this.enabledButton != null) {
-            this.enabledButton.setMessage(Component.literal(this.enabled ? "啟用: 是" : "啟用: 否"));
+            this.enabledButton.setMessage(enabledButtonText());
         }
         if (this.workerUrlField != null) {
             this.workerUrlField.setValue(serverWorkerUrl);
         }
         if (this.apiKeyField != null) {
-            this.apiKeyField.setValue(serverApiKey);
+            this.apiKeyField.setValue("");
         }
     }
 
@@ -253,7 +257,7 @@ public class DiscordConfigScreen extends Screen {
         for (int i = 0; i < this.channels.size(); i++) {
             int channelIndex = i;
             DiscordConfigSyncPayload.ChannelData channel = this.channels.get(i);
-            Button deleteButton = Button.builder(Component.literal("刪除"), button -> removeChannel(channelIndex))
+            Button deleteButton = Button.builder(discordText("delete"), button -> removeChannel(channelIndex))
                     .bounds(0, 0, 40, 18)
                     .build();
             this.channelDeleteButtons.add(deleteButton);
@@ -267,7 +271,19 @@ public class DiscordConfigScreen extends Screen {
 
         if (channelId.isEmpty()) {
             if (this.minecraft != null && this.minecraft.player != null) {
-                this.minecraft.player.sendSystemMessage(Component.literal("§c頻道 ID 不能為空"));
+                this.minecraft.player.sendSystemMessage(discordText("channel_id_empty").withStyle(ChatFormatting.RED));
+            }
+            return;
+        }
+        if (!isValidChannelId(channelId)) {
+            if (this.minecraft != null && this.minecraft.player != null) {
+                this.minecraft.player.sendSystemMessage(discordText("channel_id_invalid").withStyle(ChatFormatting.RED));
+            }
+            return;
+        }
+        if (this.channels.size() >= MAX_DISCORD_CHANNELS) {
+            if (this.minecraft != null && this.minecraft.player != null) {
+                this.minecraft.player.sendSystemMessage(discordText("channel_limit", MAX_DISCORD_CHANNELS).withStyle(ChatFormatting.RED));
             }
             return;
         }
@@ -280,7 +296,7 @@ public class DiscordConfigScreen extends Screen {
         for (DiscordConfigSyncPayload.ChannelData ch : this.channels) {
             if (ch.id().equals(channelId)) {
                 if (this.minecraft != null && this.minecraft.player != null) {
-                    this.minecraft.player.sendSystemMessage(Component.literal("§c此頻道已存在"));
+                    this.minecraft.player.sendSystemMessage(discordText("channel_duplicate").withStyle(ChatFormatting.RED));
                 }
                 return;
             }
@@ -288,11 +304,6 @@ public class DiscordConfigScreen extends Screen {
 
         // 發送到伺服器
         ClientPlayNetworking.send(new ManageDiscordChannelPayload("add", channelId, channelName));
-        
-        // 本地更新
-        this.channels.add(new DiscordConfigSyncPayload.ChannelData(channelId, channelName));
-        this.scrollOffset = 0;
-        updateLayout();
         this.channelIdField.setValue("");
         this.channelNameField.setValue("");
     }
@@ -337,12 +348,22 @@ public class DiscordConfigScreen extends Screen {
         int idWidth = Math.max(70, availableWidth / 2);
         int nameX = x + 8 + idWidth + 8;
         int nameWidth = Math.max(40, width - (nameX - x) - reservedDeleteWidth - 8);
-        String visibleId = trimToWidth("ID: " + title, idWidth);
-        String visibleName = subtitle.isEmpty() ? "" : trimToWidth("名稱: " + subtitle, nameWidth);
+        String visibleId = subtitle.isEmpty()
+                ? trimToWidth(title, availableWidth)
+                : trimToWidth(discordText("channel_id_value", title).getString(), idWidth);
+        String visibleName = subtitle.isEmpty() ? "" : trimToWidth(discordText("channel_name_value", subtitle).getString(), nameWidth);
         extractor.text(this.font, visibleId, x + 8, y + 8, 0xFFFFFFFF);
         if (!visibleName.isEmpty()) {
             extractor.text(this.font, visibleName, nameX, y + 8, 0xFFFFFFFF);
         }
+    }
+
+    private static MutableComponent discordText(String key, Object... args) {
+        return Component.translatable(TRANSLATION_PREFIX + key, args);
+    }
+
+    private Component enabledButtonText() {
+        return discordText("enabled_state", discordText(this.enabled ? "yes" : "no"));
     }
 
     private void drawCenteredText(GuiGraphicsExtractor extractor, String text, int centerX, int y, int color) {
@@ -390,9 +411,17 @@ public class DiscordConfigScreen extends Screen {
 
         DiscordConfigSyncPayload.ChannelData channel = this.channels.get(index);
         ClientPlayNetworking.send(new ManageDiscordChannelPayload("remove", channel.id(), ""));
-        this.channels.remove(index);
-        this.scrollOffset = 0;
-        rebuildChannelDeleteButtons();
-        updateLayout();
+    }
+
+    private static boolean isValidChannelId(String channelId) {
+        if (channelId.length() < 17 || channelId.length() > 20) {
+            return false;
+        }
+        for (int i = 0; i < channelId.length(); i++) {
+            if (!Character.isDigit(channelId.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 }

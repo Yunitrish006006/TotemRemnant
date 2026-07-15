@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
  */
 public class DiscordBridge {
     private static final int DELIVERY_FAILURE_ALERT_THRESHOLD = 3;
+    private static final int MAX_CHANNELS = 10;
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "DiscordBridge-Worker");
         t.setDaemon(true);
@@ -72,14 +73,16 @@ public class DiscordBridge {
         }
         String normalizedWorkerUrl = normalizeWorkerUrl(newWorkerUrl);
         String normalizedApiKey = newApiKey == null ? "" : newApiKey.trim();
-        if (newEnabled && (normalizedWorkerUrl.isEmpty() || normalizedApiKey.isEmpty())) {
+        String existingApiKey = apiKey == null ? "" : apiKey.trim();
+        String effectiveApiKey = normalizedApiKey.isEmpty() ? existingApiKey : normalizedApiKey;
+        if (newEnabled && (normalizedWorkerUrl.isEmpty() || effectiveApiKey.isEmpty())) {
             throw new IllegalArgumentException("啟用 Discord Bridge 時，workerUrl 與 apiKey 不能為空");
         }
 
         JsonObject config = new JsonObject();
         config.addProperty("enabled", newEnabled);
         config.addProperty("workerUrl", normalizedWorkerUrl);
-        config.addProperty("apiKey", normalizedApiKey);
+        config.addProperty("apiKey", effectiveApiKey);
 
         // 保留現有的 channels
         JsonArray channelArray = new JsonArray();
@@ -100,31 +103,39 @@ public class DiscordBridge {
         if (configFilePath == null) {
             throw new IllegalStateException("DiscordBridge 尚未初始化");
         }
+        String normalizedId = normalizeChannelId(channelId);
+        validateChannelId(normalizedId);
+        if (channels.size() >= MAX_CHANNELS) {
+            throw new IllegalArgumentException("最多只能配置 " + MAX_CHANNELS + " 個 Discord 頻道");
+        }
+        String normalizedName = normalizeChannelName(channelName, normalizedId);
 
         // 檢查是否已存在
         for (DiscordChannel ch : channels) {
-            if (ch.id.equals(channelId)) {
-                throw new IllegalArgumentException("頻道 " + channelId + " 已存在");
+            if (ch.id.equals(normalizedId)) {
+                throw new IllegalArgumentException("頻道 " + normalizedId + " 已存在");
             }
         }
 
-        channels.add(new DiscordChannel(channelId, channelName));
+        channels.add(new DiscordChannel(normalizedId, normalizedName));
         saveChannelsToFile();
-        Deadrecall.LOGGER.info("[DiscordBridge] 已添加頻道: {} ({})", channelName, channelId);
+        Deadrecall.LOGGER.info("[DiscordBridge] 已添加頻道: {} ({})", normalizedName, normalizedId);
     }
 
     public static synchronized void removeChannel(String channelId) throws IOException {
         if (configFilePath == null) {
             throw new IllegalStateException("DiscordBridge 尚未初始化");
         }
+        String normalizedId = normalizeChannelId(channelId);
+        validateChannelId(normalizedId);
 
-        boolean removed = channels.removeIf(ch -> ch.id.equals(channelId));
+        boolean removed = channels.removeIf(ch -> ch.id.equals(normalizedId));
         if (!removed) {
-            throw new IllegalArgumentException("頻道 " + channelId + " 不存在");
+            throw new IllegalArgumentException("頻道 " + normalizedId + " 不存在");
         }
 
         saveChannelsToFile();
-        Deadrecall.LOGGER.info("[DiscordBridge] 已移除頻道: {}", channelId);
+        Deadrecall.LOGGER.info("[DiscordBridge] 已移除頻道: {}", normalizedId);
     }
 
     public static synchronized void reload() {
@@ -173,12 +184,17 @@ public class DiscordBridge {
             channels.clear();
             if (config.has("channels") && config.get("channels").isJsonArray()) {
                 JsonArray channelArray = config.getAsJsonArray("channels");
+                Set<String> seenChannelIds = new HashSet<>();
                 for (int i = 0; i < channelArray.size(); i++) {
                     JsonObject chObj = channelArray.get(i).getAsJsonObject();
-                    String id = chObj.has("id") ? chObj.get("id").getAsString() : "";
-                    String name = chObj.has("name") ? chObj.get("name").getAsString() : id;
-                    if (!id.isEmpty()) {
-                        channels.add(new DiscordChannel(id, name));
+                    String id = normalizeChannelId(chObj.has("id") ? chObj.get("id").getAsString() : "");
+                    if (!isValidChannelId(id) || !seenChannelIds.add(id)) {
+                        continue;
+                    }
+                    String name = normalizeChannelName(chObj.has("name") ? chObj.get("name").getAsString() : id, id);
+                    channels.add(new DiscordChannel(id, name));
+                    if (channels.size() >= MAX_CHANNELS) {
+                        break;
                     }
                 }
             }
@@ -483,10 +499,6 @@ public class DiscordBridge {
         return workerUrl;
     }
 
-    public static String getApiKey() {
-        return apiKey;
-    }
-
     private static String channelsToJson() {
         JsonArray arr = new JsonArray();
         for (DiscordChannel ch : channels) {
@@ -524,6 +536,39 @@ public class DiscordBridge {
             return "";
         }
         return text.trim().replaceAll("\\s+", " ");
+    }
+
+    private static String normalizeChannelId(String channelId) {
+        return channelId == null ? "" : channelId.trim();
+    }
+
+    private static String normalizeChannelName(String channelName, String fallback) {
+        String normalized = normalizeText(channelName);
+        if (normalized.isEmpty()) {
+            return fallback;
+        }
+        return normalized.length() > 64 ? normalized.substring(0, 64).trim() : normalized;
+    }
+
+    private static void validateChannelId(String channelId) {
+        if (channelId.isEmpty()) {
+            throw new IllegalArgumentException("頻道 ID 不能為空");
+        }
+        if (!isValidChannelId(channelId)) {
+            throw new IllegalArgumentException("頻道 ID 格式不正確，必須是 Discord snowflake");
+        }
+    }
+
+    private static boolean isValidChannelId(String channelId) {
+        if (channelId == null || channelId.length() < 17 || channelId.length() > 20) {
+            return false;
+        }
+        for (int i = 0; i < channelId.length(); i++) {
+            if (!Character.isDigit(channelId.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static String normalizeActor(String actor) {

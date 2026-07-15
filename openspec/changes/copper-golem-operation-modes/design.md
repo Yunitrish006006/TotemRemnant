@@ -35,12 +35,15 @@ CopperGolemController
 │   ├── GatheringTargetScanner
 │   ├── GatheringBreakService
 │   └── BlockLlmClassifier
+├── CopperGolemLlmClient
 ├── CopperGolemWrenchHandler
 ├── CopperGolemNetworkHandler
 └── CopperGolemVisualization
 ```
 
 `TransportItemsBetweenContainersMixin` 只能在 `SORTING` 介入。`GATHERING` 由獨立控制器驅動，不得重用「主手非空即為分類貨物」的判斷。
+
+`CopperGolemLlmClient` 負責共用 OpenAI-compatible chat completions HTTP 呼叫、choices 解析、JSON 擷取與 `match/tags` schema 驗證。`ItemLlmClassifier` 與 `BlockLlmClassifier` 只負責各自的 pending/retry、prompt 組裝與結果回寫。
 
 ## 4. Domain model
 
@@ -111,6 +114,18 @@ llm_denied_tags[]
 target_position
 scan_cursor
 ```
+
+`CopperGolemData` 是目前持久化資料的 facade：集中處理 `CustomData` 讀寫、`data_version = 2` 遷移、common state、fuel stack、sorting bindings、`ItemStack` codec、座標 codec 與字串列表 codec。`CopperGolemWrenchHandler` 保留薄轉接方法，讓既有 sorting/gathering 流程可以逐步搬到 controller/service 而不改變現有資料格式。
+
+`CopperGolemFuelService` 負責燃料可用性、燃料 ItemStack/剩餘 tick 讀取、燃料設定、單次搬運燃料扣除與原版 fuel 判定。燃料變更仍會清除 sorting blocked state 並 bump revision；handler 的燃料方法只保留相容轉接。
+
+`SortingBindingService` 負責 sorting 目的地 bindings 與 shared source copper chest 的資料讀寫、查詢與座標比對。handler 仍負責玩家互動、副作用、LLM config pruning、return-carried-item 與 navigation/memory reset。
+
+`CopperGolemController` 目前接手銅傀儡 tick orchestration 與 tracked UUID 狀態。伺服器每 20 tick 做一次 discovery，將有 bindings、source copper chest、sorting blocked 或 gathering mode 的銅傀儡加入 tracked UUID 集合；平常 tick 只解析並處理 tracked 銅傀儡，移除、死亡或沒有可管理狀態時自動解除追蹤。
+
+`SortingModeController` 負責原版搬運 Mixin 需要的 sorting 流程：目的地選擇、來源取物、回退來源、目的地存放、remembered source、tried destinations 與 sorting blocked tick。`CopperGolemWrenchHandler` 保留同名 public 方法作為暫時轉接 API，避免 Mixin 和既有呼叫點一次性改名。
+
+JUnit 5 單元測試覆蓋 `CopperGolemData` 的 migration、binding/block-pos/string-list codec 與 sorting blocked snapshot 清理。背包分類回歸測試使用 `BackpackSortingHelper` 直接驗證 DeadRecall 背包內部格子的合併、空格使用與不同物品拒絕規則；純 JVM 測試使用 `Bootstrap.bootStrap()` 和 direct holder `ItemStack`，避免依賴完整 Fabric runtime。
 
 ## 5. Persistent data
 
@@ -421,9 +436,7 @@ revision
 ```text
 ChangeCopperGolemModePayload
 SetCopperGolemRunningPayload
-CopperGolemFuelSlotPayload
-CopperGolemToolSlotPayload
-CopperGolemStorageSlotPayload
+Menu slot transaction for fuel/tool/storage
 SetGatheringPromptPayload
 SetGatheringAreaPayload
 SetGatheringHomePayload

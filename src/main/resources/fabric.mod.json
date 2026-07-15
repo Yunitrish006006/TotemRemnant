@@ -17,7 +17,8 @@
       "com.adaptor.deadrecall.client.DeadrecallClient"
     ],
     "main": [
-      "com.adaptor.deadrecall.Deadrecall"
+      "com.adaptor.deadrecall.Deadrecall",
+      "com.adaptor.deadrecall.space.SpaceUnitRefreshNetworking"
     ]
   },
   "mixins": [

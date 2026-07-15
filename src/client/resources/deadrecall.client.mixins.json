@@ -6,8 +6,11 @@
   "client": [
     "OptionsMixin",
     "AbstractContainerScreenMixin",
+    "MenuScreensAccessor",
+    "SlotAccessor",
     "ItemEntityRenderStateMixin",
-    "ItemEntityRendererMixin"
+    "ItemEntityRendererMixin",
+    "SpaceUnitMapScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

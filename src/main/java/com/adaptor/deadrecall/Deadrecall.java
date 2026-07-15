@@ -12,11 +12,10 @@ import com.adaptor.deadrecall.item.ModItemGroups;
 import com.adaptor.deadrecall.item.ModItems;
 import com.adaptor.deadrecall.item.copper.CopperGolemLlmService;
 import com.adaptor.deadrecall.item.copper.CopperGolemWrenchHandler;
+import com.adaptor.deadrecall.menu.ModMenus;
 import com.adaptor.deadrecall.network.CalibrateSpaceUnitPayload;
 import com.adaptor.deadrecall.network.ConfirmSpaceUnitRegistrationPayload;
 import com.adaptor.deadrecall.network.CopperGolemOperationPayload;
-import com.adaptor.deadrecall.network.CopperGolemFuelSlotPayload;
-import com.adaptor.deadrecall.network.CopperGolemGatheringSlotPayload;
 import com.adaptor.deadrecall.network.CopperGolemGatheringTargetPayload;
 import com.adaptor.deadrecall.network.CopperGolemModePayload;
 import com.adaptor.deadrecall.network.CopperGolemVisualizationPayload;
@@ -58,6 +57,7 @@ import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -121,6 +121,7 @@ public class Deadrecall implements ModInitializer {
         ModBlockEntities.registerModBlockEntities();
         ModMobEffects.registerModEffects();
         ModCriteriaTriggers.registerModCriteriaTriggers();
+        ModMenus.registerModMenus();
         ModItems.registerModItems();
         ModItemGroups.registerModItemGroups();
         AlchemyHandler.register();
@@ -145,10 +146,6 @@ public class Deadrecall implements ModInitializer {
                 SortBackpackPayload.TYPE, SortBackpackPayload.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(
                 CopperGolemOperationPayload.TYPE, CopperGolemOperationPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                CopperGolemFuelSlotPayload.TYPE, CopperGolemFuelSlotPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                CopperGolemGatheringSlotPayload.TYPE, CopperGolemGatheringSlotPayload.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(
                 CopperGolemGatheringTargetPayload.TYPE, CopperGolemGatheringTargetPayload.CODEC);
         PayloadTypeRegistry.serverboundPlay().register(
@@ -202,17 +199,13 @@ public class Deadrecall implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(RequestDiscordConfigPayload.TYPE,
                 (payload, context) -> {
                     ServerPlayer player = context.player();
-                    var channels = DiscordBridge.getChannels();
-                    var syncedChannels = new ArrayList<DiscordConfigSyncPayload.ChannelData>(channels.size());
-                    for (var channel : channels) {
-                        syncedChannels.add(new DiscordConfigSyncPayload.ChannelData(channel.id, channel.name));
+                    if (!canManageDiscordBridge(player)) {
+                        player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.permission_view").withStyle(ChatFormatting.RED));
+                        LOGGER.warn("[DiscordBridge] 玩家 {} 嘗試未授權讀取設定", player.getName().getString());
+                        return;
                     }
-                    ServerPlayNetworking.send(player, new DiscordConfigSyncPayload(
-                            DiscordBridge.isEnabled(),
-                            DiscordBridge.getWorkerUrl(),
-                            DiscordBridge.getApiKey(),
-                            syncedChannels
-                    ));
+
+                    sendDiscordConfigTo(player);
                 });
 
         // 收到客戶端儲存請求時，更新設定（需要 OP 權限）
@@ -221,18 +214,19 @@ public class Deadrecall implements ModInitializer {
                     ServerPlayer player = context.player();
                     
                     if (!canManageDiscordBridge(player)) {
-                        player.sendSystemMessage(Component.literal("§c你沒有權限修改 Discord Bridge 設定！"));
+                        player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.permission_modify").withStyle(ChatFormatting.RED));
                         LOGGER.warn("[DiscordBridge] 玩家 {} 嘗試未授權修改設定", player.getName().getString());
                         return;
                     }
                     
                     try {
                         DiscordBridge.updateConfig(payload.enabled(), payload.workerUrl(), payload.apiKey());
-                        player.sendSystemMessage(Component.literal("§aDiscord Bridge 設定已更新"));
+                        player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.settings_updated").withStyle(ChatFormatting.GREEN));
+                        sendDiscordConfigTo(player);
                     } catch (IllegalArgumentException e) {
-                        player.sendSystemMessage(Component.literal("§c" + e.getMessage()));
+                        player.sendSystemMessage(Component.literal(e.getMessage()).withStyle(ChatFormatting.RED));
                     } catch (Exception e) {
-                        player.sendSystemMessage(Component.literal("§c更新失敗：" + e.getMessage()));
+                        player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.update_failed", e.getMessage()).withStyle(ChatFormatting.RED));
                         LOGGER.error("[DiscordBridge] 更新設定失敗", e);
                     }
                 });
@@ -243,7 +237,7 @@ public class Deadrecall implements ModInitializer {
                     ServerPlayer player = context.player();
                     
                     if (!canManageDiscordBridge(player)) {
-                        player.sendSystemMessage(Component.literal("§c你沒有權限管理 Discord 頻道！"));
+                        player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.permission_channels").withStyle(ChatFormatting.RED));
                         LOGGER.warn("[DiscordBridge] 玩家 {} 嘗試未授權管理頻道", player.getName().getString());
                         return;
                     }
@@ -251,15 +245,18 @@ public class Deadrecall implements ModInitializer {
                     try {
                         if ("add".equals(payload.action())) {
                             DiscordBridge.addChannel(payload.channelId(), payload.channelName());
-                            player.sendSystemMessage(Component.literal("§a已添加 Discord 頻道: " + payload.channelName()));
+                            player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.channel_added", payload.channelName()).withStyle(ChatFormatting.GREEN));
                         } else if ("remove".equals(payload.action())) {
                             DiscordBridge.removeChannel(payload.channelId());
-                            player.sendSystemMessage(Component.literal("§a已移除 Discord 頻道: " + payload.channelId()));
+                            player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.channel_removed", payload.channelId()).withStyle(ChatFormatting.GREEN));
+                        } else {
+                            throw new IllegalArgumentException("Unsupported channel operation");
                         }
+                        sendDiscordConfigTo(player);
                     } catch (IllegalArgumentException e) {
-                        player.sendSystemMessage(Component.literal("§c" + e.getMessage()));
+                        player.sendSystemMessage(Component.literal(e.getMessage()).withStyle(ChatFormatting.RED));
                     } catch (Exception e) {
-                        player.sendSystemMessage(Component.literal("§c操作失敗：" + e.getMessage()));
+                        player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.operation_failed", e.getMessage()).withStyle(ChatFormatting.RED));
                         LOGGER.error("[DiscordBridge] 管理頻道失敗", e);
                     }
                 });
@@ -273,14 +270,6 @@ public class Deadrecall implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(CopperGolemOperationPayload.TYPE,
                 (payload, context) -> context.server().execute(() ->
                         CopperGolemWrenchHandler.setTransportEnabledFromUi(context.player(), payload.golemId(), payload.running(), payload.revision())));
-
-        ServerPlayNetworking.registerGlobalReceiver(CopperGolemFuelSlotPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        CopperGolemWrenchHandler.handleFuelSlotFromUi(context.player(), payload.golemId(), payload.action(), payload.revision())));
-
-        ServerPlayNetworking.registerGlobalReceiver(CopperGolemGatheringSlotPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        CopperGolemWrenchHandler.handleGatheringSlotFromUi(context.player(), payload.golemId(), payload.slot(), payload.action(), payload.revision())));
 
         ServerPlayNetworking.registerGlobalReceiver(CopperGolemGatheringTargetPayload.TYPE,
                 (payload, context) -> context.server().execute(() ->
@@ -302,20 +291,20 @@ public class Deadrecall implements ModInitializer {
                 (payload, context) -> context.server().execute(() -> {
                     ServerPlayer player = context.player();
                     if (!canManageDiscordBridge(player)) {
-                        player.sendSystemMessage(Component.literal("§c你沒有權限修改 LLM API 設定！"));
+                        player.sendSystemMessage(Component.translatable("message.deadrecall.copper_wrench.llm_permission_modify").withStyle(ChatFormatting.RED));
                         LOGGER.warn("[CopperGolemLLM] 玩家 {} 嘗試未授權修改設定", player.getName().getString());
                         return;
                     }
 
                     CopperGolemWrenchHandler.setGolemLlmConfigFromUi(player, payload.golemId(), payload.apiUrl(), payload.apiKey(), payload.model(), payload.revision());
-                    player.sendSystemMessage(Component.literal("§a銅魁儡 LLM API 設定已更新"));
+                    player.sendSystemMessage(Component.translatable("message.deadrecall.copper_wrench.llm_config_updated").withStyle(ChatFormatting.GREEN));
                 }));
 
         ServerPlayNetworking.registerGlobalReceiver(TestCopperGolemLlmConnectionPayload.TYPE,
                 (payload, context) -> context.server().execute(() -> {
                     ServerPlayer player = context.player();
                     if (!canManageDiscordBridge(player)) {
-                        player.sendSystemMessage(Component.literal("§c你沒有權限測試 LLM API 設定！"));
+                        player.sendSystemMessage(Component.translatable("message.deadrecall.copper_wrench.llm_permission_test").withStyle(ChatFormatting.RED));
                         LOGGER.warn("[CopperGolemLLM] 玩家 {} 嘗試未授權測試連線", player.getName().getString());
                         return;
                     }
@@ -535,17 +524,17 @@ public class Deadrecall implements ModInitializer {
                     ServerPlayer player = context.getSource().getPlayerOrException();
                     DeathLocationManager.DeathLocation loc = DeathLocationManager.getDeathLocation(player);
                     if (loc == null) {
-                        player.sendSystemMessage(Component.literal("§c沒有死亡座標可傳送！"));
+                        player.sendSystemMessage(Component.translatable("message.deadrecall.back.no_position").withStyle(ChatFormatting.RED));
                         return 0;
                     }
 
                     ServerLevel world = context.getSource().getServer().getLevel(loc.dimension);
                     if (world == null) {
-                        player.sendSystemMessage(Component.literal("§c找不到死亡世界！"));
+                        player.sendSystemMessage(Component.translatable("message.deadrecall.back.no_world").withStyle(ChatFormatting.RED));
                         return 0;
                     }
                     player.teleportTo(world, loc.pos.getX() + 0.5, loc.pos.getY(), loc.pos.getZ() + 0.5, Relative.DELTA, player.getYRot(), player.getXRot(), false);
-                    player.sendSystemMessage(Component.literal("§a已傳送回死亡地點！"));
+                    player.sendSystemMessage(Component.translatable("message.deadrecall.back.success").withStyle(ChatFormatting.GREEN));
                     DeathLocationManager.clearDeathLocation(player);
                     return 1;
                 })
@@ -557,7 +546,7 @@ public class Deadrecall implements ModInitializer {
                             .then(Commands.literal("reload")
                                     .executes(context -> {
                                         DiscordBridge.reload();
-                                        context.getSource().sendSuccess(() -> Component.literal("§aDiscord Bridge 設定已重新載入"), true);
+                                        context.getSource().sendSuccess(() -> Component.translatable("message.deadrecall.discord_config.reloaded").withStyle(ChatFormatting.GREEN), true);
                                         return 1;
                                     }))
                             .then(Commands.literal("set")
@@ -570,13 +559,13 @@ public class Deadrecall implements ModInitializer {
                                                                 String apiKey = StringArgumentType.getString(context, "apiKey");
                                                                 try {
                                                                     DiscordBridge.updateConfig(enabled, workerUrl, apiKey);
-                                                                    context.getSource().sendSuccess(() -> Component.literal("§aDiscord Bridge 設定已更新"), true);
+                                                                    context.getSource().sendSuccess(() -> Component.translatable("message.deadrecall.discord_config.settings_updated").withStyle(ChatFormatting.GREEN), true);
                                                                     return 1;
                                                                 } catch (IllegalArgumentException e) {
-                                                                    context.getSource().sendFailure(Component.literal("§c" + e.getMessage()));
+                                                                    context.getSource().sendFailure(Component.literal(e.getMessage()).withStyle(ChatFormatting.RED));
                                                                     return 0;
                                                                 } catch (Exception e) {
-                                                                    context.getSource().sendFailure(Component.literal("§c更新失敗：" + e.getMessage()));
+                                                                    context.getSource().sendFailure(Component.translatable("message.deadrecall.discord_config.update_failed", e.getMessage()).withStyle(ChatFormatting.RED));
                                                                     LOGGER.error("[DiscordBridge] 更新設定失敗", e);
                                                                     return 0;
                                                                 }
@@ -590,13 +579,13 @@ public class Deadrecall implements ModInitializer {
                                                                String channelName = StringArgumentType.getString(context, "channelName");
                                                                try {
                                                                    DiscordBridge.addChannel(channelId, channelName);
-                                                                   context.getSource().sendSuccess(() -> Component.literal("§a已添加 Discord 頻道: " + channelName), true);
+                                                                   context.getSource().sendSuccess(() -> Component.translatable("message.deadrecall.discord_config.channel_added", channelName).withStyle(ChatFormatting.GREEN), true);
                                                                    return 1;
                                                                } catch (IllegalArgumentException e) {
-                                                                   context.getSource().sendFailure(Component.literal("§c" + e.getMessage()));
+                                                                   context.getSource().sendFailure(Component.literal(e.getMessage()).withStyle(ChatFormatting.RED));
                                                                    return 0;
                                                                } catch (Exception e) {
-                                                                   context.getSource().sendFailure(Component.literal("§c添加頻道失敗：" + e.getMessage()));
+                                                                   context.getSource().sendFailure(Component.translatable("message.deadrecall.discord_config.channel_add_failed", e.getMessage()).withStyle(ChatFormatting.RED));
                                                                    LOGGER.error("[DiscordBridge] 添加頻道失敗", e);
                                                                    return 0;
                                                                }
@@ -607,13 +596,13 @@ public class Deadrecall implements ModInitializer {
                                                         String channelId = StringArgumentType.getString(context, "channelId");
                                                         try {
                                                             DiscordBridge.removeChannel(channelId);
-                                                            context.getSource().sendSuccess(() -> Component.literal("§a已移除 Discord 頻道: " + channelId), true);
+                                                            context.getSource().sendSuccess(() -> Component.translatable("message.deadrecall.discord_config.channel_removed", channelId).withStyle(ChatFormatting.GREEN), true);
                                                             return 1;
                                                         } catch (IllegalArgumentException e) {
-                                                            context.getSource().sendFailure(Component.literal("§c" + e.getMessage()));
+                                                            context.getSource().sendFailure(Component.literal(e.getMessage()).withStyle(ChatFormatting.RED));
                                                             return 0;
                                                         } catch (Exception e) {
-                                                            context.getSource().sendFailure(Component.literal("§c移除頻道失敗：" + e.getMessage()));
+                                                            context.getSource().sendFailure(Component.translatable("message.deadrecall.discord_config.channel_remove_failed", e.getMessage()).withStyle(ChatFormatting.RED));
                                                             LOGGER.error("[DiscordBridge] 移除頻道失敗", e);
                                                             return 0;
                                                         }
@@ -622,9 +611,9 @@ public class Deadrecall implements ModInitializer {
                                             .executes(context -> {
                                                 var channels = DiscordBridge.getChannels();
                                                 if (channels.isEmpty()) {
-                                                    context.getSource().sendSuccess(() -> Component.literal("§c尚未配置任何 Discord 頻道"), true);
+                                                    context.getSource().sendSuccess(() -> Component.translatable("message.deadrecall.discord_config.no_channels_configured").withStyle(ChatFormatting.RED), true);
                                                 } else {
-                                                    context.getSource().sendSuccess(() -> Component.literal("§a已配置 " + channels.size() + " 個頻道:"), true);
+                                                    context.getSource().sendSuccess(() -> Component.translatable("message.deadrecall.discord_config.configured_channels_count", channels.size()).withStyle(ChatFormatting.GREEN), true);
                                                     for (var ch : channels) {
                                                         context.getSource().sendSuccess(() -> Component.literal("  - " + ch.name + " (" + ch.id + ")"), false);
                                                     }
@@ -675,6 +664,20 @@ public class Deadrecall implements ModInitializer {
         } else {
             DiscordBridge.sendServerStatus(status, playersOnline, playersMax, version, tps);
         }
+    }
+
+    private static void sendDiscordConfigTo(ServerPlayer player) {
+        var channels = DiscordBridge.getChannels();
+        var syncedChannels = new ArrayList<DiscordConfigSyncPayload.ChannelData>(channels.size());
+        for (var channel : channels) {
+            syncedChannels.add(new DiscordConfigSyncPayload.ChannelData(channel.id, channel.name));
+        }
+        ServerPlayNetworking.send(player, new DiscordConfigSyncPayload(
+                DiscordBridge.isEnabled(),
+                DiscordBridge.getWorkerUrl(),
+                "",
+                syncedChannels
+        ));
     }
 
     private void handlePlayerDeath(ServerPlayer player) {
@@ -754,7 +757,7 @@ public class Deadrecall implements ModInitializer {
                             DiscordBridge.sendDeathBackpackCreated(player.getName().getString());
 
                             // 通知玩家
-                            player.sendSystemMessage(Component.literal("§e你的物品已被收集到死亡背包中！"));
+                            player.sendSystemMessage(Component.translatable("message.deadrecall.death_backpack.collected").withStyle(ChatFormatting.YELLOW));
                         }
                     } else {
                         LOGGER.info("No new dropped items found for player {} at {}", player.getName().getString(), deathPos);

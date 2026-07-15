@@ -21,6 +21,8 @@ Minecraft Server
 ## 安全原則
 
 - 只有 OP 可以修改 Bridge 設定。
+- 只有 OP 或單人世界擁有者可以從 GUI 讀取 Bridge 設定；一般玩家不能取得 Worker URL、API Key 或頻道清單。
+- GUI 不會顯示既有 API Key；API Key 欄位留空儲存時會保留目前設定，只有輸入新值才會覆寫。
 - `MC_API_KEY` 應使用 Cloudflare Secret，不應提交到 Git。
 - 不要在 issue、log 或截圖中公開完整 Webhook URL、Bot Token 或 API Key。
 - 管理稽核不轉播完整指令原文；死亡背包與 Space Unit 通知不轉播座標或物品內容。

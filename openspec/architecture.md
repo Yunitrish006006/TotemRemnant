@@ -81,6 +81,7 @@ Client 只傳送操作意圖、目標 UUID、UI 選項及 revision。
 - 錯誤訊息必須指出權限、revision、距離、成本或狀態失敗原因。
 - 大型列表應分頁、篩選或使用視窗化渲染。
 - 世界位置視覺化不得暴露玩家沒有權限查看的節點。
+- 所有玩家可見的 GUI 文字、tooltip、按鈕、placeholder 與 system message 必須使用語言檔翻譯 key；Client／Server code 不得硬編碼特定語言的顯示字串。
 
 ## 7. Tick 與非同步工作
 
