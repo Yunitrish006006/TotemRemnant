@@ -9,6 +9,7 @@
 - 死亡背包 pre-drop 直接擷取：在原版 `Inventory.dropAll()` 前封裝 Inventory／Equipment，保留 Components、排除背包巢狀並提供交易 rollback。
 - `keepInventory`、消失詛咒、既有世界掉落物、雙玩家同位置同 tick、實體／死亡節點故障注入與原版 fallback GameTest 已通過。
 - 岩漿、仙人掌、虛空、爆炸，以及只持有一般／死亡背包的死亡 GameTest 已通過；環境死亡仍使用唯一的直接擷取路徑。
+- Active menu 游標與玩家 2×2 crafting inputs 已納入同一個死亡 transaction；外部箱子持久 storage 保持隔離，暫存背包排除、暫存消失詛咒與 transient rollback GameTest 已通過。
 - 舊 nearby-drop 掃描器、UUID 差集、雙重 server task、狀態 Map／Set、record 與相容 Mixin 已從程式碼完整刪除；失敗時只回到原版世界掉落。
 - 自訂物品及 Data Component 遷移基礎。
 - 多人伺服器運作基礎。
@@ -78,7 +79,7 @@
 - 銅傀儡模式切換與欄位清空驗證。
 - 銅傀儡管理 GUI 容器化：右半邊原版玩家背包、燃料／採集工具／採集倉庫真實 slot、拖曳與 Shift 點擊。
 - 資源採集、Home 銅箱及 LLM 規則整合。
-- 死亡背包 pre-drop 收尾：確認游標／2×2 合成格／第三方飾品槽、重啟、斷線、重生與死亡節點回收流程。
+- 死亡背包 pre-drop 收尾：確認外部工作站暫存輸入槽、第三方飾品槽、重啟、斷線、重生與死亡節點回收流程。
 - 離線玩家身體 OpenSpec 與實作：登出保留身體、重連接回、死亡處理與防複製。
 - OpenSpec 統一與平台架構整理。
 - DeadRecall 向 Totem 模組化架構過渡。
@@ -99,7 +100,7 @@
 
 ### 短週期完成順序
 
-1. 補死亡背包游標／合成格／第三方欄位與重啟／斷線／重生回歸。
+1. 補死亡背包外部工作站暫存輸入槽／第三方欄位與重啟／斷線／重生回歸。
 2. 完成好友玩家直接傳送的兩人多人回歸與最新位置／安全落點驗證。
 3. 完成講台配方的遊戲內行為驗證。
 4. 完成混凝土粉末的真人多人水流與大量 ItemEntity 壓力測試；水源、流動水、雨天、Components 與實體狀態已由 GameTest 驗證。
@@ -122,7 +123,7 @@
 
 ### Totem Remnant
 
-- 游標 ItemStack、玩家 2×2 crafting slots、外部容器與第三方飾品槽的死亡整合。
+- 外部工作站暫存輸入槽與第三方飾品槽的死亡整合。
 - Server restart、斷線、重生與死亡節點回收測試。
 - 離線玩家身體 Entity、SavedData、playerdata body lock 與 data migration。
 - 登出建立身體、重連接回身體、身體死亡及一次性死亡流程。

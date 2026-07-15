@@ -19,6 +19,14 @@ import net.minecraft.world.Container;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.CartographyTableMenu;
+import net.minecraft.world.inventory.CraftingMenu;
+import net.minecraft.world.inventory.EnchantmentMenu;
+import net.minecraft.world.inventory.GrindstoneMenu;
+import net.minecraft.world.inventory.ItemCombinerMenu;
+import net.minecraft.world.inventory.LoomMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.inventory.StonecutterMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemContainerContents;
@@ -38,8 +46,8 @@ import java.util.UUID;
  * <p>The service only commits inventory removal after it has built and spawned the death backpack.
  * Any runtime failure discards the incomplete entity, rolls back the temporary death node and
  * restores captured inventory stacks so vanilla {@link Inventory#dropAll()} can remain the fallback.
- * Cursor and 2x2 crafting-grid stacks are restored into the inventory on failure because vanilla
- * only emits Inventory contents during the current death path.</p>
+ * Cursor, player crafting-grid and whitelisted vanilla workstation inputs are restored into the
+ * inventory on failure because vanilla only emits Inventory contents during the current death path.</p>
  */
 public final class DeathBackpackCaptureService {
     private static final String TAG_DEATH_BACKPACK_ID = "deadrecall_death_backpack_id";
@@ -51,8 +59,8 @@ public final class DeathBackpackCaptureService {
 
     /**
      * Runs at the invocation point immediately before vanilla {@code Inventory.dropAll()}.
-     * Backpacks remain excluded from the death backpack. Backpacks found in transient cursor or
-     * crafting slots are emitted directly because vanilla dropAll cannot see those slots.
+     * Backpacks remain excluded from the death backpack. Backpacks found in transient cursor,
+     * crafting or workstation slots are emitted directly because vanilla dropAll cannot see them.
      */
     public static boolean captureBeforeVanillaDrop(ServerPlayer player, ServerLevel level) {
         Inventory inventory = player.getInventory();
@@ -227,13 +235,71 @@ public final class DeathBackpackCaptureService {
         }
 
         Container craftSlots = player.inventoryMenu.getCraftSlots();
-        for (int slot = 0; slot < craftSlots.getContainerSize(); slot++) {
-            ItemStack stack = craftSlots.getItem(slot);
+        addContainerStacks(transientStacks, craftSlots);
+        for (Slot slot : workstationInputSlots(activeMenu)) {
+            ItemStack stack = slot.getItem();
             if (!stack.isEmpty()) {
-                transientStacks.add(TransientStack.container(craftSlots, slot, stack.copy()));
+                transientStacks.add(TransientStack.container(
+                        slot.container,
+                        slot.getContainerSlot(),
+                        stack.copy()
+                ));
             }
         }
         return List.copyOf(transientStacks);
+    }
+
+    private static void addContainerStacks(List<TransientStack> transientStacks, Container container) {
+        for (int slot = 0; slot < container.getContainerSize(); slot++) {
+            ItemStack stack = container.getItem(slot);
+            if (!stack.isEmpty()) {
+                transientStacks.add(TransientStack.container(container, slot, stack.copy()));
+            }
+        }
+    }
+
+    /**
+     * Returns only vanilla input slots that their menu's removed(Player) implementation clears back
+     * to the player. Result previews and persistent block/entity inventories are intentionally absent.
+     */
+    private static List<Slot> workstationInputSlots(AbstractContainerMenu menu) {
+        if (menu instanceof CraftingMenu craftingMenu) {
+            return List.copyOf(craftingMenu.getInputGridSlots());
+        }
+        if (menu instanceof ItemCombinerMenu itemCombinerMenu) {
+            return inputSlotRange(menu, 0, itemCombinerMenu.getResultSlot());
+        }
+        if (menu instanceof GrindstoneMenu) {
+            return inputSlotRange(menu, GrindstoneMenu.INPUT_SLOT, GrindstoneMenu.RESULT_SLOT);
+        }
+        if (menu instanceof StonecutterMenu) {
+            return inputSlotRange(menu, StonecutterMenu.INPUT_SLOT, StonecutterMenu.RESULT_SLOT);
+        }
+        if (menu instanceof LoomMenu) {
+            return inputSlotRange(menu, 0, 3);
+        }
+        if (menu instanceof CartographyTableMenu) {
+            return inputSlotRange(menu, CartographyTableMenu.MAP_SLOT, CartographyTableMenu.RESULT_SLOT);
+        }
+        if (menu instanceof EnchantmentMenu) {
+            return inputSlotRange(menu, 0, 2);
+        }
+        return List.of();
+    }
+
+    private static List<Slot> inputSlotRange(
+            AbstractContainerMenu menu,
+            int startInclusive,
+            int endExclusive
+    ) {
+        if (startInclusive < 0 || endExclusive < startInclusive || endExclusive > menu.slots.size()) {
+            throw new IllegalStateException(
+                    "Invalid workstation input range " + startInclusive + ".." + endExclusive
+                            + " for " + menu.getClass().getName()
+                            + " with " + menu.slots.size() + " slots"
+            );
+        }
+        return List.copyOf(menu.slots.subList(startInclusive, endExclusive));
     }
 
     private static boolean isTransientCapturable(ItemStack stack) {
