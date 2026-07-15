@@ -6,7 +6,8 @@
 - [x] 1.2 定義第一階段擷取範圍為原版 Inventory 與 Equipment slots。
 - [x] 1.3 定義所有 DeadRecall 背包排除並交由原版掉落。
 - [x] 1.4 確認 active menu 游標 stack、玩家 2×2 crafting slots 與外部持久容器槽位的死亡語意。
-- [ ] 1.5 確認外部工作站暫存輸入槽與第三方飾品槽的死亡語意。
+- [x] 1.5 確認原版 Crafting／ItemCombiner／Grindstone／Stonecutter／Loom／Cartography／Enchantment 暫存輸入槽的死亡語意。
+- [ ] 1.6 確認第三方飾品槽與其他 addon 自訂 inventory API 的死亡語意。
 
 ## 2. Direct capture implementation
 
@@ -20,6 +21,7 @@
 - [x] 2.8 死亡節點建立後失敗時停用節點並移除探索引用。
 - [x] 2.9 將 active menu 游標與玩家 2×2 crafting inputs 納入同一 transaction；暫存背包改為獨立掉落，暫存消失詛咒物品直接銷毀。
 - [x] 2.10 移除 legacy scanner 刪除後已無消費者的 completed-capture Set。
+- [x] 2.11 以 class／slot-range 白名單擷取原版工作站關閉時會返還玩家的 inputs，並排除 result preview 與持久容器。
 
 ## 3. Legacy compatibility
 
@@ -40,6 +42,7 @@
 - [x] 4.7 Java 25 build、Fabric GameTest Server 與相關 Mixin 的實際套用驗證。
 - [x] 4.8 rollback 後由原版生成掉落物，且 legacy 掃描器不會再次建立死亡背包。
 - [x] 4.9 游標、2×2 crafting inputs、外部箱子隔離、暫存背包排除、暫存消失詛咒與 transient rollback GameTest。
+- [x] 4.10 Crafting Table、Anvil、Smithing、Grindstone、Stonecutter、Loom、Cartography Table、Enchanting Table inputs 與 workstation rollback GameTest。
 
 ## 5. Integration tests
 
@@ -48,8 +51,9 @@
 - [x] 5.3 岩漿、仙人掌、虛空與爆炸死亡回歸。
 - [x] 5.4 只持有一般／死亡背包時維持原版掉落且不建立巢狀背包或死亡節點。
 - [x] 5.5 active menu 游標與玩家 2×2 crafting inputs 會被擷取；外部箱子實際儲存槽不得被擷取或修改。
-- [ ] 5.6 外部工作站暫存輸入槽與第三方飾品模組相容測試。
-- [ ] 5.7 Server restart、斷線、重生及死亡節點回收測試。
+- [x] 5.6 原版工作站暫存 inputs 會被擷取；result preview 與持久 block/entity inventory 不得進入死亡 transaction。
+- [ ] 5.7 第三方飾品模組與 addon 自訂 inventory API 相容測試。
+- [ ] 5.8 Server restart、斷線、重生及死亡節點回收測試。
 
 ## 6. Documentation and delivery
 

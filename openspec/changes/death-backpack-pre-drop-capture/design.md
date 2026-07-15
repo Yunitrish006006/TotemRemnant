@@ -14,7 +14,7 @@
 - 生成任何玩家 Inventory 死亡 ItemEntity。
 - 清空玩家 Inventory。
 
-因此這是能同時維持原版語意並避免世界掉落競態的最窄切入點。游標與玩家 2×2 crafting inputs 不屬於 Inventory，服務會在此切點以相同的 `PREVENT_EQUIPMENT_DROP` 判斷補上消失詛咒處理。
+因此這是能同時維持原版語意並避免世界掉落競態的最窄切入點。游標、玩家 2×2 crafting inputs 與工作站暫存 inputs 不屬於 Inventory，服務會在此切點以相同的 `PREVENT_EQUIPMENT_DROP` 判斷補上消失詛咒處理。
 
 ## 2. Capture plan
 
@@ -32,24 +32,33 @@
 
 - `player.containerMenu.getCarried()`：目前 active menu 的游標 stack。
 - `player.inventoryMenu.getCraftSlots()`：玩家固定 2×2 crafting inputs。
+- Active vanilla workstation 中，原版 `removed(Player)` 會透過 `clearContainer` 返還玩家的 input slots。
+
+工作站使用嚴格的 class／slot-range 白名單：
+
+- `CraftingMenu`：3×3 input grid，不含 result。
+- `ItemCombinerMenu`：Anvil／Smithing 的 `0 .. resultSlot-1`。
+- `GrindstoneMenu`：兩個 repair inputs。
+- `StonecutterMenu`：單一 input。
+- `LoomMenu`：banner／dye／pattern 三個 inputs。
+- `CartographyTableMenu`：map／additional 兩個 inputs。
+- `EnchantmentMenu`：item／lapis 兩個 inputs。
 
 處理規則：
 
 - 一般物品：加入同一個死亡背包 transaction。
 - `PREVENT_EQUIPMENT_DROP`／消失詛咒：直接從 transient source 清除，不保留也不掉落。
 - DeadRecall 一般背包或死亡背包：不得巢狀，直接生成獨立世界掉落物；若實體建立失敗則安全回填 Inventory，交給原版 `dropAll()`。
-- 外部箱子等持久容器的實際 storage slots：不讀取、不修改、不擷取。
+- Result preview：不屬於玩家已取得物品，不擷取。
+- 箱子、熔爐、釀造台、漏斗、坐騎、村民等持久 block／entity inventory：不讀取、不修改、不擷取。
 
-目前仍不直接處理：
-
-- crafting table、anvil、smithing table 等外部工作站自己的暫存 input slots。
-- Trinkets、Accessories 等第三方 inventory API。
+目前仍不直接處理 Trinkets、Accessories 等第三方 inventory API，除非 addon 自己繼承已支援的原版 Menu 類型並沿用相同 input layout。
 
 ## 3. Transaction order
 
 正常流程：
 
-1. 建立 Inventory／Equipment、active cursor 與玩家 2×2 crafting inputs 的不可變快照。
+1. 建立 Inventory／Equipment、active cursor、玩家 2×2 crafting inputs 與白名單工作站 inputs 的不可變快照。
 2. 清除 transient 消失詛咒物品；將 transient DeadRecall 背包改為獨立世界掉落。
 3. 建立死亡背包 ItemStack，寫入唯一 ID 與 `DataComponents.CONTAINER`。
 4. 暫時從玩家 Inventory 與 transient sources 移除捕獲 stack。
@@ -64,18 +73,19 @@
 1. 若已建立死亡節點，將節點設為 `DISABLED` 並移除該玩家的探索／收藏引用。
 2. 若已生成死亡背包實體，立即 discard。
 3. 將 Inventory CapturedSlot copy 還原到原槽位；若槽位已被占用，使用 Inventory 安全回填。
-4. 將捕獲的 cursor／2×2 crafting stack 回填 Inventory，而不是放回 transient source，確保接續的原版 `Inventory.dropAll()` 能生成世界掉落物。
+4. 將捕獲的 cursor／crafting／workstation stack 回填 Inventory，而不是放回 transient source，確保接續的原版 `Inventory.dropAll()` 能生成世界掉落物。
 5. 原版 `Inventory.dropAll()` 正常掉落還原後的物品。
 6. 不執行任何附近 ItemEntity 掃描或死亡背包 fallback，避免重新引入誤收與跨玩家競態。
 
 ## 4. Data integrity invariants
 
 - 每個被捕獲 stack 只存在於原始 player-owned source、rollback Inventory 或死亡背包其中之一。
-- 正常完成後，捕獲的 Inventory、游標與 2×2 crafting sources 必須為空，不得再次掉落同一 stack。
+- 正常完成後，捕獲的 Inventory、游標、crafting 與工作站 input sources 必須為空，不得再次掉落同一 stack。
 - 失敗時死亡背包實體不得留在世界，所有捕獲 stack 必須可由接續的原版 `dropAll()` 找到或已安全生成為世界掉落。
 - 失敗後不得留下可見／可傳送的 ACTIVE 死亡節點或探索引用。
 - 背包類物品不得成為另一個死亡背包的內容。
-- 外部持久容器 storage slots 不屬於玩家死亡交易，不得被讀取、移除或寫回。
+- Result preview 與外部持久容器 storage 不屬於玩家死亡交易，不得被讀取、移除或寫回。
+- 不以「所有非 Inventory slots」推測玩家所有權；新增 Menu 必須明確加入白名單或第三方整合 API。
 - ItemStack 使用 `copy()` 保存完整 Data Components，不經 ItemEntity 合併或反序列化回注。
 - Client 不得決定或修改捕獲內容。
 - 通知、Discord 或記錄輸出不是交易的一部分，不得影響物品提交狀態。
@@ -109,8 +119,10 @@
 - 64 格、自訂名稱、耐久、盔甲、副手等 Components 保存。
 - active menu cursor 與玩家 2×2 crafting inputs 擷取。
 - 外部箱子持久 storage 不得被擷取或修改。
+- Crafting Table、Anvil、Smithing、Grindstone、Stonecutter、Loom、Cartography Table 與 Enchanting Table inputs 擷取。
+- Result preview 不得進入死亡背包。
 - transient 背包獨立掉落、transient 消失詛咒銷毀。
-- transient transaction 故障後必須回到原版世界掉落。
+- transient／workstation transaction 故障後必須回到原版世界掉落。
 - 同位置既有 ItemEntity 不得被修改或收集。
 - 兩名玩家同位置、同 tick 死亡時，各自背包內容不得交叉。
 - 直接擷取失敗時，原版掉落必須存在，且不得建立第二條死亡背包路徑。
@@ -120,6 +132,6 @@
 
 - 岩漿、仙人掌、虛空、爆炸及死亡點高密度掉落物。
 - 只持有一般／死亡背包時的原版掉落。
-- 外部工作站暫存 input slots 與第三方飾品槽。
+- 第三方飾品槽與 addon 自訂 inventory API。
 - Server restart、斷線、重生及死亡節點回收。
 - 與第三方墓碑、keep inventory 與飾品模組的事件優先序。
