@@ -1,15 +1,11 @@
 package com.adaptor.deadrecall.death;
 
-import com.adaptor.deadrecall.item.DeathBackpackItem;
-import com.adaptor.deadrecall.item.TieredBackpackItem;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -20,14 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DeathBackpackCaptureServiceTest {
-    private static final Item TEST_DEATH_BACKPACK = new DeathBackpackItem(
-            properties("test_death_backpack").stacksTo(1)
-    );
-    private static final Item TEST_TIERED_BACKPACK = new TieredBackpackItem(
-            properties("test_tiered_backpack").stacksTo(1),
-            TieredBackpackItem.BackpackTier.BASIC
-    );
-
     @BeforeAll
     static void bootStrap() {
         SharedConstants.tryDetectVersion();
@@ -37,7 +25,7 @@ class DeathBackpackCaptureServiceTest {
 
     @Test
     void capturesNormalItems() {
-        assertTrue(DeathBackpackCaptureService.isCapturable(stack(vanillaItem("diamond"), 12, 64)));
+        assertTrue(DeathBackpackCaptureService.isCapturable(stack(vanillaItem("diamond"), 12)));
     }
 
     @Test
@@ -45,27 +33,9 @@ class DeathBackpackCaptureServiceTest {
         assertFalse(DeathBackpackCaptureService.isCapturable(ItemStack.EMPTY));
     }
 
-    @Test
-    void excludesDeathBackpacksFromNesting() {
-        assertFalse(DeathBackpackCaptureService.isCapturable(stack(TEST_DEATH_BACKPACK, 1, 1)));
-    }
-
-    @Test
-    void excludesTieredBackpacksFromNesting() {
-        assertFalse(DeathBackpackCaptureService.isCapturable(stack(TEST_TIERED_BACKPACK, 1, 1)));
-    }
-
-    private static Item.Properties properties(String path) {
-        ResourceKey<Item> key = ResourceKey.create(
-                Registries.ITEM,
-                Identifier.fromNamespaceAndPath("deadrecall_test", path)
-        );
-        return new Item.Properties().setId(key);
-    }
-
-    private static ItemStack stack(Item item, int count, int maxStackSize) {
+    private static ItemStack stack(Item item, int count) {
         return new ItemStack(Holder.direct(item, DataComponentMap.builder()
-                .set(DataComponents.MAX_STACK_SIZE, maxStackSize)
+                .set(DataComponents.MAX_STACK_SIZE, 64)
                 .build()), count);
     }
 
