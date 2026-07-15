@@ -6,7 +6,10 @@
 
 - 死亡背包核心流程。
 - 死亡物品收集與回收。
-- 死亡背包 pre-drop 直接擷取第一階段：在原版 `Inventory.dropAll()` 前封裝 Inventory／Equipment，保留 Components、排除背包巢狀、失敗 rollback 與 legacy fallback；Server GameTest 已通過。
+- 死亡背包 pre-drop 直接擷取：在原版 `Inventory.dropAll()` 前封裝 Inventory／Equipment，保留 Components、排除背包巢狀並提供交易 rollback。
+- `keepInventory`、消失詛咒、既有世界掉落物、雙玩家同位置同 tick、實體／死亡節點故障注入與原版 fallback GameTest 已通過。
+- 岩漿、仙人掌、虛空、爆炸，以及只持有一般／死亡背包的死亡 GameTest 已通過；環境死亡仍使用唯一的直接擷取路徑。
+- 舊 nearby-drop 掃描器、UUID 差集、雙重 server task、狀態 Map／Set、record 與相容 Mixin 已從程式碼完整刪除；失敗時只回到原版世界掉落。
 - 自訂物品及 Data Component 遷移基礎。
 - 多人伺服器運作基礎。
 - Minecraft 26.2 / Fabric 遷移工作。
@@ -75,7 +78,7 @@
 - 銅傀儡模式切換與欄位清空驗證。
 - 銅傀儡管理 GUI 容器化：右半邊原版玩家背包、燃料／採集工具／採集倉庫真實 slot、拖曳與 Shift 點擊。
 - 資源採集、Home 銅箱及 LLM 規則整合。
-- 死亡背包 pre-drop 擷取相容性收尾：待故障注入 rollback、`keepInventory`／消失詛咒、雙人同 tick、游標／合成格／第三方欄位驗證，通過後移除舊半徑掃描器。
+- 死亡背包 pre-drop 收尾：確認游標／2×2 合成格／第三方飾品槽、重啟、斷線、重生與死亡節點回收流程。
 - 離線玩家身體 OpenSpec 與實作：登出保留身體、重連接回、死亡處理與防複製。
 - OpenSpec 統一與平台架構整理。
 - DeadRecall 向 Totem 模組化架構過渡。
@@ -96,7 +99,7 @@
 
 ### 短週期完成順序
 
-1. 完成死亡背包 pre-drop 擷取的 rollback、原版規則與多人競態驗證，之後刪除舊 ItemEntity 半徑掃描器。
+1. 補死亡背包游標／合成格／第三方欄位與重啟／斷線／重生回歸。
 2. 完成好友玩家直接傳送的兩人多人回歸與最新位置／安全落點驗證。
 3. 完成講台配方的遊戲內行為驗證。
 4. 完成混凝土粉末的真人多人水流與大量 ItemEntity 壓力測試；水源、流動水、雨天、Components 與實體狀態已由 GameTest 驗證。
@@ -119,9 +122,8 @@
 
 ### Totem Remnant
 
-- 死亡背包 pre-drop 擷取：刪除 legacy nearby-drop collector、雙重 server task、UUID 差集與相關狀態 Map／Set。
-- 死亡背包 fault injection、孤立死亡節點清理、原版規則與多人競態完整回歸。
 - 游標 ItemStack、玩家 2×2 crafting slots、外部容器與第三方飾品槽的死亡整合。
+- Server restart、斷線、重生與死亡節點回收測試。
 - 離線玩家身體 Entity、SavedData、playerdata body lock 與 data migration。
 - 登出建立身體、重連接回身體、身體死亡及一次性死亡流程。
 - 與死亡背包、死亡紀錄、Nexus 死亡節點及 Discord Bridge 死亡事件整合。

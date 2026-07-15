@@ -7,7 +7,6 @@ import com.adaptor.deadrecall.advancement.ModCriteriaTriggers;
 import com.adaptor.deadrecall.block.ModBlocks;
 import com.adaptor.deadrecall.block.entity.ModBlockEntities;
 import com.adaptor.deadrecall.effect.ModMobEffects;
-import com.adaptor.deadrecall.item.BackpackItemHelper;
 import com.adaptor.deadrecall.item.ModItemGroups;
 import com.adaptor.deadrecall.item.ModItems;
 import com.adaptor.deadrecall.item.copper.CopperGolemLlmService;
@@ -60,8 +59,6 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -73,39 +70,29 @@ import net.minecraft.world.entity.Relative;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.CustomData;
-import net.minecraft.world.item.component.ItemContainerContents;
-import net.minecraft.world.phys.AABB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 public class Deadrecall implements ModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("DeadRecall");
     private static final int BOOKSHELF_REPLACE_INTERVAL_TICKS = 20;
     private static final int PLAYER_HOTBAR_SLOT_COUNT = 9;
-    private static final double DEATH_BACKPACK_COLLECTION_RADIUS = 10.0D;
-    private static final String TAG_DEATH_BACKPACK_ID = "deadrecall_death_backpack_id";
     private static final int DISCORD_HEALTH_SAMPLE_INTERVAL_TICKS = 20 * 10;
     private static final int DISCORD_LOW_TPS_REQUIRED_SAMPLES = 3;
     private static final double DISCORD_LOW_TPS_THRESHOLD = 15.0D;
     private static final double DISCORD_RECOVERED_TPS_THRESHOLD = 18.0D;
-    private static final Map<UUID, PendingDeathCollection> pendingDeathCollections = new HashMap<>();
-    private static final Set<UUID> scheduledDeathBackpackCollections = new HashSet<>();
     private static int bookshelfReplaceTicker = 0;
     private static MinecraftServer discordStatusOpenServer = null;
     private static long discordHealthTickStartNanos = 0L;
@@ -439,9 +426,7 @@ public class Deadrecall implements ModInitializer {
                         )));
 
         ServerLivingEntityEvents.ALLOW_DEATH.register((entity, damageSource, damageAmount) -> {
-            if (entity instanceof ServerPlayer player) {
-                rememberExistingDropsBeforeDeath(player);
-            } else if (entity instanceof net.minecraft.world.entity.animal.golem.CopperGolem golem) {
+            if (entity instanceof net.minecraft.world.entity.animal.golem.CopperGolem golem) {
                 CopperGolemWrenchHandler.clearGatheringDisplayedItem(golem);
             }
             return true;
@@ -452,7 +437,6 @@ public class Deadrecall implements ModInitializer {
             if (entity instanceof ServerPlayer player) {
                 DiscordBridge.sendDeathMessage(damageSource.getLocalizedDeathMessage(player).getString());
                 DeathLocationManager.setDeathLocation(player, player.blockPosition(), player.level());
-                handlePlayerDeath(player);
             } else if (entity instanceof EnderDragon) {
                 DiscordBridge.sendBossDefeated("終界龍", damageSourcePlayerName(damageSource.getEntity()));
             } else if (entity instanceof WitherBoss) {
@@ -680,112 +664,6 @@ public class Deadrecall implements ModInitializer {
         ));
     }
 
-    private void handlePlayerDeath(ServerPlayer player) {
-        ServerLevel world = (ServerLevel) player.level();
-        BlockPos deathPos = player.blockPosition();
-        UUID playerId = player.getUUID();
-        PendingDeathCollection pendingCollection = pendingDeathCollections.remove(playerId);
-        Set<UUID> existingDropIds = pendingCollection != null
-                && pendingCollection.dimension().equals(world.dimension())
-                ? pendingCollection.existingDropIds()
-                : Set.of();
-
-        if (!scheduledDeathBackpackCollections.add(playerId)) {
-            LOGGER.warn("Death backpack collection already scheduled for player {}, skipping duplicate", player.getName().getString());
-            return;
-        }
-
-        LOGGER.info("Player {} died at {}, starting death backpack collection", player.getName().getString(), deathPos);
-
-        // 延到掉落物生成後再收集。
-        world.getServer().execute(() -> {
-            world.getServer().execute(() -> {
-                try {
-                    LOGGER.info("Collecting dropped items for player {} at {}", player.getName().getString(), deathPos);
-
-                    // 收集本次死亡後新產生的掉落物，避免把死亡前地上的物品一起裝進死亡背包。
-                    AABB searchBox = new AABB(deathPos).inflate(DEATH_BACKPACK_COLLECTION_RADIUS);
-                    List<ItemEntity> droppedItems = world.getEntitiesOfClass(ItemEntity.class, searchBox,
-                            entity -> entity.isAlive() && !existingDropIds.contains(entity.getUUID()));
-
-                    LOGGER.info("Found {} new dropped items for player {}", droppedItems.size(), player.getName().getString());
-
-                    if (!droppedItems.isEmpty()) {
-                        // 創建死亡背包
-                        ItemStack deathBackpack = new ItemStack(ModItems.DEATH_BACKPACK);
-                        markDeathBackpackUnique(deathBackpack);
-                        List<ItemStack> collectedItems = new ArrayList<>();
-
-                        // 收集物品並移除實體
-                        for (ItemEntity itemEntity : droppedItems) {
-                            ItemStack droppedStack = itemEntity.getItem();
-                            if (BackpackItemHelper.isBackpackItem(droppedStack)) {
-                                LOGGER.info("Skipped backpack item from death backpack collection: {} x{}",
-                                        droppedStack.getItem().getName(droppedStack).getString(),
-                                        droppedStack.getCount());
-                                continue;
-                            }
-
-                            if (droppedStack.isEmpty()) {
-                                continue;
-                            }
-
-                            collectedItems.add(droppedStack.copy());
-                            itemEntity.discard(); // 移除實體
-                            LOGGER.info("Collected item: {} x{}", droppedStack.getItem().getName(droppedStack).getString(), droppedStack.getCount());
-                        }
-
-                        // 將物品存儲到背包中
-                        if (!collectedItems.isEmpty()) {
-                            deathBackpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(collectedItems));
-                            UUID deathNodeId = SpaceUnitHandler.createDeathNode(player, world, deathPos);
-                            SpaceUnitHandler.writeDeathNodeBinding(deathBackpack, deathNodeId);
-
-                            // 在死亡地點生成背包實體
-                            ItemEntity backpackEntity = new ItemEntity(world,
-                                deathPos.getX() + 0.5, deathPos.getY() + 0.5, deathPos.getZ() + 0.5,
-                                deathBackpack);
-
-                            // 設置物品所有者，防止立即消失
-                            backpackEntity.setPickUpDelay(40); // 2 秒拾取延遲
-                            // 將死亡背包標記為不可被傷害/摧毀（例如仙人掌傷害）的一個額外保護
-                            backpackEntity.setUnlimitedLifetime();
-                            world.addFreshEntity(backpackEntity);
-
-                            LOGGER.info("Created death backpack for player {} with {} items at {}",
-                                player.getName().getString(), collectedItems.size(), deathPos);
-                            DiscordBridge.sendDeathBackpackCreated(player.getName().getString());
-
-                            // 通知玩家
-                            player.sendSystemMessage(Component.translatable("message.deadrecall.death_backpack.collected").withStyle(ChatFormatting.YELLOW));
-                        }
-                    } else {
-                        LOGGER.info("No new dropped items found for player {} at {}", player.getName().getString(), deathPos);
-                    }
-                } finally {
-                    scheduledDeathBackpackCollections.remove(playerId);
-                }
-            });
-        });
-    }
-
-    private static void rememberExistingDropsBeforeDeath(ServerPlayer player) {
-        ServerLevel world = (ServerLevel) player.level();
-        BlockPos deathPos = player.blockPosition();
-        AABB searchBox = new AABB(deathPos).inflate(DEATH_BACKPACK_COLLECTION_RADIUS);
-        Set<UUID> existingDropIds = new HashSet<>();
-        for (ItemEntity itemEntity : world.getEntitiesOfClass(ItemEntity.class, searchBox, ItemEntity::isAlive)) {
-            existingDropIds.add(itemEntity.getUUID());
-        }
-        pendingDeathCollections.put(player.getUUID(), new PendingDeathCollection(world.dimension(), existingDropIds));
-    }
-
-    private static void markDeathBackpackUnique(ItemStack deathBackpack) {
-        CompoundTag tag = new CompoundTag();
-        tag.putString(TAG_DEATH_BACKPACK_ID, UUID.randomUUID().toString());
-        deathBackpack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
-    }
-
     private static boolean isFirstJoin(ServerPlayer player) {
         return player.getStats().getValue(Stats.CUSTOM, Stats.PLAY_TIME) <= 0;
     }
@@ -826,12 +704,6 @@ public class Deadrecall implements ModInitializer {
         if (discordLowTpsAlertActive && tps >= DISCORD_RECOVERED_TPS_THRESHOLD) {
             discordLowTpsAlertActive = false;
             DiscordBridge.sendServerHealthAlert(String.format(Locale.ROOT, "TPS 已恢復：%.1f TPS", tps));
-        }
-    }
-
-    private record PendingDeathCollection(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension, Set<UUID> existingDropIds) {
-        private PendingDeathCollection {
-            existingDropIds = Set.copyOf(existingDropIds);
         }
     }
 

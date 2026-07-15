@@ -15,31 +15,35 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 /**
- * Captures a player's authoritative inventory directly before vanilla death drops are emitted.
+ * Captures a player's authoritative inventory and transient player-owned menu stacks directly
+ * before vanilla death drops are emitted.
  *
  * <p>The service only commits inventory removal after it has built and spawned the death backpack.
  * Any runtime failure discards the incomplete entity, rolls back the temporary death node and
- * restores the captured slots so vanilla {@link Inventory#dropAll()} can remain the fallback.</p>
+ * restores captured inventory stacks so vanilla {@link Inventory#dropAll()} can remain the fallback.
+ * Cursor and 2x2 crafting-grid stacks are restored into the inventory on failure because vanilla
+ * only emits Inventory contents during the current death path.</p>
  */
 public final class DeathBackpackCaptureService {
     private static final String TAG_DEATH_BACKPACK_ID = "deadrecall_death_backpack_id";
     private static final int PICKUP_DELAY_TICKS = 40;
-    private static final Set<UUID> COMPLETED_CAPTURES = new HashSet<>();
     private static final Map<UUID, CaptureFailurePoint> FORCED_TEST_FAILURES = new HashMap<>();
 
     private DeathBackpackCaptureService() {
@@ -47,26 +51,39 @@ public final class DeathBackpackCaptureService {
 
     /**
      * Runs at the invocation point immediately before vanilla {@code Inventory.dropAll()}.
-     * Backpacks remain in the inventory and are therefore emitted by vanilla instead of being
-     * nested inside the new death backpack.
+     * Backpacks remain excluded from the death backpack. Backpacks found in transient cursor or
+     * crafting slots are emitted directly because vanilla dropAll cannot see those slots.
      */
     public static boolean captureBeforeVanillaDrop(ServerPlayer player, ServerLevel level) {
         Inventory inventory = player.getInventory();
+        List<TransientStack> transientStacks = collectTransientStacks(player);
+        processUncapturedTransientStacks(player, inventory, transientStacks);
+
         List<CapturedSlot> capturedSlots = collectCapturableSlots(inventory);
-        if (capturedSlots.isEmpty()) {
+        List<TransientStack> capturedTransientStacks = transientStacks.stream()
+                .filter(transient -> isTransientCapturable(transient.stack()))
+                .toList();
+        if (capturedSlots.isEmpty() && capturedTransientStacks.isEmpty()) {
             return false;
         }
 
-        List<ItemStack> contents = capturedSlots.stream()
+        List<ItemStack> contents = new ArrayList<>(capturedSlots.size() + capturedTransientStacks.size());
+        capturedSlots.stream()
                 .map(CapturedSlot::stack)
                 .map(ItemStack::copy)
-                .toList();
+                .forEach(contents::add);
+        capturedTransientStacks.stream()
+                .map(TransientStack::stack)
+                .map(ItemStack::copy)
+                .forEach(contents::add);
+
         ItemStack deathBackpack = createDeathBackpack(contents);
         BlockPos deathPos = player.blockPosition().immutable();
         ItemEntity backpackEntity = null;
         UUID deathNodeId = null;
 
         removeCapturedSlots(inventory, capturedSlots);
+        removeCapturedTransientStacks(capturedTransientStacks);
         try {
             failIfRequested(player, CaptureFailurePoint.AFTER_SLOT_REMOVAL);
 
@@ -98,6 +115,7 @@ public final class DeathBackpackCaptureService {
                 backpackEntity.discard();
             }
             restoreCapturedSlots(inventory, capturedSlots);
+            restoreTransientStacksForVanillaDrop(inventory, capturedTransientStacks);
             clearForcedFailureForTesting(player.getUUID());
             Deadrecall.LOGGER.error(
                     "Direct death backpack capture failed for {}; vanilla death drops will be used",
@@ -108,17 +126,8 @@ public final class DeathBackpackCaptureService {
         }
 
         clearForcedFailureForTesting(player.getUUID());
-        COMPLETED_CAPTURES.add(player.getUUID());
         notifyCaptureCompleted(player, contents.size(), deathPos);
         return true;
-    }
-
-    /**
-     * Consumed by the legacy AFTER_DEATH bridge so the old nearby-ItemEntity collector does not
-     * run after a successful direct capture.
-     */
-    public static boolean consumeCompletedCapture(UUID playerId) {
-        return COMPLETED_CAPTURES.remove(playerId);
     }
 
     static boolean isCapturable(ItemStack stack) {
@@ -209,6 +218,56 @@ public final class DeathBackpackCaptureService {
         return List.copyOf(captured);
     }
 
+    private static List<TransientStack> collectTransientStacks(ServerPlayer player) {
+        List<TransientStack> transientStacks = new ArrayList<>();
+        AbstractContainerMenu activeMenu = player.containerMenu;
+        ItemStack carried = activeMenu.getCarried();
+        if (!carried.isEmpty()) {
+            transientStacks.add(TransientStack.carried(activeMenu, carried.copy()));
+        }
+
+        Container craftSlots = player.inventoryMenu.getCraftSlots();
+        for (int slot = 0; slot < craftSlots.getContainerSize(); slot++) {
+            ItemStack stack = craftSlots.getItem(slot);
+            if (!stack.isEmpty()) {
+                transientStacks.add(TransientStack.container(craftSlots, slot, stack.copy()));
+            }
+        }
+        return List.copyOf(transientStacks);
+    }
+
+    private static boolean isTransientCapturable(ItemStack stack) {
+        return isCapturable(stack) && !isPreventedFromDeathDrop(stack);
+    }
+
+    private static boolean isPreventedFromDeathDrop(ItemStack stack) {
+        return EnchantmentHelper.has(stack, EnchantmentEffectComponents.PREVENT_EQUIPMENT_DROP);
+    }
+
+    private static void processUncapturedTransientStacks(
+            ServerPlayer player,
+            Inventory inventory,
+            List<TransientStack> transientStacks
+    ) {
+        for (TransientStack transientStack : transientStacks) {
+            ItemStack stack = transientStack.stack();
+            if (isPreventedFromDeathDrop(stack)) {
+                transientStack.clear();
+                continue;
+            }
+            if (!BackpackItemHelper.isBackpackItem(stack)) {
+                continue;
+            }
+
+            transientStack.clear();
+            ItemStack looseBackpack = stack.copy();
+            ItemEntity dropped = player.drop(looseBackpack, false);
+            if (dropped == null) {
+                inventory.placeItemBackInInventory(looseBackpack, false);
+            }
+        }
+    }
+
     private static ItemStack createDeathBackpack(List<ItemStack> contents) {
         ItemStack deathBackpack = new ItemStack(ModItems.DEATH_BACKPACK);
         CompoundTag tag = new CompoundTag();
@@ -224,6 +283,12 @@ public final class DeathBackpackCaptureService {
         }
     }
 
+    private static void removeCapturedTransientStacks(List<TransientStack> transientStacks) {
+        for (TransientStack transientStack : transientStacks) {
+            transientStack.clear();
+        }
+    }
+
     private static void restoreCapturedSlots(Inventory inventory, List<CapturedSlot> capturedSlots) {
         for (CapturedSlot captured : capturedSlots) {
             ItemStack restored = captured.stack().copy();
@@ -235,6 +300,15 @@ public final class DeathBackpackCaptureService {
         }
     }
 
+    private static void restoreTransientStacksForVanillaDrop(
+            Inventory inventory,
+            List<TransientStack> capturedTransientStacks
+    ) {
+        for (TransientStack captured : capturedTransientStacks) {
+            inventory.placeItemBackInInventory(captured.stack().copy(), false);
+        }
+    }
+
     enum CaptureFailurePoint {
         AFTER_SLOT_REMOVAL,
         AFTER_ENTITY_ADD,
@@ -242,5 +316,28 @@ public final class DeathBackpackCaptureService {
     }
 
     private record CapturedSlot(int slot, ItemStack stack) {
+    }
+
+    private record TransientStack(
+            AbstractContainerMenu carriedMenu,
+            Container container,
+            int slot,
+            ItemStack stack
+    ) {
+        private static TransientStack carried(AbstractContainerMenu menu, ItemStack stack) {
+            return new TransientStack(menu, null, -1, stack);
+        }
+
+        private static TransientStack container(Container container, int slot, ItemStack stack) {
+            return new TransientStack(null, container, slot, stack);
+        }
+
+        private void clear() {
+            if (this.carriedMenu != null) {
+                this.carriedMenu.setCarried(ItemStack.EMPTY);
+            } else if (this.container != null) {
+                this.container.removeItemNoUpdate(this.slot);
+            }
+        }
     }
 }

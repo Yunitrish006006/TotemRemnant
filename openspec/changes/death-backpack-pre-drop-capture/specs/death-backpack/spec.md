@@ -42,20 +42,40 @@ Direct capture SHALL be transactional and SHALL fail back to vanilla death drops
 - **WHEN** death-backpack entity creation, death-node creation or binding throws or fails
 - **THEN** any incomplete death-backpack entity SHALL be discarded
 - **AND** all captured stacks SHALL be restored to the player Inventory
+- **AND** any incomplete death node SHALL be disabled
+- **AND** its discovery and favorite references SHALL be removed
 - **AND** vanilla `Inventory.dropAll()` SHALL continue
-- **AND** the legacy post-drop collector MAY run as a compatibility fallback
+- **AND** no nearby-ItemEntity fallback collector SHALL run
 
-### Requirement: Legacy collector isolation
+### Requirement: Legacy collector removal from runtime
 
-The old nearby-ItemEntity collector SHALL NOT run after a successful direct capture.
+The old nearby-ItemEntity collector SHALL NOT run for either successful or failed direct capture.
 
 #### Scenario: Direct capture completed
 
 - **GIVEN** direct capture created and bound a death backpack successfully
 - **WHEN** the existing AFTER_DEATH handler executes
 - **THEN** it SHALL consume the direct-capture completion marker
-- **AND** clear the player's pending nearby-drop snapshot
 - **AND** cancel the legacy radius scan
+
+#### Scenario: Direct capture failed
+
+- **GIVEN** direct capture restored the player's slots after a failure
+- **WHEN** vanilla death processing continues
+- **THEN** vanilla SHALL emit the restored stacks normally
+- **AND** the system SHALL NOT scan, collect or discard nearby ItemEntity instances
+- **AND** no replacement death backpack SHALL be generated from those world drops
+
+### Requirement: Post-commit notification isolation
+
+Discord, player notification and logging failures SHALL NOT roll back a completed death-backpack transaction.
+
+#### Scenario: Notification failure after commit
+
+- **GIVEN** the death backpack entity and death-node binding were committed successfully
+- **WHEN** a Discord or player-notification call throws
+- **THEN** the death backpack and captured contents SHALL remain committed
+- **AND** the failure SHALL only be logged
 
 ### Requirement: Server authority
 
@@ -65,4 +85,4 @@ All death inventory capture, mutation, rollback, death-node creation and ItemEnt
 
 ### Requirement: Death backpack source data
 
-The primary source for death-backpack contents SHALL be the player's authoritative slot data rather than ItemEntity instances found near the death location. Nearby ItemEntity scanning SHALL only remain as a temporary fallback until compatibility verification permits its removal.
+The sole runtime source for death-backpack contents SHALL be the player's authoritative slot data. Nearby ItemEntity scanning SHALL NOT participate in normal capture or failure fallback.

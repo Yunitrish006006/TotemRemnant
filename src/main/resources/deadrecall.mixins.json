@@ -6,7 +6,6 @@
     "AbstractFurnaceBlockEntityAccessor",
     "BanPlayerCommandsMixin",
     "DifficultyCommandMixin",
-    "DeadrecallDeathBackpackMixin",
     "DeadRecallSpaceUnitCatalystMixin",
     "DeadRecallSpaceUnitSavedDataAccessor",
     "EnchantmentHelperMixin",
