@@ -4,7 +4,10 @@ import com.adaptor.deadrecall.Deadrecall;
 import com.adaptor.deadrecall.DiscordBridge;
 import com.adaptor.deadrecall.item.BackpackItemHelper;
 import com.adaptor.deadrecall.item.ModItems;
+import com.adaptor.deadrecall.space.DeadRecallSpaceDiscoverySavedData;
+import com.adaptor.deadrecall.space.DeadRecallSpaceUnitSavedData;
 import com.adaptor.deadrecall.space.SpaceUnitHandler;
+import com.adaptor.deadrecall.space.SpaceUnitRecord;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -19,22 +22,25 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemContainerContents;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 /**
  * Captures a player's authoritative inventory directly before vanilla death drops are emitted.
  *
- * <p>The service only commits inventory removal after it has built the death-backpack stack.
- * Any runtime failure restores the captured slots and lets vanilla {@link Inventory#dropAll()}
- * continue as the fallback path.</p>
+ * <p>The service only commits inventory removal after it has built and spawned the death backpack.
+ * Any runtime failure discards the incomplete entity, rolls back the temporary death node and
+ * restores the captured slots so vanilla {@link Inventory#dropAll()} can remain the fallback.</p>
  */
 public final class DeathBackpackCaptureService {
     private static final String TAG_DEATH_BACKPACK_ID = "deadrecall_death_backpack_id";
     private static final int PICKUP_DELAY_TICKS = 40;
     private static final Set<UUID> COMPLETED_CAPTURES = new HashSet<>();
+    private static final Map<UUID, CaptureFailurePoint> FORCED_TEST_FAILURES = new HashMap<>();
 
     private DeathBackpackCaptureService() {
     }
@@ -58,9 +64,12 @@ public final class DeathBackpackCaptureService {
         ItemStack deathBackpack = createDeathBackpack(contents);
         BlockPos deathPos = player.blockPosition().immutable();
         ItemEntity backpackEntity = null;
+        UUID deathNodeId = null;
 
         removeCapturedSlots(inventory, capturedSlots);
         try {
+            failIfRequested(player, CaptureFailurePoint.AFTER_SLOT_REMOVAL);
+
             backpackEntity = new ItemEntity(
                     level,
                     deathPos.getX() + 0.5,
@@ -74,27 +83,22 @@ public final class DeathBackpackCaptureService {
             if (!level.addFreshEntity(backpackEntity)) {
                 throw new IllegalStateException("Minecraft rejected the death backpack ItemEntity");
             }
+            failIfRequested(player, CaptureFailurePoint.AFTER_ENTITY_ADD);
 
-            UUID deathNodeId = SpaceUnitHandler.createDeathNode(player, level, deathPos);
+            deathNodeId = createDeathNodeTransactional(player, level, deathPos);
+            failIfRequested(player, CaptureFailurePoint.AFTER_DEATH_NODE_CREATE);
+
             SpaceUnitHandler.writeDeathNodeBinding(deathBackpack, deathNodeId);
             backpackEntity.setItem(deathBackpack);
-
-            COMPLETED_CAPTURES.add(player.getUUID());
-            DiscordBridge.sendDeathBackpackCreated(player.getName().getString());
-            player.sendSystemMessage(Component.translatable("message.deadrecall.death_backpack.collected")
-                    .withStyle(ChatFormatting.YELLOW));
-            Deadrecall.LOGGER.info(
-                    "Created death backpack directly from player {} with {} stacks at {}",
-                    player.getName().getString(),
-                    contents.size(),
-                    deathPos
-            );
-            return true;
         } catch (RuntimeException exception) {
+            if (deathNodeId != null) {
+                rollbackDeathNode(player, level, deathNodeId);
+            }
             if (backpackEntity != null && backpackEntity.isAlive()) {
                 backpackEntity.discard();
             }
             restoreCapturedSlots(inventory, capturedSlots);
+            clearForcedFailureForTesting(player.getUUID());
             Deadrecall.LOGGER.error(
                     "Direct death backpack capture failed for {}; vanilla death drops will be used",
                     player.getName().getString(),
@@ -102,6 +106,11 @@ public final class DeathBackpackCaptureService {
             );
             return false;
         }
+
+        clearForcedFailureForTesting(player.getUUID());
+        COMPLETED_CAPTURES.add(player.getUUID());
+        notifyCaptureCompleted(player, contents.size(), deathPos);
+        return true;
     }
 
     /**
@@ -114,6 +123,79 @@ public final class DeathBackpackCaptureService {
 
     static boolean isCapturable(ItemStack stack) {
         return !stack.isEmpty() && !BackpackItemHelper.isBackpackItem(stack);
+    }
+
+    static void forceFailureForTesting(UUID playerId, CaptureFailurePoint failurePoint) {
+        FORCED_TEST_FAILURES.put(playerId, failurePoint);
+    }
+
+    static void clearForcedFailureForTesting(UUID playerId) {
+        FORCED_TEST_FAILURES.remove(playerId);
+    }
+
+    private static void failIfRequested(ServerPlayer player, CaptureFailurePoint failurePoint) {
+        if (FORCED_TEST_FAILURES.get(player.getUUID()) != failurePoint) {
+            return;
+        }
+        FORCED_TEST_FAILURES.remove(player.getUUID());
+        throw new IllegalStateException("Forced death-backpack capture failure at " + failurePoint);
+    }
+
+    private static UUID createDeathNodeTransactional(ServerPlayer player, ServerLevel level, BlockPos deathPos) {
+        DeadRecallSpaceUnitSavedData units = units(level);
+        DeadRecallSpaceDiscoverySavedData discovery = discovery(level);
+        SpaceUnitRecord unit = units.createDeathUnit(level, deathPos, player);
+        try {
+            discovery.markDiscovered(player.getUUID(), unit.id());
+            return unit.id();
+        } catch (RuntimeException exception) {
+            units.disableDeathUnit(player.getUUID(), unit.id(), level.getGameTime());
+            discovery.removeDiscovered(player.getUUID(), unit.id());
+            throw exception;
+        }
+    }
+
+    private static void rollbackDeathNode(ServerPlayer player, ServerLevel level, UUID deathNodeId) {
+        units(level).disableDeathUnit(player.getUUID(), deathNodeId, level.getGameTime());
+        discovery(level).removeDiscovered(player.getUUID(), deathNodeId);
+    }
+
+    private static DeadRecallSpaceUnitSavedData units(ServerLevel level) {
+        return level.getServer().overworld().getDataStorage().computeIfAbsent(DeadRecallSpaceUnitSavedData.TYPE);
+    }
+
+    private static DeadRecallSpaceDiscoverySavedData discovery(ServerLevel level) {
+        return level.getServer().overworld().getDataStorage().computeIfAbsent(DeadRecallSpaceDiscoverySavedData.TYPE);
+    }
+
+    private static void notifyCaptureCompleted(ServerPlayer player, int stackCount, BlockPos deathPos) {
+        try {
+            DiscordBridge.sendDeathBackpackCreated(player.getName().getString());
+        } catch (RuntimeException exception) {
+            Deadrecall.LOGGER.warn(
+                    "Death backpack was created, but the Discord notification failed for {}",
+                    player.getName().getString(),
+                    exception
+            );
+        }
+
+        try {
+            player.sendSystemMessage(Component.translatable("message.deadrecall.death_backpack.collected")
+                    .withStyle(ChatFormatting.YELLOW));
+        } catch (RuntimeException exception) {
+            Deadrecall.LOGGER.warn(
+                    "Death backpack was created, but the player notification failed for {}",
+                    player.getName().getString(),
+                    exception
+            );
+        }
+
+        Deadrecall.LOGGER.info(
+                "Created death backpack directly from player {} with {} stacks at {}",
+                player.getName().getString(),
+                stackCount,
+                deathPos
+        );
     }
 
     private static List<CapturedSlot> collectCapturableSlots(Inventory inventory) {
@@ -151,6 +233,12 @@ public final class DeathBackpackCaptureService {
                 inventory.placeItemBackInInventory(restored, false);
             }
         }
+    }
+
+    enum CaptureFailurePoint {
+        AFTER_SLOT_REMOVAL,
+        AFTER_ENTITY_ADD,
+        AFTER_DEATH_NODE_CREATE
     }
 
     private record CapturedSlot(int slot, ItemStack stack) {

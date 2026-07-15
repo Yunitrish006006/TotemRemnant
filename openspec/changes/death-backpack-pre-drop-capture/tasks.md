@@ -25,12 +25,13 @@
 
 ## 4. Automated tests
 
-- [ ] 4.1 一般物品、空 stack 與背包排除 policy 單元測試。
-- [ ] 4.2 64 格、耐久、附魔、自訂名稱與自訂 Components 保存測試。
-- [ ] 4.3 實體建立失敗／死亡節點建立失敗的槽位 rollback 測試。
-- [ ] 4.4 Inventory 與 Equipment 混合 GameTest。
-- [ ] 4.5 `keepInventory=true` 與消失詛咒 GameTest。
-- [ ] 4.6 Java 25 build、Fabric GameTest Server 與 Mixin 套用驗證。
+- [x] 4.1 一般物品與空 stack 擷取 policy 單元測試；背包排除由 Server GameTest 驗證。
+- [x] 4.2 64 格、耐久、自訂名稱、裝備與副手 Components 保存 GameTest。
+- [ ] 4.3 附魔及其他第三方自訂 Components 保存測試。
+- [ ] 4.4 實體建立失敗／死亡節點建立失敗的槽位 rollback 與孤立死亡節點測試。
+- [x] 4.5 Inventory 與 Equipment 混合 GameTest；確認捕獲物不生成世界 ItemEntity、排除背包由原版掉落且只建立一個死亡背包。
+- [ ] 4.6 `keepInventory=true` 與消失詛咒 GameTest。
+- [x] 4.7 Java 25 build、Fabric GameTest Server 與兩個 Mixin 的實際套用驗證。
 
 ## 5. Integration tests
 
@@ -44,6 +45,6 @@
 ## 6. Documentation and delivery
 
 - [x] 6.1 建立 proposal、design、tasks 與 delta spec。
-- [ ] 6.2 更新玩家文件，說明死亡背包在掉落生成前直接封裝。
+- [x] 6.2 更新玩家文件，說明死亡背包在掉落生成前直接封裝與目前 fallback。
 - [ ] 6.3 更新 changelog／版本變更清單。
-- [ ] 6.4 完成第一階段後更新 Roadmap 狀態。
+- [x] 6.4 完成第一階段後更新 Roadmap 狀態。

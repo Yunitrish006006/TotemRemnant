@@ -6,6 +6,7 @@
 
 - 死亡背包核心流程。
 - 死亡物品收集與回收。
+- 死亡背包 pre-drop 直接擷取第一階段：在原版 `Inventory.dropAll()` 前封裝 Inventory／Equipment，保留 Components、排除背包巢狀、失敗 rollback 與 legacy fallback；Server GameTest 已通過。
 - 自訂物品及 Data Component 遷移基礎。
 - 多人伺服器運作基礎。
 - Minecraft 26.2 / Fabric 遷移工作。
@@ -74,7 +75,7 @@
 - 銅傀儡模式切換與欄位清空驗證。
 - 銅傀儡管理 GUI 容器化：右半邊原版玩家背包、燃料／採集工具／採集倉庫真實 slot、拖曳與 Shift 點擊。
 - 資源採集、Home 銅箱及 LLM 規則整合。
-- 死亡背包資料安全、複製及物品回注問題修正。
+- 死亡背包 pre-drop 擷取相容性收尾：待故障注入 rollback、`keepInventory`／消失詛咒、雙人同 tick、游標／合成格／第三方欄位驗證，通過後移除舊半徑掃描器。
 - 離線玩家身體 OpenSpec 與實作：登出保留身體、重連接回、死亡處理與防複製。
 - OpenSpec 統一與平台架構整理。
 - DeadRecall 向 Totem 模組化架構過渡。
@@ -91,18 +92,19 @@
 - 回生羅盤將自己的死亡節點傳送偏差降低 50%。
 - 書本作為路線典籍，對已探索固定磁石目標降低 20% 準備時間與 25% 石碑磨損率。
 - 已繪製地圖在目標位於地圖 Dimension 與覆蓋範圍內時，降低 20% 食物等價成本與偏差；不降低紫水晶成本。
-- 此項目已完成 proposal、design、tasks 與 delta spec，排在目前四項遊戲內驗證後開始實作。
+- 此項目已完成 proposal、design、tasks 與 delta spec，排在目前功能驗證後開始實作。
 
 ### 短週期完成順序
 
-1. 完成好友玩家直接傳送的兩人多人回歸與最新位置／安全落點驗證。
-2. 完成講台配方的遊戲內行為驗證。
-3. 完成混凝土粉末的真人多人水流與大量 ItemEntity 壓力測試；水源、流動水、雨天、Components 與實體狀態已由 GameTest 驗證。
-4. 驗證紫水晶催化折抵，並擴充 Payload／UI 顯示原始成本、催化數量與折抵。
-5. 傳送介面 Phase A：共用介面類型、Server context、四物品開啟 UI 與普通羅盤專屬能力分流。
-6. 傳送介面 Phase B：回生羅盤死亡節點偏差特化、書本固定磁石路線特化與第一階段 UI。
-7. 傳送介面 Phase C：已繪製地圖覆蓋範圍、食物成本／偏差特化、動態玩家目標與隱私驗證。
-8. 傳送介面 Phase D：base／final 報價明細、完整 Payload、Dedicated Server 與多人回歸。
+1. 完成死亡背包 pre-drop 擷取的 rollback、原版規則與多人競態驗證，之後刪除舊 ItemEntity 半徑掃描器。
+2. 完成好友玩家直接傳送的兩人多人回歸與最新位置／安全落點驗證。
+3. 完成講台配方的遊戲內行為驗證。
+4. 完成混凝土粉末的真人多人水流與大量 ItemEntity 壓力測試；水源、流動水、雨天、Components 與實體狀態已由 GameTest 驗證。
+5. 驗證紫水晶催化折抵，並擴充 Payload／UI 顯示原始成本、催化數量與折抵。
+6. 傳送介面 Phase A：共用介面類型、Server context、四物品開啟 UI 與普通羅盤專屬能力分流。
+7. 傳送介面 Phase B：回生羅盤死亡節點偏差特化、書本固定磁石路線特化與第一階段 UI。
+8. 傳送介面 Phase C：已繪製地圖覆蓋範圍、食物成本／偏差特化、動態玩家目標與隱私驗證。
+9. 傳送介面 Phase D：base／final 報價明細、完整 Payload、Dedicated Server 與多人回歸。
 
 ## 尚未完成
 
@@ -117,6 +119,9 @@
 
 ### Totem Remnant
 
+- 死亡背包 pre-drop 擷取：刪除 legacy nearby-drop collector、雙重 server task、UUID 差集與相關狀態 Map／Set。
+- 死亡背包 fault injection、孤立死亡節點清理、原版規則與多人競態完整回歸。
+- 游標 ItemStack、玩家 2×2 crafting slots、外部容器與第三方飾品槽的死亡整合。
 - 離線玩家身體 Entity、SavedData、playerdata body lock 與 data migration。
 - 登出建立身體、重連接回身體、身體死亡及一次性死亡流程。
 - 與死亡背包、死亡紀錄、Nexus 死亡節點及 Discord Bridge 死亡事件整合。
