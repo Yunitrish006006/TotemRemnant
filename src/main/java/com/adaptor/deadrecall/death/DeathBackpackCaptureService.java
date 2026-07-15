@@ -61,7 +61,7 @@ public final class DeathBackpackCaptureService {
 
         List<CapturedSlot> capturedSlots = collectCapturableSlots(inventory);
         List<TransientStack> capturedTransientStacks = transientStacks.stream()
-                .filter(transient -> isTransientCapturable(transient.stack()))
+                .filter(transientStack -> isTransientCapturable(transientStack.stack()))
                 .toList();
         if (capturedSlots.isEmpty() && capturedTransientStacks.isEmpty()) {
             return false;
