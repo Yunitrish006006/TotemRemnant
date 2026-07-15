@@ -20,6 +20,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DeathBackpackCaptureServiceTest {
+    private static final Item TEST_DEATH_BACKPACK = new DeathBackpackItem(
+            properties("test_death_backpack").stacksTo(1)
+    );
+    private static final Item TEST_TIERED_BACKPACK = new TieredBackpackItem(
+            properties("test_tiered_backpack").stacksTo(1),
+            TieredBackpackItem.BackpackTier.BASIC
+    );
+
     @BeforeAll
     static void bootStrap() {
         SharedConstants.tryDetectVersion();
@@ -29,7 +37,7 @@ class DeathBackpackCaptureServiceTest {
 
     @Test
     void capturesNormalItems() {
-        assertTrue(DeathBackpackCaptureService.isCapturable(stack(vanillaItem("diamond"), 12)));
+        assertTrue(DeathBackpackCaptureService.isCapturable(stack(vanillaItem("diamond"), 12, 64)));
     }
 
     @Test
@@ -39,17 +47,12 @@ class DeathBackpackCaptureServiceTest {
 
     @Test
     void excludesDeathBackpacksFromNesting() {
-        Item deathBackpack = new DeathBackpackItem(properties("test_death_backpack").stacksTo(1));
-        assertFalse(DeathBackpackCaptureService.isCapturable(stack(deathBackpack, 1)));
+        assertFalse(DeathBackpackCaptureService.isCapturable(stack(TEST_DEATH_BACKPACK, 1, 1)));
     }
 
     @Test
     void excludesTieredBackpacksFromNesting() {
-        Item tieredBackpack = new TieredBackpackItem(
-                properties("test_tiered_backpack").stacksTo(1),
-                TieredBackpackItem.BackpackTier.BASIC
-        );
-        assertFalse(DeathBackpackCaptureService.isCapturable(stack(tieredBackpack, 1)));
+        assertFalse(DeathBackpackCaptureService.isCapturable(stack(TEST_TIERED_BACKPACK, 1, 1)));
     }
 
     private static Item.Properties properties(String path) {
@@ -60,9 +63,9 @@ class DeathBackpackCaptureServiceTest {
         return new Item.Properties().setId(key);
     }
 
-    private static ItemStack stack(Item item, int count) {
+    private static ItemStack stack(Item item, int count, int maxStackSize) {
         return new ItemStack(Holder.direct(item, DataComponentMap.builder()
-                .set(DataComponents.MAX_STACK_SIZE, Math.max(1, item.getDefaultMaxStackSize()))
+                .set(DataComponents.MAX_STACK_SIZE, maxStackSize)
                 .build()), count);
     }
 

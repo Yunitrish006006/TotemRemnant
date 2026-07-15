@@ -113,6 +113,21 @@ openspec/
 - 死亡背包、死亡紀錄、Nexus 死亡節點與 Discord Bridge 死亡事件整合。
 - Server restart、crash recovery、管理員修復與資料不一致處理。
 
+### Totem Remnant / Death Backpack Capture
+
+```text
+openspec/changes/death-backpack-pre-drop-capture/
+├── proposal.md
+├── design.md
+├── tasks.md
+└── specs/death-backpack/spec.md
+```
+
+- 在原版 `Inventory.dropAll()` 前直接從玩家權威 Inventory 建立死亡背包。
+- 保留 ItemStack 數量與完整 Data Components，不再依賴附近 ItemEntity 回收。
+- DeadRecall 背包維持排除並交由原版世界掉落，避免背包巢狀。
+- 第一階段保留舊半徑掃描器作失敗 fallback；成功時會取消舊流程。
+
 ### DeadRecall Gameplay Recipes
 
 - [`openspec/specs/gameplay-recipes/spec.md`](openspec/specs/gameplay-recipes/spec.md)
