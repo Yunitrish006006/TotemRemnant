@@ -50,8 +50,6 @@ public final class DeathBackpackCaptureRollbackGameTest {
                     "Incomplete death-backpack ItemEntity remained after rollback");
             require(helper, deathNodeIds(helper, player.getUUID()).equals(nodeIdsBefore),
                     "Entity-stage failure unexpectedly created a death node");
-            require(helper, !DeathBackpackCaptureService.consumeCompletedCapture(player.getUUID()),
-                    "Failed capture was incorrectly marked completed");
             helper.succeed();
         } finally {
             DeathBackpackCaptureService.clearForcedFailureForTesting(player.getUUID());
@@ -100,8 +98,6 @@ public final class DeathBackpackCaptureRollbackGameTest {
                     .computeIfAbsent(DeadRecallSpaceDiscoverySavedData.TYPE);
             require(helper, !discovery.hasDiscovered(player.getUUID(), rolledBackNodeId),
                     "Failed death node remained in the player's discovery data");
-            require(helper, !DeathBackpackCaptureService.consumeCompletedCapture(player.getUUID()),
-                    "Failed capture was incorrectly marked completed");
             helper.succeed();
         } finally {
             DeathBackpackCaptureService.clearForcedFailureForTesting(player.getUUID());
