@@ -1,6 +1,6 @@
 package com.adaptor.deadrecall.inventory;
 
-import com.adaptor.deadrecall.space.SpaceUnitHandler;
+import com.adaptor.deadrecall.death.DeathBackpackRecoveryService;
 import com.adaptor.deadrecall.item.DeathBackpackItem;
 import com.adaptor.deadrecall.item.BackpackItemHelper;
 import com.adaptor.deadrecall.item.TieredBackpackItem;
@@ -224,7 +224,7 @@ public class BackpackInventory implements Container {
         }
 
         if (player instanceof ServerPlayer serverPlayer) {
-            SpaceUnitHandler.disableDeathNodeFromBackpack(serverPlayer, backpackStack);
+            DeathBackpackRecoveryService.recoverBoundNode(serverPlayer, backpackStack);
         }
 
         Inventory inventory = player.getInventory();
