@@ -99,8 +99,8 @@ public final class DeathBackpackWorkstationInputGameTest {
                 helper,
                 LoomMenu::new,
                 List.of(
-                        new InputExpectation(0, Items.WHITE_BANNER, 1),
-                        new InputExpectation(1, Items.RED_DYE, 5)
+                        new InputExpectation(0, Items.DIAMOND, 1),
+                        new InputExpectation(1, Items.EMERALD, 5)
                 )
         );
     }
