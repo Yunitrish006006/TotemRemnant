@@ -2,7 +2,7 @@ package com.adaptor.deadrecall.death;
 
 import com.adaptor.deadrecall.Deadrecall;
 import com.adaptor.deadrecall.DiscordBridge;
-import com.adaptor.deadrecall.item.BackpackItemHelper;
+import com.adaptor.deadrecall.inventory.PortableContainerPolicy;
 import com.adaptor.deadrecall.item.ModItems;
 import com.adaptor.deadrecall.space.DeadRecallSpaceDiscoverySavedData;
 import com.adaptor.deadrecall.space.DeadRecallSpaceUnitSavedData;
@@ -59,8 +59,9 @@ public final class DeathBackpackCaptureService {
 
     /**
      * Runs at the invocation point immediately before vanilla {@code Inventory.dropAll()}.
-     * Backpacks remain excluded from the death backpack. Backpacks found in transient cursor,
-     * crafting or workstation slots are emitted directly because vanilla dropAll cannot see them.
+     * Portable containers remain excluded from the death backpack. Restricted containers found in
+     * transient cursor, crafting or workstation slots are emitted directly because vanilla dropAll
+     * cannot see them.
      */
     public static boolean captureBeforeVanillaDrop(ServerPlayer player, ServerLevel level) {
         Inventory inventory = player.getInventory();
@@ -139,7 +140,7 @@ public final class DeathBackpackCaptureService {
     }
 
     static boolean isCapturable(ItemStack stack) {
-        return !stack.isEmpty() && !BackpackItemHelper.isBackpackItem(stack);
+        return !stack.isEmpty() && PortableContainerPolicy.mayInsertIntoBackpack(stack);
     }
 
     static void forceFailureForTesting(UUID playerId, CaptureFailurePoint failurePoint) {
@@ -258,10 +259,6 @@ public final class DeathBackpackCaptureService {
         }
     }
 
-    /**
-     * Returns only vanilla input slots that their menu's removed(Player) implementation clears back
-     * to the player. Result previews and persistent block/entity inventories are intentionally absent.
-     */
     private static List<Slot> workstationInputSlots(AbstractContainerMenu menu) {
         if (menu instanceof CraftingMenu craftingMenu) {
             return List.copyOf(craftingMenu.getInputGridSlots());
@@ -287,11 +284,7 @@ public final class DeathBackpackCaptureService {
         return List.of();
     }
 
-    private static List<Slot> inputSlotRange(
-            AbstractContainerMenu menu,
-            int startInclusive,
-            int endExclusive
-    ) {
+    private static List<Slot> inputSlotRange(AbstractContainerMenu menu, int startInclusive, int endExclusive) {
         if (startInclusive < 0 || endExclusive < startInclusive || endExclusive > menu.slots.size()) {
             throw new IllegalStateException(
                     "Invalid workstation input range " + startInclusive + ".." + endExclusive
@@ -321,15 +314,15 @@ public final class DeathBackpackCaptureService {
                 transientStack.clear();
                 continue;
             }
-            if (!BackpackItemHelper.isBackpackItem(stack)) {
+            if (!PortableContainerPolicy.isRestrictedPortableContainer(stack)) {
                 continue;
             }
 
             transientStack.clear();
-            ItemStack looseBackpack = stack.copy();
-            ItemEntity dropped = player.drop(looseBackpack, false);
+            ItemStack looseContainer = stack.copy();
+            ItemEntity dropped = player.drop(looseContainer, false);
             if (dropped == null) {
-                inventory.placeItemBackInInventory(looseBackpack, false);
+                inventory.placeItemBackInInventory(looseContainer, false);
             }
         }
     }
@@ -344,52 +337,35 @@ public final class DeathBackpackCaptureService {
     }
 
     private static void removeCapturedSlots(Inventory inventory, List<CapturedSlot> capturedSlots) {
-        for (CapturedSlot captured : capturedSlots) {
-            inventory.removeItemNoUpdate(captured.slot());
-        }
-    }
-
-    private static void removeCapturedTransientStacks(List<TransientStack> transientStacks) {
-        for (TransientStack transientStack : transientStacks) {
-            transientStack.clear();
+        for (CapturedSlot capturedSlot : capturedSlots) {
+            inventory.setItem(capturedSlot.slot(), ItemStack.EMPTY);
         }
     }
 
     private static void restoreCapturedSlots(Inventory inventory, List<CapturedSlot> capturedSlots) {
-        for (CapturedSlot captured : capturedSlots) {
-            ItemStack restored = captured.stack().copy();
-            if (inventory.getItem(captured.slot()).isEmpty()) {
-                inventory.setItem(captured.slot(), restored);
-            } else {
-                inventory.placeItemBackInInventory(restored, false);
-            }
+        for (CapturedSlot capturedSlot : capturedSlots) {
+            inventory.setItem(capturedSlot.slot(), capturedSlot.stack().copy());
         }
+    }
+
+    private static void removeCapturedTransientStacks(List<TransientStack> transientStacks) {
+        transientStacks.forEach(TransientStack::clear);
     }
 
     private static void restoreTransientStacksForVanillaDrop(
             Inventory inventory,
-            List<TransientStack> capturedTransientStacks
+            List<TransientStack> transientStacks
     ) {
-        for (TransientStack captured : capturedTransientStacks) {
-            inventory.placeItemBackInInventory(captured.stack().copy(), false);
+        for (TransientStack transientStack : transientStacks) {
+            ItemStack restored = transientStack.stack().copy();
+            inventory.placeItemBackInInventory(restored, false);
         }
-    }
-
-    enum CaptureFailurePoint {
-        AFTER_SLOT_REMOVAL,
-        AFTER_ENTITY_ADD,
-        AFTER_DEATH_NODE_CREATE
     }
 
     private record CapturedSlot(int slot, ItemStack stack) {
     }
 
-    private record TransientStack(
-            AbstractContainerMenu carriedMenu,
-            Container container,
-            int slot,
-            ItemStack stack
-    ) {
+    private record TransientStack(AbstractContainerMenu menu, Container container, int slot, ItemStack stack) {
         private static TransientStack carried(AbstractContainerMenu menu, ItemStack stack) {
             return new TransientStack(menu, null, -1, stack);
         }
@@ -399,11 +375,17 @@ public final class DeathBackpackCaptureService {
         }
 
         private void clear() {
-            if (this.carriedMenu != null) {
-                this.carriedMenu.setCarried(ItemStack.EMPTY);
-            } else if (this.container != null) {
-                this.container.removeItemNoUpdate(this.slot);
+            if (this.menu != null) {
+                this.menu.setCarried(ItemStack.EMPTY);
+            } else if (this.container != null && this.slot >= 0) {
+                this.container.setItem(this.slot, ItemStack.EMPTY);
             }
         }
+    }
+
+    enum CaptureFailurePoint {
+        AFTER_SLOT_REMOVAL,
+        AFTER_ENTITY_ADD,
+        AFTER_DEATH_NODE_CREATE
     }
 }

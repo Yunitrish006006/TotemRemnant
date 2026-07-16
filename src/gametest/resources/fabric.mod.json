@@ -5,6 +5,9 @@
   "name": "DeadRecall GameTests",
   "environment": "server",
   "entrypoints": {
+    "main": [
+      "com.adaptor.deadrecall.gametest.DeathBackpackRestartProbe"
+    ],
     "fabric-gametest": [
       "com.adaptor.deadrecall.gametest.ConcretePowderItemHardeningGameTest"
     ]

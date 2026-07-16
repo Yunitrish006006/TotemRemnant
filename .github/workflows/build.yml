@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - fix/**
+      - release/**
   pull_request:
 
 permissions:
@@ -29,11 +30,47 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
+      - name: Verify release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^mod_version=//p' gradle.properties)"
+          test -n "${version}"
+          test -f "docs/releases/${version}.md"
+          grep -F -- "- [${version}](${version}.md)" docs/releases/README.md
+
       - name: Build and run server GameTests
         shell: bash
         run: |
           set -o pipefail
           ./gradlew build --no-daemon --stacktrace 2>&1 | tee build.log
+
+      - name: Verify death backpack across Dedicated Server restarts
+        shell: bash
+        run: |
+          set -euo pipefail
+          marker_dir="${GITHUB_WORKSPACE}/restart-probe"
+          run_dir="${GITHUB_WORKSPACE}/run/restartProbe"
+          rm -rf "${marker_dir}" "${run_dir}"
+          mkdir -p "${marker_dir}" "${run_dir}"
+          printf 'eula=true\n' > "${run_dir}/eula.txt"
+          cat > "${run_dir}/server.properties" <<'PROPERTIES'
+          online-mode=false
+          level-name=world
+          spawn-protection=0
+          view-distance=4
+          simulation-distance=4
+          PROPERTIES
+
+          for phase in seed recover verify; do
+            echo "Running normal Dedicated Server restart probe phase: ${phase}"
+            DEADRECALL_RESTART_PROBE_PHASE="${phase}" \
+            DEADRECALL_RESTART_PROBE_MARKER_DIR="${marker_dir}" \
+              ./gradlew runRestartProbe --no-daemon --stacktrace \
+              2>&1 | tee "restart-${phase}.log"
+            test -f "${marker_dir}/${phase}.ok"
+            test ! -f "${marker_dir}/${phase}.failure"
+          done
 
       - name: Store failure reports
         if: failure()
@@ -43,6 +80,9 @@ jobs:
           if-no-files-found: ignore
           path: |
             build.log
+            restart-*.log
+            restart-probe/
             **/build/reports/
             **/build/test-results/
             run/gametest/
+            run/restartProbe/

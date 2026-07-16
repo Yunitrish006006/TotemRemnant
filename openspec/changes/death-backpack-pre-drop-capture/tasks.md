@@ -22,6 +22,7 @@
 - [x] 2.9 將 active menu 游標與玩家 2×2 crafting inputs 納入同一 transaction；暫存背包改為獨立掉落，暫存消失詛咒物品直接銷毀。
 - [x] 2.10 移除 legacy scanner 刪除後已無消費者的 completed-capture Set。
 - [x] 2.11 以 class／slot-range 白名單擷取原版工作站關閉時會返還玩家的 inputs，並排除 result preview 與持久容器。
+- [x] 2.12 清空死亡背包時依背包綁定的 node ID 停用節點，不要求清空者必須是原 owner；回收通知失敗不得中斷節點停用或空背包移除。
 
 ## 3. Legacy compatibility
 
@@ -43,6 +44,8 @@
 - [x] 4.8 rollback 後由原版生成掉落物，且 legacy 掃描器不會再次建立死亡背包。
 - [x] 4.9 游標、2×2 crafting inputs、外部箱子隔離、暫存背包排除、暫存消失詛咒與 transient rollback GameTest。
 - [x] 4.10 Crafting Table、Anvil、Smithing、Grindstone、Stonecutter、Loom、Cartography Table、Enchanting Table inputs 與 workstation rollback GameTest。
+- [x] 4.11 非 owner 回收、其他節點隔離、通知故障與回收後 SavedData codec round-trip GameTest。
+- [x] 4.12 以正常 Dedicated Server run 連續執行 seed／recover／verify 三個獨立 JVM，驗證 entity region、Space Unit SavedData、discovery、同 UUID replacement player 與回收刪除跨程序持久化。
 
 ## 5. Integration tests
 
@@ -53,11 +56,12 @@
 - [x] 5.5 active menu 游標與玩家 2×2 crafting inputs 會被擷取；外部箱子實際儲存槽不得被擷取或修改。
 - [x] 5.6 原版工作站暫存 inputs 會被擷取；result preview 與持久 block/entity inventory 不得進入死亡 transaction。
 - [ ] 5.7 第三方飾品模組與 addon 自訂 inventory API 相容測試。
-- [ ] 5.8 Server restart、斷線、重生及死亡節點回收測試。
+- [x] 5.8 原 owner 離線後死亡背包實體與節點保持可回收；任意玩家清空綁定背包可停用正確節點；SavedData codec round-trip 保留回收狀態。
+- [x] 5.9 Dedicated Server 實際重啟、同 UUID replacement player 與世界檔 reload 回歸。
 
 ## 6. Documentation and delivery
 
 - [x] 6.1 建立 proposal、design、tasks 與 delta spec。
 - [x] 6.2 更新玩家文件，說明死亡背包在掉落生成前直接封裝與原版 fallback。
-- [ ] 6.3 更新 changelog／版本變更清單。
+- [x] 6.3 更新 changelog／版本變更清單。
 - [x] 6.4 更新 Roadmap 狀態。

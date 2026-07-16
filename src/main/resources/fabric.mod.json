@@ -14,10 +14,12 @@
       "com.adaptor.deadrecall.client.DeadrecallDataGenerator"
     ],
     "client": [
-      "com.adaptor.deadrecall.client.DeadrecallClient"
+      "com.adaptor.deadrecall.client.DeadrecallClient",
+      "com.adaptor.deadrecall.client.DeathNodeAdminClientInitializer"
     ],
     "main": [
       "com.adaptor.deadrecall.Deadrecall",
+      "com.adaptor.deadrecall.DeathNodeAdminInitializer",
       "com.adaptor.deadrecall.space.SpaceUnitRefreshNetworking"
     ]
   },

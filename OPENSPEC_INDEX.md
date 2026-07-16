@@ -52,6 +52,22 @@ openspec/changes/teleport-interface-item-specializations/
 - 固定石碑中的紫水晶催化方塊將降低跨維度碎片成本。
 - 普通羅盤、回生羅盤、書本與已繪製地圖將可開啟傳送介面，並提供死亡節點精準化、路線典籍與地圖覆蓋特化。
 
+### Totem Nexus / Death Node Administration
+
+```text
+openspec/changes/admin-death-node-manager/
+├── proposal.md
+├── design.md
+├── tasks.md
+└── specs/death-node-administration/spec.md
+```
+
+- 管理員可依玩家、Dimension、狀態與時間篩選死亡節點。
+- 支援檢視、安全傳送、停用、永久刪除與批次清理。
+- 破壞性操作使用短效確認 token，所有查詢與變更由 Server 重新驗證。
+- 刪除節點不會自動刪除仍存在的死亡背包；之後回收必須保持冪等。
+- 管理操作需留下稽核紀錄，Discord 通知失敗不得回滾資料操作。
+
 ### Totem Automata / Copper Golem
 
 ```text
@@ -127,6 +143,22 @@ openspec/changes/death-backpack-pre-drop-capture/
 - 保留 ItemStack 數量與完整 Data Components，不再依賴附近 ItemEntity 回收。
 - DeadRecall 背包維持排除並交由原版世界掉落，避免背包巢狀。
 - 第一階段保留舊半徑掃描器作失敗 fallback；成功時會取消舊流程。
+
+### DeadRecall / Container Safety
+
+```text
+openspec/changes/container-nesting-restrictions/
+├── proposal.md
+├── design.md
+├── tasks.md
+└── specs/container-safety/spec.md
+```
+
+- 禁止 DeadRecall 背包與 Bundle、Shulker Box 或設定型可攜式容器雙向巢狀。
+- GUI、Shift 點擊、拖曳、漏斗、漏斗礦車、投擲器與死亡交易使用同一套 Server policy。
+- 舊世界既有非法巢狀資料允許讀取與取出，但禁止重新插入。
+- 不自動刪除、攤平或改寫舊資料。
+- 分類機制需可由 Tag 或 predicate 擴充給其他 Totem 模組與 addon。
 
 ### DeadRecall Gameplay Recipes
 

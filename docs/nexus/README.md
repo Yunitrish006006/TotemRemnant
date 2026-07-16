@@ -7,6 +7,7 @@
 - [磁石註冊、探索與羅盤操作](space-units.md)
 - [Space Unit 地圖](map.md)
 - [傳送成本與安全條件](teleportation.md)
+- [死亡節點管理介面](death-node-admin.md)
 - [目前完成與未完成內容](status.md)
 - [完整 OpenSpec](../../openspec/specs/space-unit-lodestone/spec.md)
 
@@ -19,5 +20,6 @@
 | 手持羅盤左鍵已註冊磁石 | 將該節點標記為已探索 |
 | 手持羅盤右鍵空氣 | 以玩家目前位置作為臨時來源開啟地圖 |
 | 在地圖選擇節點並按傳送 | 送出伺服器驗證的傳送請求 |
+| 管理員執行 `/deadrecall deathnodes` | 開啟玩家篩選、停用與永久清理 Death Node 的管理介面 |
 
 磁石來源必須在玩家附近，預設檢查半徑為 8 格。Client 不能指定可信座標、成本或安全落點，這些資料全部由 Server 重新查詢與計算。

@@ -2,10 +2,13 @@
 
 DeadRecall 是 Minecraft Fabric 26.2 模組，整合死亡物品保護、可升級背包、銅魁儡分類與採集、Totem Nexus 傳送、雕紋書櫃附魔、煉藥鍋配方、Discord Bridge 與跨維度 `/back`。
 
+目前穩定收尾版本為 **2.4.1**，重點是死亡背包、死亡節點與 Dedicated Server 世界保存的資料安全。詳細內容見 [2.4.1 變更清單](docs/releases/2.4.1.md)。
+
 ## 專案資訊
 
 | 項目 | 內容 |
 | --- | --- |
+| 版本 | 2.4.1 |
 | Minecraft | 26.2 |
 | Fabric Loader | 0.19.3+ |
 | Fabric API | 0.154.2+26.2 |

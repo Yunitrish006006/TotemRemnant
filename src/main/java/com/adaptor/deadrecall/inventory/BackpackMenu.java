@@ -1,6 +1,5 @@
 package com.adaptor.deadrecall.inventory;
 
-import com.adaptor.deadrecall.item.BackpackItemHelper;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ChestMenu;
@@ -39,9 +38,10 @@ public final class BackpackMenu extends ChestMenu {
         }
 
         Slot sourceSlot = this.slots.get(slotIndex);
-        if (slotIndex >= this.backpackSlotCount && BackpackItemHelper.isBackpackItem(sourceSlot.getItem())) {
-            // Do not let any backpack in the player's inventory quick-move into the open backpack.
-            // Backpacks already present in corrupted legacy contents can still be quick-moved out.
+        if (slotIndex >= this.backpackSlotCount
+                && !PortableContainerPolicy.mayInsertIntoBackpack(sourceSlot.getItem())) {
+            // Reject backpacks, bundles and shulker boxes from player inventory.
+            // Restricted items already present in legacy backpack contents can still move out.
             return ItemStack.EMPTY;
         }
 
@@ -52,7 +52,8 @@ public final class BackpackMenu extends ChestMenu {
     public void clicked(int slotIndex, int buttonNum, ContainerInput input, Player player) {
         if (targetsTrackedBackpack(slotIndex)
                 || swapsTrackedBackpackFromInventory(player.getInventory(), input, buttonNum)
-                || collectsBackpacksWithPickupAll(input)) {
+                || collectsRestrictedContainersWithPickupAll(input)
+                || insertsRestrictedCarriedStack(slotIndex, input)) {
             return;
         }
 
@@ -72,7 +73,18 @@ public final class BackpackMenu extends ChestMenu {
                 && inventory.getItem(inventorySlot) == this.trackedBackpackStack;
     }
 
-    private boolean collectsBackpacksWithPickupAll(ContainerInput input) {
-        return input == ContainerInput.PICKUP_ALL && BackpackItemHelper.isBackpackItem(this.getCarried());
+    private boolean collectsRestrictedContainersWithPickupAll(ContainerInput input) {
+        return input == ContainerInput.PICKUP_ALL
+                && PortableContainerPolicy.isRestrictedPortableContainer(this.getCarried());
+    }
+
+    private boolean insertsRestrictedCarriedStack(int slotIndex, ContainerInput input) {
+        if (slotIndex < 0 || slotIndex >= this.backpackSlotCount) {
+            return false;
+        }
+        if (input != ContainerInput.PICKUP && input != ContainerInput.QUICK_CRAFT) {
+            return false;
+        }
+        return !PortableContainerPolicy.mayInsertIntoBackpack(this.getCarried());
     }
 }

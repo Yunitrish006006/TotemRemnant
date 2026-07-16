@@ -50,6 +50,19 @@ fabricApi {
     }
 }
 
+loom {
+    runs {
+        restartProbe {
+            server()
+            setConfigName("Death Backpack Restart Probe")
+            ideConfigGenerated(false)
+            runDir("run/restartProbe")
+            source sourceSets.gametest
+            programArg("--nogui")
+        }
+    }
+}
+
 repositories {
     mavenCentral()
 
@@ -152,7 +165,7 @@ tasks.register("normalizeFabricApiTweakersForNamedDevRuntime") {
 }
 
 tasks.matching { task ->
-    task.name in ["runClient", "runServer", "runDatagen", "runGameTest"]
+    task.name in ["runClient", "runServer", "runDatagen", "runGameTest", "runRestartProbe"]
 }.configureEach {
     dependsOn("normalizeFabricApiTweakersForNamedDevRuntime")
 }
