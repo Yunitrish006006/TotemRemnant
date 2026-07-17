@@ -60,6 +60,14 @@ loom {
             source sourceSets.gametest
             programArg("--nogui")
         }
+        copperRestartProbe {
+            server()
+            setConfigName("Copper Golem Restart Probe")
+            ideConfigGenerated(false)
+            runDir("run/copperRestartProbe")
+            source sourceSets.gametest
+            programArg("--nogui")
+        }
     }
 }
 
@@ -165,7 +173,7 @@ tasks.register("normalizeFabricApiTweakersForNamedDevRuntime") {
 }
 
 tasks.matching { task ->
-    task.name in ["runClient", "runServer", "runDatagen", "runGameTest", "runRestartProbe"]
+    task.name in ["runClient", "runServer", "runDatagen", "runGameTest", "runRestartProbe", "runCopperRestartProbe"]
 }.configureEach {
     dependsOn("normalizeFabricApiTweakersForNamedDevRuntime")
 }
@@ -223,10 +231,9 @@ publishing {
         }
     }
 
-    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
     repositories {
         // Add repositories to publish to here.
-        // Notice: This block does NOT have the same function as the block in the top level.
+        // Notice: this block does NOT have the same function as the block in the top level.
         // The repositories here are for publishing your artifact, not for retrieving dependencies.
     }
 }

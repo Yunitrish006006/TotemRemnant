@@ -129,14 +129,40 @@
 
 ## 13. Tests
 
-- [ ] 13.1 模式切換單元測試矩陣。
-- [ ] 13.2 倉庫容量、Components、多掉落拒絕測試。
-- [ ] 13.3 工作區與跨維度測試。
-- [ ] 13.4 手動／LLM 優先序及過期回應測試。
-- [ ] 13.5 分類完整回歸 GameTests。
-- [ ] 13.6 採集、返回、Home 滿、工具損壞 GameTests。
-- [ ] 13.7 重啟、區塊卸載與資料恢復測試。
-- [ ] 13.8 偽造 payload、多人操作與壓力測試。
+- [x] 13.1 模式切換單元測試矩陣。
+  - stopped、cargo、pending source、工具、倉庫與工作 target 均由 Server GameTest 驗證。
+  - 成功切換驗證 revision 增加及 activity／scanner state 清除。
+- [x] 13.2 倉庫容量、Components、多掉落拒絕測試。
+  - 驗證 16 個上限、相同 Components 合併、不同 Components／Item 拒絕及 menu 寫入 clamp。
+- [x] 13.3 工作區與跨維度測試。
+  - 驗證 64 軸長、262,144 體積上限，以及跨 Dimension 編輯時清除舊角點。
+- [x] 13.4 手動／LLM 優先序及過期回應測試。
+  - [x] 手動 Block ID 規則覆蓋 cached LLM deny。
+  - [x] 採集 Prompt revision 改變後，過期 allow／deny 非同步回應不得寫入。
+  - [x] 分類 Prompt 改變或停用後，過期回應不得重新污染快取。
+  - [x] pending query 原子去重、失敗 cooldown、精確重試邊界及 query generation 分離。
+- [x] 13.5 分類完整回歸 GameTests。
+  - [x] 真實 Chest source／destination 的 16 個取貨、來源 exactly-once 回滾與目的地存放。
+  - [x] blocked snapshot 在 source、target 或 bindings 改變時解除，未改變時保持阻塞。
+  - [x] 箱內 DeadRecall 背包優先接收匹配貨物，且禁止背包作為被分類貨物再次巢狀。
+  - [x] 移除最後目的地時，主手貨物 exactly-once 回滾至記憶來源。
+  - [x] 未載入區塊的綁定不被修剪；載入後可恢復使用，已載入且容器消失時才移除。
+- [x] 13.6 採集、返回、Home 滿、工具損壞 GameTests。
+  - [x] Home 滿載 preflight 不改資料、相容 stack 合併與工具最後耐久原子損壞。
+  - [x] 真實 Server tick 驗證掃描、尋路、可視破壞、掉落入倉、返回 Home 與存放。
+  - [x] 返回途中移除 Home 時進入 `BLOCKED_HOME_UNAVAILABLE`，且倉庫內容保持不變。
+  - [x] 工具最後耐久耗盡後保留掉落，清空工具欄，並跨 30 tick 維持 `BLOCKED_TOOL_BROKEN`。
+- [x] 13.7 重啟、區塊卸載與資料恢復測試。
+  - [x] Copper Golem Entity NBT round-trip 保留 mode、running、revision、工具、倉庫 Components、區域與手動規則。
+  - [x] 真實遠端 chunk unload／reload 保留相同 Entity UUID、Home、target、activity、fuel、工具、倉庫 Components、手動規則與 scanner cursor。
+  - [x] `seed → recover → verify` 三次獨立 Dedicated Server JVM world persistence probe 通過；詳細證據見 `13.7-persistence-evidence.md`。
+- [x] 13.8 偽造 payload、多人操作與壓力測試。
+  - [x] 未綁定板手、錯誤 UUID、距離過遠、running slot edit 與雙玩家獨立板手權限。
+  - [x] stale revision 的 mode、running 與 gathering LLM payload 全部拒絕，且不得增加 revision。
+  - [x] 兩名已綁定玩家以相同 revision 連續提交操作時，只有第一個 mutation 生效，revision 只增加一次。
+  - [x] 已開啟 Menu 在 running 或 mode 改變後，`ContainerInput.PICKUP` 仍會重新驗證 live slot 權限。
+  - [x] 128 隻 Copper Golem 的 512-block scanner fixture 維持 cursor 上限，移除 96 隻後 controller 清除失效 UUID 並保留 32 隻存活實體。
+  - [x] 遠端 chunk 卸載後 controller 移除追蹤；相同 UUID 的 managed entity 重載後在 20 個 controller tick 內重新發現。
 
 ## 14. Documentation
 

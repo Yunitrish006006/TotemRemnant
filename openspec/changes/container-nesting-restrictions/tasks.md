@@ -22,7 +22,8 @@
 - [x] Preserve existing nested contents on load.
 - [x] Allow extracting invalid nested items from DeadRecall backpacks.
 - [x] Reject reinsertion without deleting or rewriting the stack in DeadRecall backpack menus.
-- [ ] Add an admin diagnostic command or report for invalid nesting.
+- [x] Add a read-only administrator report for invalid nesting in online player inventories, cursors, crafting inputs and currently open menus.
+- [x] Bound diagnostic traversal by depth, scanned-stack count and retained findings without mutating Components.
 
 ## Tests
 
@@ -38,5 +39,6 @@
 - [x] Death capture and rollback exactly-once tests for Bundle and Shulker Box stacks.
 - [x] Existing invalid nesting load/extract/reinsert fixture test.
 - [x] Custom Data Components and named container preservation test.
+- [x] Read-only diagnostics cover both nesting directions, clean contents, mutation safety and depth truncation.
 - [ ] Multiplayer race and Dedicated Server restart tests.
   - [x] Existing three-JVM Dedicated Server restart probe remains required by CI.

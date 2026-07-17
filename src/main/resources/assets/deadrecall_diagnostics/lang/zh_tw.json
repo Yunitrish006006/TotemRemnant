@@ -1,0 +1,11 @@
+{
+  "message.deadrecall.container_scan.scope_all": "所有線上玩家",
+  "message.deadrecall.container_scan.player_missing": "找不到線上玩家：%s",
+  "message.deadrecall.container_scan.clean": "%s 的容器巢狀掃描未發現異常（%s 個根節點，%s 個物品堆疊）。",
+  "message.deadrecall.container_scan.summary": "%s 的容器巢狀掃描找到 %s 條非法路徑（%s 個根節點，%s 個物品堆疊）。",
+  "message.deadrecall.container_scan.finding": "%s 位於 %s：%s → %s，深度 %s，%s",
+  "message.deadrecall.container_scan.more": "另有 %s 筆結果只記錄於伺服器日誌。",
+  "message.deadrecall.container_scan.truncated": "掃描已達安全上限，報告並不完整；沒有任何資料被修改。",
+  "message.deadrecall.container_scan.direction.inside_backpack": "受限制容器位於背包內",
+  "message.deadrecall.container_scan.direction.backpack_inside_container": "背包位於可攜式容器內"
+}

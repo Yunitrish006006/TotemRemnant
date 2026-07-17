@@ -1,0 +1,11 @@
+{
+  "message.deadrecall.container_scan.scope_all": "all online players",
+  "message.deadrecall.container_scan.player_missing": "Online player not found: %s",
+  "message.deadrecall.container_scan.clean": "Container nesting scan for %s is clean (%s roots, %s stacks).",
+  "message.deadrecall.container_scan.summary": "Container nesting scan for %s found %s invalid path(s) (%s roots, %s stacks).",
+  "message.deadrecall.container_scan.finding": "%s at %s: %s -> %s, depth %s, %s",
+  "message.deadrecall.container_scan.more": "%s additional finding(s) are available in the Server log.",
+  "message.deadrecall.container_scan.truncated": "A scan limit was reached. This report is incomplete; no data was modified.",
+  "message.deadrecall.container_scan.direction.inside_backpack": "restricted container inside backpack",
+  "message.deadrecall.container_scan.direction.backpack_inside_container": "backpack inside portable container"
+}

@@ -19,6 +19,7 @@
     ],
     "main": [
       "com.adaptor.deadrecall.Deadrecall",
+      "com.adaptor.deadrecall.ContainerSafetyAdminInitializer",
       "com.adaptor.deadrecall.DeathNodeAdminInitializer",
       "com.adaptor.deadrecall.space.SpaceUnitRefreshNetworking"
     ]

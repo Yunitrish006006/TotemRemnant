@@ -6,7 +6,8 @@
   "environment": "server",
   "entrypoints": {
     "main": [
-      "com.adaptor.deadrecall.gametest.DeathBackpackRestartProbe"
+      "com.adaptor.deadrecall.gametest.DeathBackpackRestartProbe",
+      "com.adaptor.deadrecall.item.copper.CopperGolemRestartProbe"
     ],
     "fabric-gametest": [
       "com.adaptor.deadrecall.gametest.ConcretePowderItemHardeningGameTest"

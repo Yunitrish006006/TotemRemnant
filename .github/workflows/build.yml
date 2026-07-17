@@ -63,11 +63,38 @@ jobs:
           PROPERTIES
 
           for phase in seed recover verify; do
-            echo "Running normal Dedicated Server restart probe phase: ${phase}"
+            echo "Running death-backpack Dedicated Server restart probe phase: ${phase}"
             DEADRECALL_RESTART_PROBE_PHASE="${phase}" \
             DEADRECALL_RESTART_PROBE_MARKER_DIR="${marker_dir}" \
               ./gradlew runRestartProbe --no-daemon --stacktrace \
               2>&1 | tee "restart-${phase}.log"
+            test -f "${marker_dir}/${phase}.ok"
+            test ! -f "${marker_dir}/${phase}.failure"
+          done
+
+      - name: Verify copper golem across Dedicated Server restarts
+        shell: bash
+        run: |
+          set -euo pipefail
+          marker_dir="${GITHUB_WORKSPACE}/copper-restart-probe"
+          run_dir="${GITHUB_WORKSPACE}/run/copperRestartProbe"
+          rm -rf "${marker_dir}" "${run_dir}"
+          mkdir -p "${marker_dir}" "${run_dir}"
+          printf 'eula=true\n' > "${run_dir}/eula.txt"
+          cat > "${run_dir}/server.properties" <<'PROPERTIES'
+          online-mode=false
+          level-name=world
+          spawn-protection=0
+          view-distance=4
+          simulation-distance=4
+          PROPERTIES
+
+          for phase in seed recover verify; do
+            echo "Running copper-golem Dedicated Server restart probe phase: ${phase}"
+            DEADRECALL_COPPER_RESTART_PROBE_PHASE="${phase}" \
+            DEADRECALL_COPPER_RESTART_PROBE_MARKER_DIR="${marker_dir}" \
+              ./gradlew runCopperRestartProbe --no-daemon --stacktrace \
+              2>&1 | tee "copper-restart-${phase}.log"
             test -f "${marker_dir}/${phase}.ok"
             test ! -f "${marker_dir}/${phase}.failure"
           done
@@ -81,8 +108,11 @@ jobs:
           path: |
             build.log
             restart-*.log
+            copper-restart-*.log
             restart-probe/
+            copper-restart-probe/
             **/build/reports/
             **/build/test-results/
             run/gametest/
             run/restartProbe/
+            run/copperRestartProbe/
