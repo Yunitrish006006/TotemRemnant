@@ -11,6 +11,8 @@
 - 岩漿、仙人掌、虛空、爆炸，以及只持有一般／死亡背包的死亡 GameTest 已通過；環境死亡仍使用唯一的直接擷取路徑。
 - Active menu 游標與玩家 2×2 crafting inputs 已納入同一個死亡 transaction；外部箱子持久 storage 保持隔離，暫存背包排除、暫存消失詛咒與 transient rollback GameTest 已通過。
 - Crafting Table、Anvil、Smithing Table、Grindstone、Stonecutter、Loom、Cartography Table 與 Enchanting Table 的暫存 inputs 已透過 class／slot-range 白名單納入死亡 transaction；result preview 與持久 block/entity inventory 維持排除。
+- 第三方 player-owned inventory 已提供公開 transaction SPI：provider／slot registry、commit-time compare-and-clear、反向 rollback、Inventory fallback、provider 例外隔離及可攜式容器排除已完成。
+- Trinkets Updated 4.1.x／Minecraft 26.2 optional adapter 已完成；真實 player `DROP` slot、Components、source 清空及 exactly-once 世界結果已由 GameTest 驗證，未安裝 Trinkets 時不形成必要依賴。
 - 死亡背包回收改以背包綁定的 node UUID 停用節點；原 owner 離線後可由其他玩家安全回收，通知故障不影響節點停用或空背包移除，回收狀態與 discovery 已通過 SavedData codec round-trip。
 - 死亡背包 entity、Space Unit SavedData、discovery、同 UUID replacement player 回收與刪除狀態已通過三次獨立正常 Dedicated Server JVM 的 seed／recover／verify world reload。
 - 舊 nearby-drop 掃描器、UUID 差集、雙重 server task、狀態 Map／Set、record 與相容 Mixin 已從程式碼完整刪除；失敗時只回到原版世界掉落。
@@ -84,7 +86,6 @@
 
 ## 進行中
 
-- 死亡背包 pre-drop 收尾：確認第三方飾品槽與 addon inventory API，並整理 changelog／版本變更清單。
 - 離線玩家身體 OpenSpec 與實作：登出保留身體、重連接回、死亡處理與防複製。
 - OpenSpec 統一與平台架構整理。
 - DeadRecall 向 Totem 模組化架構過渡。
@@ -105,15 +106,14 @@
 
 ### 短週期完成順序
 
-1. 補死亡背包第三方 inventory API 相容與 changelog／版本變更清單。
-2. 完成好友玩家直接傳送的兩人多人回歸與最新位置／安全落點驗證。
-3. 完成講台配方的遊戲內行為驗證。
-4. 完成混凝土粉末的真人多人水流與大量 ItemEntity 壓力測試；水源、流動水、雨天、Components 與實體狀態已由 GameTest 驗證。
-5. 驗證紫水晶催化折抵，並擴充 Payload／UI 顯示原始成本、催化數量與折抵。
-6. 傳送介面 Phase A：共用介面類型、Server context、四物品開啟 UI 與普通羅盤專屬能力分流。
-7. 傳送介面 Phase B：回生羅盤死亡節點偏差特化、書本固定磁石路線特化與第一階段 UI。
-8. 傳送介面 Phase C：已繪製地圖覆蓋範圍、食物成本／偏差特化、動態玩家目標與隱私驗證。
-9. 傳送介面 Phase D：base／final 報價明細、完整 Payload、Dedicated Server 與多人回歸。
+1. 完成好友玩家直接傳送的兩人多人回歸與最新位置／安全落點驗證。
+2. 完成講台配方的遊戲內行為驗證。
+3. 完成混凝土粉末的真人多人水流與大量 ItemEntity 壓力測試；水源、流動水、雨天、Components 與實體狀態已由 GameTest 驗證。
+4. 驗證紫水晶催化折抵，並擴充 Payload／UI 顯示原始成本、催化數量與折抵。
+5. 傳送介面 Phase A：共用介面類型、Server context、四物品開啟 UI 與普通羅盤專屬能力分流。
+6. 傳送介面 Phase B：回生羅盤死亡節點偏差特化、書本固定磁石路線特化與第一階段 UI。
+7. 傳送介面 Phase C：已繪製地圖覆蓋範圍、食物成本／偏差特化、動態玩家目標與隱私驗證。
+8. 傳送介面 Phase D：base／final 報價明細、完整 Payload、Dedicated Server 與多人回歸。
 
 ## 尚未完成
 
@@ -128,12 +128,12 @@
 
 ### Totem Remnant
 
-- 第三方飾品槽與 addon 自訂 inventory API 的死亡整合。
 - 離線玩家身體 Entity、SavedData、playerdata body lock 與 data migration。
 - 登出建立身體、重連接回身體、身體死亡及一次性死亡流程。
 - 與死亡背包、死亡紀錄、Nexus 死亡節點及 Discord Bridge 死亡事件整合。
 - Server restart、server shutdown、crash recovery 與管理員修復指令。
 - 多玩家、PVP、區塊卸載、fake player、Creative／Spectator 與 Dedicated Server 測試。
+- 尚無 Minecraft 26.2 直接版本的特定 Accessories adapter；其他 addon 已可使用公開死亡 inventory SPI。
 
 ### Totem Nexus
 
@@ -164,14 +164,13 @@
 
 ## 建議開發順序
 
-1. 完成 DeadRecall 2.x 的第三方 inventory API 相容、資料安全驗證與 release 文件。
-2. 收尾 Nexus 好友直接傳送、講台配方、混凝土粉末壓力及紫水晶催化等短週期驗證。
-3. 實作傳送介面物品特化 Phase A–D，完成目前 Nexus 使用者介面主線。
-4. 實作 Remnant 離線玩家身體及其死亡背包、死亡節點與 Discord 整合。
-5. 抽出 Totem Core 最小共用層，再逐步建立穩定公開 API 與 migration framework。
-6. 完成 DeadRecall 向 Totem 模組化架構過渡及 addon 文件。
-7. 移植 Excavation。
-8. 最後建立 Cognition Agent Framework，作為可選模組。
+1. 收尾 Nexus 好友直接傳送、講台配方、混凝土粉末壓力及紫水晶催化等短週期驗證。
+2. 實作傳送介面物品特化 Phase A–D，完成目前 Nexus 使用者介面主線。
+3. 實作 Remnant 離線玩家身體及其死亡背包、死亡節點與 Discord 整合。
+4. 抽出 Totem Core 最小共用層，再逐步建立穩定公開 API 與 migration framework。
+5. 完成 DeadRecall 向 Totem 模組化架構過渡及 addon 文件。
+6. 移植 Excavation。
+7. 最後建立 Cognition Agent Framework，作為可選模組。
 
 ## 重新命名策略
 
