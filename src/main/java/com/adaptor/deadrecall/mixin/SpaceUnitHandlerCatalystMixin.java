@@ -32,22 +32,23 @@ public abstract class SpaceUnitHandlerCatalystMixin {
 
         SpaceUnitMapSourceAccessor sourceAccessor = (SpaceUnitMapSourceAccessor) source;
         SpaceUnitTeleportTargetAccessor targetAccessor = (SpaceUnitTeleportTargetAccessor) target;
+        boolean sourceLodestone = SpaceUnitHandler.SOURCE_TYPE_LODESTONE.equals(sourceAccessor.deadrecall$getType());
+        boolean targetLodestone = targetAccessor.deadrecall$isLodestoneAnchor();
 
-        int sourceCatalysts = 0;
-        if (SpaceUnitHandler.SOURCE_TYPE_LODESTONE.equals(sourceAccessor.deadrecall$getType())) {
-            sourceCatalysts = catalystBlocks(units, sourceAccessor.deadrecall$getId());
-        }
-
-        int targetCatalysts = targetAccessor.deadrecall$isLodestoneAnchor()
-                ? catalystBlocks(units, targetAccessor.deadrecall$getId())
-                : 0;
-
-        return AmethystCatalystDiscount.finalCost(baseCost, sourceCatalysts, targetCatalysts);
+        return AmethystCatalystDiscount.quoteForEndpoints(
+                baseCost,
+                sourceLodestone,
+                deadrecall$storedCatalystBlocks(units, sourceAccessor.deadrecall$getId()),
+                targetLodestone,
+                deadrecall$storedCatalystBlocks(units, targetAccessor.deadrecall$getId())
+        ).finalCost();
     }
 
-    private static int catalystBlocks(DeadRecallSpaceUnitSavedData units, java.util.UUID unitId) {
+    private static int deadrecall$storedCatalystBlocks(
+            DeadRecallSpaceUnitSavedData units,
+            java.util.UUID unitId
+    ) {
         return units.get(unitId)
-                .filter(SpaceUnitRecord::isLodestoneAnchor)
                 .map(SpaceUnitRecord::structure)
                 .map(snapshot -> snapshot.amethystCatalystBlocks())
                 .orElse(0);

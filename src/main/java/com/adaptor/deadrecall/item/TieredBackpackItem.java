@@ -12,7 +12,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -21,7 +20,7 @@ import net.minecraft.world.level.Level;
 
 import java.util.function.Consumer;
 
-public class TieredBackpackItem extends Item {
+public class TieredBackpackItem extends AbstractBackpackItem {
     private final BackpackTier tier;
 
     public TieredBackpackItem(Properties settings, BackpackTier tier) {
@@ -52,23 +51,23 @@ public class TieredBackpackItem extends Item {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay tooltipDisplay, Consumer<Component> tooltipAdder, TooltipFlag tooltipFlag) {
         super.appendHoverText(stack, context, tooltipDisplay, tooltipAdder, tooltipFlag);
         tooltipAdder.accept(Component.translatable(
-                "item.deadrecall.backpack.tooltip.tier",
-                Component.translatable("item.deadrecall.backpack.tier." + tier.getName())
+            "item.deadrecall.backpack.tooltip.tier",
+            Component.translatable("item.deadrecall.backpack.tier." + tier.getName())
         ).withStyle(ChatFormatting.GRAY));
         tooltipAdder.accept(Component.translatable(
-                "item.deadrecall.backpack.tooltip.capacity",
-                tier.getSlots(),
-                tier.getRows()
+            "item.deadrecall.backpack.tooltip.capacity",
+            tier.getSlots(),
+            tier.getRows()
         ).withStyle(ChatFormatting.BLUE));
         tooltipAdder.accept(Component.translatable(
-                "item.deadrecall.backpack.tooltip.used",
-                BackpackItemHelper.countStoredStacks(stack),
-                tier.getSlots()
+            "item.deadrecall.backpack.tooltip.used",
+            BackpackItemHelper.countStoredStacks(stack),
+            tier.getSlots()
         ).withStyle(ChatFormatting.DARK_GRAY));
         tooltipAdder.accept(Component.translatable("item.deadrecall.backpack.tooltip.no_nesting").withStyle(ChatFormatting.RED));
         tooltipAdder.accept(Component.translatable("item.deadrecall.backpack.tooltip.death_drop").withStyle(ChatFormatting.GOLD));
         tooltipAdder.accept(Component.translatable(BackpackItemHelper.getProtectionTooltipKey(tier)).withStyle(
-                tier == BackpackTier.NETHERITE ? ChatFormatting.GOLD : ChatFormatting.YELLOW
+            tier == BackpackTier.NETHERITE ? ChatFormatting.GOLD : ChatFormatting.YELLOW
         ));
     }
 

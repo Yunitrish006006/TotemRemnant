@@ -50,13 +50,95 @@ public abstract class SpaceUnitOfflinePlayerNameMixin {
     }
 
     private static Optional<String> deadrecall$cachedPlayerName(MinecraftServer server, UUID playerId) {
-        return server.getProfileCache().get(playerId).flatMap(profile -> {
-            String name = deadrecall$invokeNameAccessor(profile, "name");
-            if (name == null || name.isBlank()) {
-                name = deadrecall$invokeNameAccessor(profile, "getName");
+        Object cache = deadrecall$profileCache(server);
+        if (cache == null) {
+            return Optional.empty();
+        }
+
+        Object profile = deadrecall$lookupProfile(cache, playerId);
+        if (profile == null) {
+            return Optional.empty();
+        }
+
+        String name = deadrecall$invokeNameAccessor(profile, "name");
+        if (name == null || name.isBlank()) {
+            name = deadrecall$invokeNameAccessor(profile, "getName");
+        }
+        return name == null || name.isBlank() ? Optional.empty() : Optional.of(name);
+    }
+
+    /**
+     * Minecraft 26.x mappings have changed the public cache accessor name more than once. Resolve
+     * the cache reflectively so this compatibility shim does not depend on one mapping spelling.
+     */
+    private static Object deadrecall$profileCache(MinecraftServer server) {
+        Object cache = deadrecall$invokeNoArg(server, "getProfileCache");
+        if (cache == null) {
+            cache = deadrecall$invokeNoArg(server, "getUserCache");
+        }
+        if (cache == null) {
+            cache = deadrecall$invokeNoArg(server, "profileCache");
+        }
+        if (cache == null) {
+            cache = deadrecall$invokeNoArg(server, "userCache");
+        }
+        if (cache != null) {
+            return cache;
+        }
+
+        Object services = deadrecall$invokeNoArg(server, "services");
+        if (services == null) {
+            services = deadrecall$invokeNoArg(server, "getServices");
+        }
+        if (services == null) {
+            return null;
+        }
+
+        cache = deadrecall$invokeNoArg(services, "profileCache");
+        if (cache == null) {
+            cache = deadrecall$invokeNoArg(services, "userCache");
+        }
+        if (cache == null) {
+            cache = deadrecall$invokeNoArg(services, "nameToIdCache");
+        }
+        return cache;
+    }
+
+    private static Object deadrecall$lookupProfile(Object cache, UUID playerId) {
+        for (Method method : cache.getClass().getMethods()) {
+            if (method.getParameterCount() != 1 || method.getParameterTypes()[0] != UUID.class) {
+                continue;
             }
-            return name == null || name.isBlank() ? Optional.empty() : Optional.of(name);
-        });
+
+            String methodName = method.getName();
+            if (!methodName.equals("get")
+                    && !methodName.equals("getByUuid")
+                    && !methodName.equals("getById")
+                    && !methodName.equals("findById")
+                    && !methodName.equals("findProfileById")) {
+                continue;
+            }
+
+            try {
+                Object value = method.invoke(cache, playerId);
+                if (value instanceof Optional<?> optional) {
+                    return optional.orElse(null);
+                }
+                return value;
+            } catch (ReflectiveOperationException | RuntimeException ignored) {
+                // Try the next compatible accessor.
+            }
+        }
+        return null;
+    }
+
+    private static Object deadrecall$invokeNoArg(Object target, String methodName) {
+        try {
+            Method method = target.getClass().getMethod(methodName);
+            return method.invoke(target);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            return null;
+        }
     }
 
     private static String deadrecall$invokeNameAccessor(Object profile, String methodName) {
@@ -64,7 +146,7 @@ public abstract class SpaceUnitOfflinePlayerNameMixin {
             Method method = profile.getClass().getMethod(methodName);
             Object value = method.invoke(profile);
             return value instanceof String string ? string : null;
-        } catch (ReflectiveOperationException ignored) {
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
             return null;
         }
     }

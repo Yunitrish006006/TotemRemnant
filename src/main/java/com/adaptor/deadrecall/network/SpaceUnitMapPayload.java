@@ -42,6 +42,10 @@ public record SpaceUnitMapPayload(
             int safeFoodPointsAvailable,
             int amethystCost,
             int amethystAvailable,
+            int baseAmethystCost,
+            int sourceCatalysts,
+            int targetCatalysts,
+            int catalystDiscount,
             int prepareTicks,
             int maxHorizontalDeviation,
             int damageChancePercent,
@@ -52,6 +56,47 @@ public record SpaceUnitMapPayload(
             int allowedPlayerCount,
             boolean canTeleport,
             String blockedReason) {
+
+        /**
+         * Compatibility constructor for call sites that have not yet populated catalyst details.
+         */
+        public Entry(
+                UUID id,
+                String type,
+                String name,
+                String visibility,
+                boolean friendShared,
+                String dimension,
+                int x,
+                int y,
+                int z,
+                double resonance,
+                int tier,
+                int distanceBlocks,
+                int saturationCost,
+                int hungerCost,
+                int foodPointsNeeded,
+                int safeFoodPointsAvailable,
+                int amethystCost,
+                int amethystAvailable,
+                int prepareTicks,
+                int maxHorizontalDeviation,
+                int damageChancePercent,
+                boolean favorite,
+                boolean manageable,
+                boolean owned,
+                int administratorCount,
+                int allowedPlayerCount,
+                boolean canTeleport,
+                String blockedReason) {
+            this(
+                    id, type, name, visibility, friendShared, dimension, x, y, z, resonance, tier,
+                    distanceBlocks, saturationCost, hungerCost, foodPointsNeeded, safeFoodPointsAvailable,
+                    amethystCost, amethystAvailable, amethystCost, 0, 0, 0,
+                    prepareTicks, maxHorizontalDeviation, damageChancePercent, favorite, manageable, owned,
+                    administratorCount, allowedPlayerCount, canTeleport, blockedReason
+            );
+        }
     }
 
     public static final StreamCodec<FriendlyByteBuf, SpaceUnitMapPayload> CODEC =
@@ -114,6 +159,10 @@ public record SpaceUnitMapPayload(
         buf.writeInt(entry.safeFoodPointsAvailable());
         buf.writeInt(entry.amethystCost());
         buf.writeInt(entry.amethystAvailable());
+        buf.writeInt(entry.baseAmethystCost());
+        buf.writeInt(entry.sourceCatalysts());
+        buf.writeInt(entry.targetCatalysts());
+        buf.writeInt(entry.catalystDiscount());
         buf.writeInt(entry.prepareTicks());
         buf.writeInt(entry.maxHorizontalDeviation());
         buf.writeInt(entry.damageChancePercent());
@@ -138,6 +187,10 @@ public record SpaceUnitMapPayload(
                 buf.readInt(),
                 buf.readInt(),
                 buf.readDouble(),
+                buf.readInt(),
+                buf.readInt(),
+                buf.readInt(),
+                buf.readInt(),
                 buf.readInt(),
                 buf.readInt(),
                 buf.readInt(),

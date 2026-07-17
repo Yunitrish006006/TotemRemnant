@@ -100,7 +100,7 @@ public class BackpackInventory implements Container {
 
     @Override
     public boolean canPlaceItem(int slot, ItemStack stack) {
-        return !BackpackItemHelper.isBackpackItem(stack);
+        return PortableContainerPolicy.mayInsertIntoBackpack(stack);
     }
 
     @Override
@@ -136,6 +136,8 @@ public class BackpackInventory implements Container {
         int index = 0;
         for (ItemStack stack : container.nonEmptyItemCopyStream().toList()) {
             if (index < size) {
+                // Deliberately do not call canPlaceItem here. Legacy invalid nesting must remain
+                // readable and extractable; only new insertion is rejected.
                 items.set(index, stack.copy());
                 index++;
             }

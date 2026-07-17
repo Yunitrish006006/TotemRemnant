@@ -12,7 +12,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -21,7 +20,7 @@ import net.minecraft.world.level.Level;
 
 import java.util.function.Consumer;
 
-public class DeathBackpackItem extends Item {
+public class DeathBackpackItem extends AbstractBackpackItem {
     public DeathBackpackItem(Properties settings) {
         super(settings);
     }
@@ -57,10 +56,10 @@ public class DeathBackpackItem extends Item {
         int capacity = rows * 9;
         tooltipAdder.accept(Component.translatable("item.deadrecall.death_backpack.tooltip.summary").withStyle(ChatFormatting.RED));
         tooltipAdder.accept(Component.translatable(
-                "item.deadrecall.death_backpack.tooltip.capacity",
-                BackpackItemHelper.countStoredStacks(stack),
-                capacity,
-                rows
+            "item.deadrecall.death_backpack.tooltip.capacity",
+            BackpackItemHelper.countStoredStacks(stack),
+            capacity,
+            rows
         ).withStyle(ChatFormatting.GRAY));
         tooltipAdder.accept(Component.translatable("item.deadrecall.backpack.tooltip.no_nesting").withStyle(ChatFormatting.RED));
         tooltipAdder.accept(Component.translatable("item.deadrecall.death_backpack.tooltip.persistent").withStyle(ChatFormatting.GOLD));

@@ -5,6 +5,8 @@ import com.adaptor.deadrecall.network.RefreshSpaceUnitQuotePayload;
 import com.adaptor.deadrecall.network.SpaceUnitMapPayload;
 import com.adaptor.deadrecall.network.StartSpaceUnitTeleportPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.input.MouseButtonEvent;
 import org.spongepowered.asm.mixin.Mixin;
@@ -31,6 +33,31 @@ public abstract class SpaceUnitMapScreenMixin {
 
     @Shadow
     private SpaceUnitMapPayload.Entry selectedEntry() {
+        throw new AssertionError();
+    }
+
+    @Shadow
+    private int panelX() {
+        throw new AssertionError();
+    }
+
+    @Shadow
+    private int panelY() {
+        throw new AssertionError();
+    }
+
+    @Shadow
+    private int panelHeight() {
+        throw new AssertionError();
+    }
+
+    @Shadow
+    private int firstFooterButtonX() {
+        throw new AssertionError();
+    }
+
+    @Shadow
+    private String trimToWidth(String value, int width) {
         throw new AssertionError();
     }
 
@@ -76,6 +103,28 @@ public abstract class SpaceUnitMapScreenMixin {
         }
         SpaceUnitMapPayload.Entry selected = selectedEntry();
         this.teleportButton.active = selected != null && !selected.id().equals(this.payload.sourceUnitId());
+    }
+
+    @Inject(method = "drawFooter", at = @At("TAIL"))
+    private void deadrecall$drawCatalystQuote(
+            GuiGraphicsExtractor extractor,
+            int mouseX,
+            int mouseY,
+            CallbackInfo ci
+    ) {
+        SpaceUnitMapPayload.Entry selected = selectedEntry();
+        if (selected == null || selected.baseAmethystCost() <= 0) {
+            return;
+        }
+
+        int x = panelX() + 12;
+        int y = panelY() + panelHeight() - 46 + 27;
+        int width = Math.max(36, firstFooterButtonX() - x - 8);
+        String text = "Amethyst " + selected.baseAmethystCost()
+                + " | Catalyst " + selected.sourceCatalysts() + "+" + selected.targetCatalysts()
+                + " | -" + selected.catalystDiscount()
+                + " = " + selected.amethystCost();
+        extractor.text(Minecraft.getInstance().font, trimToWidth(text, width), x, y, 0xFFB9A3E3);
     }
 
     @Inject(method = "requestTeleport", at = @At("HEAD"), cancellable = true)

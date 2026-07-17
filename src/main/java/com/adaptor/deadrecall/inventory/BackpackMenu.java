@@ -1,5 +1,6 @@
 package com.adaptor.deadrecall.inventory;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ChestMenu;
@@ -16,8 +17,11 @@ import net.minecraft.world.item.ItemStack;
  * quick-move and swap operations, so the owning backpack needs an explicit identity lock.</p>
  */
 public final class BackpackMenu extends ChestMenu {
+    private static final long REJECTION_MESSAGE_COOLDOWN_TICKS = 20L;
+
     private final ItemStack trackedBackpackStack;
     private final int backpackSlotCount;
+    private long nextRejectionMessageGameTime;
 
     public BackpackMenu(
             MenuType<?> menuType,
@@ -40,8 +44,8 @@ public final class BackpackMenu extends ChestMenu {
         Slot sourceSlot = this.slots.get(slotIndex);
         if (slotIndex >= this.backpackSlotCount
                 && !PortableContainerPolicy.mayInsertIntoBackpack(sourceSlot.getItem())) {
-            // Reject backpacks, bundles and shulker boxes from player inventory.
             // Restricted items already present in legacy backpack contents can still move out.
+            notifyRestrictedInsertion(player);
             return ItemStack.EMPTY;
         }
 
@@ -51,9 +55,13 @@ public final class BackpackMenu extends ChestMenu {
     @Override
     public void clicked(int slotIndex, int buttonNum, ContainerInput input, Player player) {
         if (targetsTrackedBackpack(slotIndex)
-                || swapsTrackedBackpackFromInventory(player.getInventory(), input, buttonNum)
-                || collectsRestrictedContainersWithPickupAll(input)
+                || swapsTrackedBackpackFromInventory(player.getInventory(), input, buttonNum)) {
+            return;
+        }
+
+        if (collectsRestrictedContainersWithPickupAll(input)
                 || insertsRestrictedCarriedStack(slotIndex, input)) {
+            notifyRestrictedInsertion(player);
             return;
         }
 
@@ -86,5 +94,18 @@ public final class BackpackMenu extends ChestMenu {
             return false;
         }
         return !PortableContainerPolicy.mayInsertIntoBackpack(this.getCarried());
+    }
+
+    private void notifyRestrictedInsertion(Player player) {
+        if (player.level().isClientSide()) {
+            return;
+        }
+
+        long gameTime = player.level().getGameTime();
+        if (gameTime < this.nextRejectionMessageGameTime) {
+            return;
+        }
+        this.nextRejectionMessageGameTime = gameTime + REJECTION_MESSAGE_COOLDOWN_TICKS;
+        player.sendSystemMessage(Component.translatable("item.deadrecall.backpack.tooltip.no_nesting"));
     }
 }
