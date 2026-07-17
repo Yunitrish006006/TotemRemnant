@@ -78,16 +78,9 @@ repositories {
         url = "https://repo.codemc.io/repository/relativitymc/"
     }
 
-    exclusiveContent {
-        forRepository {
-            maven {
-                name = "Modrinth"
-                url = "https://api.modrinth.com/maven"
-            }
-        }
-        filter {
-            includeGroup "maven.modrinth"
-        }
+    maven {
+        name = "Nucleoid"
+        url = "https://maven.nucleoid.xyz/releases"
     }
 }
 
@@ -100,8 +93,9 @@ dependencies {
     compileOnly "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     runtimeOnly "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-    // Optional runtime integration. This is not declared as a required Fabric dependency.
-    modImplementation "maven.modrinth:XaT8sLP6:kOeE0jtC"
+    // Optional runtime integration. Neither dependency is declared as required by DeadRecall.
+    modImplementation "eu.pb4:trinkets:4.1.0-beta.2+26.2"
+    modImplementation "dev.yumi.mc.core:yumi-mc-foundation:1.1.1+26.2"
 
     // Gson for JSON parsing (used in DiscordBridge)
     // Use Minecraft's built-in Gson instead of bundling it
