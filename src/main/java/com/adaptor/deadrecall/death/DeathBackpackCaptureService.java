@@ -2,6 +2,9 @@ package com.adaptor.deadrecall.death;
 
 import com.adaptor.deadrecall.Deadrecall;
 import com.adaptor.deadrecall.DiscordBridge;
+import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryProvider;
+import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryRegistry;
+import com.adaptor.deadrecall.api.death.DeathBackpackAddonSlot;
 import com.adaptor.deadrecall.inventory.PortableContainerPolicy;
 import com.adaptor.deadrecall.item.ModItems;
 import com.adaptor.deadrecall.space.DeadRecallSpaceDiscoverySavedData;
@@ -35,19 +38,15 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * Captures a player's authoritative inventory and transient player-owned menu stacks directly
- * before vanilla death drops are emitted.
- *
- * <p>The service only commits inventory removal after it has built and spawned the death backpack.
- * Any runtime failure discards the incomplete entity, rolls back the temporary death node and
- * restores captured inventory stacks so vanilla {@link Inventory#dropAll()} can remain the fallback.
- * Cursor, player crafting-grid and whitelisted vanilla workstation inputs are restored into the
- * inventory on failure because vanilla only emits Inventory contents during the current death path.</p>
+ * Captures authoritative player-owned stacks directly before vanilla death drops are emitted.
+ * Vanilla, transient menu and registered addon slots participate in one transaction.
  */
 public final class DeathBackpackCaptureService {
     private static final String TAG_DEATH_BACKPACK_ID = "deadrecall_death_backpack_id";
@@ -57,12 +56,7 @@ public final class DeathBackpackCaptureService {
     private DeathBackpackCaptureService() {
     }
 
-    /**
-     * Runs at the invocation point immediately before vanilla {@code Inventory.dropAll()}.
-     * Portable containers remain excluded from the death backpack. Restricted containers found in
-     * transient cursor, crafting or workstation slots are emitted directly because vanilla dropAll
-     * cannot see them.
-     */
+    /** Runs immediately before vanilla {@code Inventory.dropAll()}. */
     public static boolean captureBeforeVanillaDrop(ServerPlayer player, ServerLevel level) {
         Inventory inventory = player.getInventory();
         List<TransientStack> transientStacks = collectTransientStacks(player);
@@ -72,28 +66,27 @@ public final class DeathBackpackCaptureService {
         List<TransientStack> capturedTransientStacks = transientStacks.stream()
                 .filter(transientStack -> isTransientCapturable(transientStack.stack()))
                 .toList();
-        if (capturedSlots.isEmpty() && capturedTransientStacks.isEmpty()) {
+        List<AddonCapturedSlot> capturedAddonSlots = collectCapturableAddonSlots(player);
+        if (capturedSlots.isEmpty() && capturedTransientStacks.isEmpty() && capturedAddonSlots.isEmpty()) {
             return false;
         }
 
-        List<ItemStack> contents = new ArrayList<>(capturedSlots.size() + capturedTransientStacks.size());
-        capturedSlots.stream()
-                .map(CapturedSlot::stack)
-                .map(ItemStack::copy)
-                .forEach(contents::add);
-        capturedTransientStacks.stream()
-                .map(TransientStack::stack)
-                .map(ItemStack::copy)
-                .forEach(contents::add);
+        List<ItemStack> contents = new ArrayList<>(
+                capturedSlots.size() + capturedTransientStacks.size() + capturedAddonSlots.size());
+        capturedSlots.stream().map(CapturedSlot::stack).map(ItemStack::copy).forEach(contents::add);
+        capturedTransientStacks.stream().map(TransientStack::stack).map(ItemStack::copy).forEach(contents::add);
+        capturedAddonSlots.stream().map(AddonCapturedSlot::stack).map(ItemStack::copy).forEach(contents::add);
 
         ItemStack deathBackpack = createDeathBackpack(contents);
         BlockPos deathPos = player.blockPosition().immutable();
         ItemEntity backpackEntity = null;
         UUID deathNodeId = null;
+        List<AddonCapturedSlot> removedAddonSlots = new ArrayList<>();
 
-        removeCapturedSlots(inventory, capturedSlots);
-        removeCapturedTransientStacks(capturedTransientStacks);
         try {
+            removeCapturedSlots(inventory, capturedSlots);
+            removeCapturedTransientStacks(capturedTransientStacks);
+            removeCapturedAddonSlots(capturedAddonSlots, removedAddonSlots);
             failIfRequested(player, CaptureFailurePoint.AFTER_SLOT_REMOVAL);
 
             backpackEntity = new ItemEntity(
@@ -125,6 +118,7 @@ public final class DeathBackpackCaptureService {
             }
             restoreCapturedSlots(inventory, capturedSlots);
             restoreTransientStacksForVanillaDrop(inventory, capturedTransientStacks);
+            restoreAddonSlotsForVanillaDrop(inventory, removedAddonSlots);
             clearForcedFailureForTesting(player.getUUID());
             Deadrecall.LOGGER.error(
                     "Direct death backpack capture failed for {}; vanilla death drops will be used",
@@ -222,6 +216,39 @@ public final class DeathBackpackCaptureService {
             ItemStack stack = inventory.getItem(slot);
             if (isCapturable(stack)) {
                 captured.add(new CapturedSlot(slot, stack.copy()));
+            }
+        }
+        return List.copyOf(captured);
+    }
+
+    private static List<AddonCapturedSlot> collectCapturableAddonSlots(ServerPlayer player) {
+        List<AddonCapturedSlot> captured = new ArrayList<>();
+        Set<String> sourceKeys = new HashSet<>();
+        for (DeathBackpackAddonInventoryProvider provider : DeathBackpackAddonInventoryRegistry.providers()) {
+            try {
+                List<? extends DeathBackpackAddonSlot> slots = provider.collectDroppableSlots(player);
+                if (slots == null) {
+                    throw new IllegalStateException("Provider returned null slot list");
+                }
+                for (DeathBackpackAddonSlot slot : slots) {
+                    if (slot == null) {
+                        throw new IllegalStateException("Provider returned a null slot");
+                    }
+                    String sourceKey = provider.id() + ":" + slot.sourceKey();
+                    if (!sourceKeys.add(sourceKey)) {
+                        throw new IllegalStateException("Provider returned duplicate source " + sourceKey);
+                    }
+                    ItemStack snapshot = slot.snapshot();
+                    if (isCapturable(snapshot)) {
+                        captured.add(new AddonCapturedSlot(provider.id().toString(), slot, snapshot.copy()));
+                    }
+                }
+            } catch (RuntimeException exception) {
+                Deadrecall.LOGGER.warn(
+                        "Skipping death-backpack addon inventory provider {} after snapshot failure",
+                        provider.id(),
+                        exception
+                );
             }
         }
         return List.copyOf(captured);
@@ -352,6 +379,21 @@ public final class DeathBackpackCaptureService {
         transientStacks.forEach(TransientStack::clear);
     }
 
+    private static void removeCapturedAddonSlots(
+            List<AddonCapturedSlot> capturedSlots,
+            List<AddonCapturedSlot> removedSlots
+    ) {
+        for (AddonCapturedSlot capturedSlot : capturedSlots) {
+            if (!capturedSlot.slot().clearIfUnchanged(capturedSlot.stack())) {
+                throw new IllegalStateException(
+                        "Addon inventory slot changed before commit: "
+                                + capturedSlot.providerId() + ":" + capturedSlot.slot().sourceKey()
+                );
+            }
+            removedSlots.add(capturedSlot);
+        }
+    }
+
     private static void restoreTransientStacksForVanillaDrop(
             Inventory inventory,
             List<TransientStack> transientStacks
@@ -362,7 +404,33 @@ public final class DeathBackpackCaptureService {
         }
     }
 
+    private static void restoreAddonSlotsForVanillaDrop(
+            Inventory inventory,
+            List<AddonCapturedSlot> capturedSlots
+    ) {
+        for (int index = capturedSlots.size() - 1; index >= 0; index--) {
+            AddonCapturedSlot capturedSlot = capturedSlots.get(index);
+            ItemStack restored = capturedSlot.stack().copy();
+            try {
+                if (capturedSlot.slot().restoreIfEmpty(restored)) {
+                    continue;
+                }
+            } catch (RuntimeException exception) {
+                Deadrecall.LOGGER.warn(
+                        "Could not restore addon inventory source {}:{}; using vanilla inventory fallback",
+                        capturedSlot.providerId(),
+                        capturedSlot.slot().sourceKey(),
+                        exception
+                );
+            }
+            inventory.placeItemBackInInventory(restored, false);
+        }
+    }
+
     private record CapturedSlot(int slot, ItemStack stack) {
+    }
+
+    private record AddonCapturedSlot(String providerId, DeathBackpackAddonSlot slot, ItemStack stack) {
     }
 
     private record TransientStack(AbstractContainerMenu menu, Container container, int slot, ItemStack stack) {

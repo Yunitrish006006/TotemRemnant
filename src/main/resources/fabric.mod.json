@@ -20,6 +20,7 @@
     "main": [
       "com.adaptor.deadrecall.Deadrecall",
       "com.adaptor.deadrecall.ContainerSafetyAdminInitializer",
+      "com.adaptor.deadrecall.DeathBackpackAddonIntegrationInitializer",
       "com.adaptor.deadrecall.DeathNodeAdminInitializer",
       "com.adaptor.deadrecall.space.SpaceUnitRefreshNetworking"
     ]
@@ -35,5 +36,8 @@
     "fabricloader": ">=${loader_version}",
     "fabric-api": "*",
     "minecraft": "${minecraft_version}"
+  },
+  "suggests": {
+    "trinkets_updated": ">=4.1.0-beta.2"
   }
 }
