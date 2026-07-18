@@ -6,13 +6,14 @@
 
 - 死亡背包核心流程。
 - 死亡物品收集與回收。
-- 死亡背包 pre-drop 直接擷取：在原版 `Inventory.dropAll()` 前封裝 Inventory／Equipment，保留 Components、排除背包巢狀並提供交易 rollback。
+- 死亡背包 pre-drop 直接擷取：在 `Player.dropEquipment` 入口、原版／addon 掉落與 `Inventory.dropAll()` 前封裝 Inventory／Equipment，保留 Components、排除背包巢狀並提供交易 rollback。
 - `keepInventory`、消失詛咒、既有世界掉落物、雙玩家同位置同 tick、實體／死亡節點故障注入與原版 fallback GameTest 已通過。
 - 岩漿、仙人掌、虛空、爆炸，以及只持有一般／死亡背包的死亡 GameTest 已通過；環境死亡仍使用唯一的直接擷取路徑。
 - Active menu 游標與玩家 2×2 crafting inputs 已納入同一個死亡 transaction；外部箱子持久 storage 保持隔離，暫存背包排除、暫存消失詛咒與 transient rollback GameTest 已通過。
 - Crafting Table、Anvil、Smithing Table、Grindstone、Stonecutter、Loom、Cartography Table 與 Enchanting Table 的暫存 inputs 已透過 class／slot-range 白名單納入死亡 transaction；result preview 與持久 block/entity inventory 維持排除。
 - 第三方 player-owned inventory 已提供公開 transaction SPI：provider／slot registry、commit-time compare-and-clear、反向 rollback、Inventory fallback、provider 例外隔離及可攜式容器排除已完成。
 - Trinkets Updated 4.1.x／Minecraft 26.2 optional adapter 已完成；真實 player `DROP` slot、Components、source 清空及 exactly-once 世界結果已由 GameTest 驗證，未安裝 Trinkets 時不形成必要依賴。
+- 可攜式容器巢狀限制已覆蓋 Backpack／Bundle／Shulker 的手動操作、Hopper、Hopper Minecart chain、Dropper、Dispenser、死亡 rollback、legacy data 與雙玩家同 tick Server fixture。
 - 死亡背包回收改以背包綁定的 node UUID 停用節點；原 owner 離線後可由其他玩家安全回收，通知故障不影響節點停用或空背包移除，回收狀態與 discovery 已通過 SavedData codec round-trip。
 - 死亡背包 entity、Space Unit SavedData、discovery、同 UUID replacement player 回收與刪除狀態已通過三次獨立正常 Dedicated Server JVM 的 seed／recover／verify world reload。
 - 舊 nearby-drop 掃描器、UUID 差集、雙重 server task、狀態 Map／Set、record 與相容 Mixin 已從程式碼完整刪除；失敗時只回到原版世界掉落。
@@ -67,7 +68,9 @@
 - Space Unit 未註冊磁石的石碑預覽 GUI 與 Server-side pending 確認封包基礎。
 - Space Unit 好友管理 GUI 名單瀏覽、邀請狀態顯示與移除／取消關係基礎。
 - Space Unit 好友直接傳送已移除舊逐次 consent，補上成功啟動通知、解除好友立即取消，以及離線／不可用／關係解除的精確取消原因。
-- Space Unit 石碑紫水晶催化核心：快照 optional 欄位、資料驅動 tag、既有掃描計數、每 4 方塊折抵 1 碎片、最終成本最低 1，以及 Java 25 公式測試已完成。
+- 好友 PLAYER 傳送多人 GameTests 已完成：雙向好友直接啟動、非好友／單向邀請／自己拒絕、解除好友雙方向立即取消、離線／死亡取消、完成時最新位置與安全落點、跨 Dimension 追蹤及成本 exactly-once。
+- Space Unit 石碑紫水晶催化已完成：快照 optional 欄位、資料驅動 tag、既有掃描計數、每 4 方塊折抵 1 碎片、最終成本最低 1、Server Payload／本地化 UI、完成前重新報價、跨維度扣款及舊世界三次 JVM migration probe 均已驗證。
+- 傳送介面 Phase A–D 已完成：四種物品入口、Server context／session、普通羅盤能力邊界、回生羅盤自己的死亡節點偏差 -50%、書本固定磁石準備時間 -20%／石碑磨損 -25%，以及已繪製地圖的 Server coverage、食物／偏差 -20%、動態玩家重驗證與位置隱私均已完成；Payload／GUI 顯示食物、時間、偏差及磨損的 base／final 明細，29 個 required GameTests 全數通過。
 
 ### 共用基礎
 
@@ -77,11 +80,12 @@
 - ItemStack 自訂資料處理。
 - OpenSpec 銅傀儡文件。
 - Discord Bridge OpenSpec、玩家／管理／公開事件轉播、健康告警及伺服器狀態 Bot Token 頻道路由修正。
-- 講台替代配方資源：4 個任意木半磚＋1 本書；Java 25 build 與 Dedicated Server recipe 載入已驗證。
-- 混凝土粉末掉落物水中硬化核心：16 色映射、Server-side 同一 ItemEntity 轉換、無世界全量掃描、Java 25 build 與 Dedicated Server 啟動已完成。
-- Fabric Loom Server GameTest 基礎：獨立 `gametest` source set、測試模組 entrypoint、`runGameTest` 自動接入 `build`，並保留失敗報告 artifact。
+- Discord 固定繁中本地化已涵蓋 advancement、村民、死亡 template、Boss／實體名稱、raid 結果與 difficulty；custom literal、missing-key 節流、exactly-once payload、Worker 503 隔離、Server Data runtime reload 及原子 snapshot 替換已自動驗證。
+- 講台替代配方已完成：4 個任意木半磚＋1 本書；RecipeManager 已驗證橡木、竹、緋紅蕈木、扭曲蕈木與混合半磚，講台書本／Menu／Comparator／兩 tick 紅石脈衝及村民圖書管理員 POI 均通過 Server GameTest。
+- 混凝土粉末掉落物水中硬化核心：16 色映射、Server-side 同一 ItemEntity 轉換、無世界全量掃描、512 實體壓力回歸、Java 25 build 與 Dedicated Server 啟動已完成。
+- Fabric Loom Server GameTest 基礎：獨立 `gametest` source set、完整 34 類測試模組 entrypoint、`runGameTest` 自動接入 `build`，並保留失敗報告 artifact。
 - 正常 Dedicated Server restart probe 基礎：死亡背包 `runRestartProbe` 與銅傀儡 `runCopperRestartProbe` 使用獨立 world、跨 JVM phase marker、entity region／SavedData reload 與失敗 artifact。
-- 混凝土粉末自動回歸：水源、非水源流動水、未接觸水、雨天、64 格數量、自訂名稱、同一 ItemEntity、age、位置、速度與 pickup delay；5 個 required GameTests 全部通過。
+- 混凝土粉末自動回歸：水源、非水源流動水、未接觸水、雨天、64 格數量、自訂名稱、同一 ItemEntity、age、位置、速度、pickup delay，以及 512 個不可合併 ItemEntity 壓力 fixture；6 個 required GameTests 全部通過。
 - 最新 `master` Dedicated Server 煙霧測試成功：Fabric／Mixin 初始化、1,594 個 recipe、1,699 個 advancement、三維度建立、保存與正常停止均完成。
 
 ## 進行中
@@ -90,30 +94,20 @@
 - OpenSpec 統一與平台架構整理。
 - DeadRecall 向 Totem 模組化架構過渡。
 - Nexus 進階地圖功能、石碑管理與好友權限模型。
-- 好友玩家直接傳送：核心流程、死碼清理、通知、主動取消與精確原因已完成；待兩名真實玩家回歸及完成時最新位置／安全落點驗證。
-- 講台配方覆寫：Dedicated Server 載入已通過；待不同木種製作、圖書管理員、書本與紅石行為驗證。
-- 混凝土粉末掉落物硬化：Server GameTest 自動驗證已完成；只剩兩名以上真人玩家水流測試與大量 ItemEntity 壓力測試。
-- 紫水晶催化折抵：Dedicated Server 啟動與 Mixin 初始化已通過；待舊世界載入、拆除後重新報價、實際跨維度扣款，以及 Payload／UI 明細。
+- 混凝土粉末掉落物硬化：Server GameTest 與 512 個 ItemEntity 壓力回歸已完成；只剩兩名以上真人玩家水流驗收。
+- 傳送介面物品特化：Phase A–D 自動化排程完成；只剩兩名以上真人 Client 的 UI、動態目標與多人驗收。
 
 ## 待排程
 
-- 傳送介面物品特化：普通羅盤、回生羅盤、書本與已繪製地圖皆可開啟傳送介面。
-- 普通羅盤維持通用基準與磁石／好友管理能力。
-- 回生羅盤將自己的死亡節點傳送偏差降低 50%。
-- 書本作為路線典籍，對已探索固定磁石目標降低 20% 準備時間與 25% 石碑磨損率。
-- 已繪製地圖在目標位於地圖 Dimension 與覆蓋範圍內時，降低 20% 食物等價成本與偏差；不降低紫水晶成本。
-- 此項目已完成 proposal、design、tasks 與 delta spec，排在目前功能驗證後開始實作。
+- 傳送介面 Phase A–D 已完成；真人 Client 驗收在可取得兩名以上玩家時執行。
 
 ### 短週期完成順序
 
-1. 完成好友玩家直接傳送的兩人多人回歸與最新位置／安全落點驗證。
-2. 完成講台配方的遊戲內行為驗證。
-3. 完成混凝土粉末的真人多人水流與大量 ItemEntity 壓力測試；水源、流動水、雨天、Components 與實體狀態已由 GameTest 驗證。
-4. 驗證紫水晶催化折抵，並擴充 Payload／UI 顯示原始成本、催化數量與折抵。
-5. 傳送介面 Phase A：共用介面類型、Server context、四物品開啟 UI 與普通羅盤專屬能力分流。
-6. 傳送介面 Phase B：回生羅盤死亡節點偏差特化、書本固定磁石路線特化與第一階段 UI。
-7. 傳送介面 Phase C：已繪製地圖覆蓋範圍、食物成本／偏差特化、動態玩家目標與隱私驗證。
-8. 傳送介面 Phase D：base／final 報價明細、完整 Payload、Dedicated Server 與多人回歸。
+1. 完成混凝土粉末的真人多人水流驗收；此人工項目與後續開發平行待辦，512 個 ItemEntity 壓力測試、水源、流動水、雨天、Components 與實體狀態已由 GameTest 驗證。
+2. 傳送介面 Phase A：已完成共用介面類型、Server context、四物品開啟 UI 與普通羅盤專屬能力分流。
+3. 傳送介面 Phase B：已完成回生羅盤死亡節點偏差特化、書本固定磁石路線特化與第一階段 UI。
+4. 傳送介面 Phase C：已完成已繪製地圖覆蓋範圍、食物成本／偏差特化、動態玩家目標與隱私驗證。
+5. 傳送介面 Phase D：已完成 base／final 報價明細、完整 Payload／GUI、Dedicated Server 與自動化多人回歸；真人多人 UI 驗收保持待辦。
 
 ## 尚未完成
 
@@ -140,9 +134,8 @@
 - 磁石完整管理介面整合與 UX 打磨。
 - 石碑完整管理介面的離線玩家查詢、名單瀏覽與批次調整。
 - 好友／人體磁石進階設定（通知、黑名單與完整互動流程）。
-- 紫水晶催化折抵的 base cost、catalyst count、discount Payload 欄位與地圖明細 UI。
 - 死亡節點傳送成本細節與回收後歷史紀錄介面。
-- 傳送介面物品特化：四物品入口、Server context、回生羅盤、路線典籍、地圖覆蓋與報價明細。
+- 傳送介面物品特化：Phase A–D 四物品入口、Server context、回生羅盤、路線典籍、地圖覆蓋及 base／final 報價明細已完成；只剩真人多人 UI／動態目標驗收。
 
 ### Totem Excavation
 
@@ -164,8 +157,8 @@
 
 ## 建議開發順序
 
-1. 收尾 Nexus 好友直接傳送、講台配方、混凝土粉末壓力及紫水晶催化等短週期驗證。
-2. 實作傳送介面物品特化 Phase A–D，完成目前 Nexus 使用者介面主線。
+1. 在混凝土粉末真人多人驗收平行待辦期間，實作傳送介面物品特化 Phase A–D，完成目前 Nexus 使用者介面主線。
+2. 完成真人多人可用時才能執行的混凝土粉末水流驗收。
 3. 實作 Remnant 離線玩家身體及其死亡背包、死亡節點與 Discord 整合。
 4. 抽出 Totem Core 最小共用層，再逐步建立穩定公開 API 與 migration framework。
 5. 完成 DeadRecall 向 Totem 模組化架構過渡及 addon 文件。

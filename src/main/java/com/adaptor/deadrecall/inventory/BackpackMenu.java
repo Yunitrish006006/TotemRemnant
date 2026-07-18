@@ -60,7 +60,13 @@ public final class BackpackMenu extends ChestMenu {
         }
 
         if (collectsRestrictedContainersWithPickupAll(input)
-                || insertsRestrictedCarriedStack(slotIndex, input)) {
+                || insertsRestrictedCarriedStack(slotIndex, input)
+                || swapsRestrictedInventoryStackIntoBackpack(
+                        slotIndex,
+                        player.getInventory(),
+                        input,
+                        buttonNum
+                )) {
             notifyRestrictedInsertion(player);
             return;
         }
@@ -94,6 +100,20 @@ public final class BackpackMenu extends ChestMenu {
             return false;
         }
         return !PortableContainerPolicy.mayInsertIntoBackpack(this.getCarried());
+    }
+
+    private boolean swapsRestrictedInventoryStackIntoBackpack(
+            int slotIndex,
+            Inventory inventory,
+            ContainerInput input,
+            int inventorySlot
+    ) {
+        return slotIndex >= 0
+                && slotIndex < this.backpackSlotCount
+                && input == ContainerInput.SWAP
+                && inventorySlot >= 0
+                && inventorySlot < inventory.getContainerSize()
+                && !PortableContainerPolicy.mayInsertIntoBackpack(inventory.getItem(inventorySlot));
     }
 
     private void notifyRestrictedInsertion(Player player) {

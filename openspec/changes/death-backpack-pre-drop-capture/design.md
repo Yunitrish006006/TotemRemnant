@@ -2,19 +2,21 @@
 
 ## 1. Injection point
 
-使用 `Player.dropEquipment(ServerLevel)` 中呼叫 `Inventory.dropAll()` 前的 Mixin 注入點。
+使用 `Player.dropEquipment(ServerLevel)` 的 `HEAD` Mixin 注入點。
 
-此時原版已完成：
+此切點早於 `LivingEntity.dropEquipment` 的 addon tail hooks 與原版 `Inventory.dropAll()`。這對 Trinkets Updated 很重要：其 `DROP` slots 會在 superclass equipment 流程尾端清除，若等到 `Inventory.dropAll()` 前才讀取便已失去 authoritative addon source。
 
-- 判斷 `keepInventory=false`。
-- 移除 Inventory／Equipment 中具有原版防掉落／消失效果的物品。
+Capture service 因此必須在 snapshot 前自行維持原版語意：
+
+- `keepInventory=true` 時立即返回，不開始 transaction。
+- Inventory／Equipment／transient 中具有原版防掉落／消失效果的物品不納入死亡背包，交給接續原版流程處理。
 
 但尚未：
 
 - 生成任何玩家 Inventory 死亡 ItemEntity。
 - 清空玩家 Inventory。
 
-因此這是能同時維持原版語意並避免世界掉落競態的最窄切入點。游標、玩家 2×2 crafting inputs、工作站暫存 inputs 與 addon-owned player slots 不屬於原版 Inventory，服務會在此切點將它們納入同一個 Server-side transaction。
+因此這是能同時取得 addon authoritative slots、維持原版語意並避免世界掉落競態的最窄切入點。游標、玩家 2×2 crafting inputs、工作站暫存 inputs 與 addon-owned player slots 不屬於原版 Inventory，服務會在此切點將它們納入同一個 Server-side transaction。
 
 ## 2. Capture plan
 

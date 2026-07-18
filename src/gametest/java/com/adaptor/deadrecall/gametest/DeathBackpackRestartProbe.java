@@ -18,6 +18,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerLevel;
@@ -28,6 +32,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.AABB;
 
 import java.io.IOException;
@@ -49,6 +55,13 @@ public final class DeathBackpackRestartProbe implements ModInitializer {
     private static final String MARKER_DIRECTORY_ENV = "DEADRECALL_RESTART_PROBE_MARKER_DIR";
     private static final UUID OWNER_ID = UUID.fromString("6b2fac01-f28d-43fd-b729-5aca6521bb56");
     private static final BlockPos PROBE_POS = new BlockPos(8, 200, 8);
+    private static final BlockPos CATALYST_PROBE_POS = new BlockPos(12, 200, 12);
+    private static final List<BlockPos> CATALYST_OFFSETS = List.of(
+            new BlockPos(1, 0, 0),
+            new BlockPos(-1, 0, 0),
+            new BlockPos(0, 0, 1),
+            new BlockPos(0, 0, -1)
+    );
     private static final int PROBE_CHUNK_X = SectionPos.blockToSectionCoord(PROBE_POS.getX());
     private static final int PROBE_CHUNK_Z = SectionPos.blockToSectionCoord(PROBE_POS.getZ());
     private static final String BACKPACK_ID_TAG = "deadrecall_death_backpack_id";
@@ -69,6 +82,16 @@ public final class DeathBackpackRestartProbe implements ModInitializer {
             ProbeSession session = new ProbeSession(phase, markerDirectory);
             ServerTickEvents.END_SERVER_TICK.register(session::tick);
         });
+        if ("seed".equals(phase)) {
+            ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+                try {
+                    rewriteCatalystSnapshotAsLegacy(server, markerDirectory);
+                } catch (Throwable throwable) {
+                    writeMarker(markerDirectory, "seed.failure", throwable.toString() + "\n");
+                    throw new IllegalStateException("Could not prepare legacy catalyst snapshot", throwable);
+                }
+            });
+        }
     }
 
     private static Path markerDirectory() {
@@ -98,6 +121,17 @@ public final class DeathBackpackRestartProbe implements ModInitializer {
         DeadRecallSpaceDiscoverySavedData discovery = discovery(level);
         SpaceUnitRecord node = units.createDeathUnit(level, PROBE_POS, owner);
         discovery.markDiscovered(OWNER_ID, node.id());
+
+        level.setBlockAndUpdate(CATALYST_PROBE_POS, Blocks.LODESTONE.defaultBlockState());
+        for (BlockPos offset : CATALYST_OFFSETS) {
+            level.setBlockAndUpdate(
+                    CATALYST_PROBE_POS.offset(offset),
+                    Blocks.AMETHYST_BLOCK.defaultBlockState()
+            );
+        }
+        SpaceUnitRecord catalystProbe = units.getOrCreateLodestone(level, CATALYST_PROBE_POS, owner);
+        require(catalystProbe.structure().amethystCatalystBlocks() == 4,
+                "Seed phase did not persist four catalyst blocks before legacy rewrite");
 
         ItemStack deathBackpack = new ItemStack(ModItems.DEATH_BACKPACK);
         CompoundTag customData = new CompoundTag();
@@ -144,6 +178,14 @@ public final class DeathBackpackRestartProbe implements ModInitializer {
                 "Recover phase did not persistently disable the probe death node");
         require(discovery(level).hasDiscovered(OWNER_ID, node.id()),
                 "Recover phase lost the probe discovery reference");
+
+        SpaceUnitRecord legacyCatalystProbe = requireCatalystProbe(level);
+        require(legacyCatalystProbe.structure().amethystCatalystBlocks() == 0,
+                "Recover phase did not load the missing legacy catalyst field as zero");
+        SpaceUnitRecord refreshedCatalystProbe = units(level).rescanLodestone(level, legacyCatalystProbe.id())
+                .orElseThrow(() -> new IllegalStateException("Recover phase could not rescan catalyst probe"));
+        require(refreshedCatalystProbe.structure().amethystCatalystBlocks() == 4,
+                "Recover phase did not restore catalyst count from the live structure scan");
     }
 
     private static void verify(ServerLevel level) {
@@ -154,7 +196,59 @@ public final class DeathBackpackRestartProbe implements ModInitializer {
                 "Verify phase did not reload the probe discovery reference");
         require(findProbeBackpack(level) == null,
                 "Verify phase reloaded a death backpack that was removed before the previous shutdown");
+        require(requireCatalystProbe(level).structure().amethystCatalystBlocks() == 4,
+                "Verify phase did not persist the rescanned catalyst count");
+        units(level).disableLodestone(level.dimension(), CATALYST_PROBE_POS, level.getGameTime());
         level.setChunkForced(PROBE_CHUNK_X, PROBE_CHUNK_Z, false);
+    }
+
+    private static SpaceUnitRecord requireCatalystProbe(ServerLevel level) {
+        return unitRecords(level).values().stream()
+                .filter(SpaceUnitRecord::isLodestoneAnchor)
+                .filter(unit -> unit.owner().equals(OWNER_ID))
+                .filter(unit -> unit.pos().equals(CATALYST_PROBE_POS))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No catalyst migration probe was loaded"));
+    }
+
+    private static void rewriteCatalystSnapshotAsLegacy(
+            MinecraftServer server,
+            Path markerDirectory
+    ) throws IOException {
+        Path savedDataPath = server.getWorldPath(LevelResource.ROOT)
+                .resolve("dimensions")
+                .resolve("minecraft")
+                .resolve("overworld")
+                .resolve("data")
+                .resolve("deadrecall")
+                .resolve("space_units.dat");
+        require(Files.isRegularFile(savedDataPath),
+                "Seed shutdown did not produce Space Unit SavedData at " + savedDataPath);
+
+        CompoundTag root = NbtIo.readCompressed(savedDataPath, NbtAccounter.unlimitedHeap());
+        CompoundTag data = root.getCompound("data")
+                .orElseThrow(() -> new IllegalStateException("Space Unit SavedData has no data compound"));
+        ListTag records = data.getList("units")
+                .orElseThrow(() -> new IllegalStateException("Space Unit SavedData has no units list"));
+        boolean removed = false;
+        for (int index = 0; index < records.size(); index++) {
+            CompoundTag record = records.getCompoundOrEmpty(index);
+            SpaceUnitRecord decoded = SpaceUnitRecord.CODEC.parse(NbtOps.INSTANCE, record).getOrThrow();
+            if (!decoded.isLodestoneAnchor()
+                    || !decoded.owner().equals(OWNER_ID)
+                    || !decoded.pos().equals(CATALYST_PROBE_POS)) {
+                continue;
+            }
+            CompoundTag structure = record.getCompound("structure")
+                    .orElseThrow(() -> new IllegalStateException("Catalyst probe has no structure compound"));
+            if (structure.remove("amethyst_catalyst_blocks") != null) {
+                removed = true;
+                break;
+            }
+        }
+        require(removed, "Seed shutdown could not remove catalyst field from persisted snapshot");
+        NbtIo.writeCompressed(root, savedDataPath);
+        writeMarker(markerDirectory, "legacy-catalyst-snapshot.ok", "success\n");
     }
 
     private static SpaceUnitRecord requireProbeNode(ServerLevel level, SpaceUnitStatus expectedStatus) {

@@ -32,14 +32,14 @@ public abstract class RaidMixin {
     @Unique
     private static String raidResult(Raid raid) {
         if (raid.isVictory()) {
-            return "勝利";
+            return "victory";
         }
         if (raid.isLoss()) {
-            return "失敗";
+            return "defeat";
         }
         if (raid.isStopped()) {
-            return "停止";
+            return "stopped";
         }
-        return "結束";
+        return "ended";
     }
 }

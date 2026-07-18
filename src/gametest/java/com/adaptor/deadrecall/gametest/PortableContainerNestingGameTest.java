@@ -9,6 +9,8 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.Container;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.vehicle.minecart.MinecartHopper;
 import net.minecraft.world.inventory.ShulkerBoxSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -93,6 +95,46 @@ public final class PortableContainerNestingGameTest {
         });
     }
 
+    @GameTest(maxTicks = 60)
+    public void hopperMinecartChainCannotNestBackpackInShulker(GameTestHelper helper) {
+        placeHopperOverShulker(helper);
+        HopperBlockEntity hopper = hopper(helper);
+        ShulkerBoxBlockEntity shulker = shulker(helper);
+        MinecartHopper minecart = hopperMinecart(helper);
+        minecart.setItem(0, new ItemStack(ModItems.BACKPACK_NETHERITE));
+
+        helper.runAtTickTime(36, () -> {
+            int sourceCount = countItem(minecart, ModItems.BACKPACK_NETHERITE);
+            int intermediateCount = countItem(hopper, ModItems.BACKPACK_NETHERITE);
+            require(helper, sourceCount + intermediateCount == 1,
+                    "Hopper Minecart chain duplicated or deleted the rejected backpack");
+            require(helper, isEmpty(shulker),
+                    "Hopper Minecart chain nested the backpack inside a Shulker Box");
+            minecart.discard();
+            helper.succeed();
+        });
+    }
+
+    @GameTest(maxTicks = 60)
+    public void hopperMinecartChainStillMovesOrdinaryItemIntoShulker(GameTestHelper helper) {
+        placeHopperOverShulker(helper);
+        HopperBlockEntity hopper = hopper(helper);
+        ShulkerBoxBlockEntity shulker = shulker(helper);
+        MinecartHopper minecart = hopperMinecart(helper);
+        minecart.setItem(0, new ItemStack(Items.DIRT));
+
+        helper.runAtTickTime(36, () -> {
+            require(helper, countItem(minecart, Items.DIRT) == 0,
+                    "Control Hopper Minecart retained the ordinary item");
+            require(helper, countItem(hopper, Items.DIRT) == 0,
+                    "Control Hopper retained the ordinary item from the Minecart");
+            require(helper, shulker.getItem(0).is(Items.DIRT) && shulker.getItem(0).getCount() == 1,
+                    "Control Shulker Box did not receive the Hopper Minecart item exactly once");
+            minecart.discard();
+            helper.succeed();
+        });
+    }
+
     private static void assertRestrictedInsideBackpack(GameTestHelper helper, ItemStack stack, String id) {
         require(helper, PortableContainerPolicy.isRestrictedPortableContainer(stack),
                 id + " was not classified as a portable container");
@@ -146,6 +188,21 @@ public final class PortableContainerNestingGameTest {
         throw helper.assertionException("Missing HopperBlockEntity fixture");
     }
 
+    private static MinecartHopper hopperMinecart(GameTestHelper helper) {
+        MinecartHopper minecart = new MinecartHopper(EntityTypes.HOPPER_MINECART, helper.getLevel());
+        BlockPos aboveHopper = helper.absolutePos(HOPPER_POS.above());
+        minecart.snapTo(
+                aboveHopper.getX() + 0.5D,
+                aboveHopper.getY(),
+                aboveHopper.getZ() + 0.5D,
+                0.0F,
+                0.0F
+        );
+        require(helper, helper.getLevel().addFreshEntity(minecart),
+                "Could not add Hopper Minecart fixture");
+        return minecart;
+    }
+
     private static ShulkerBoxBlockEntity shulker(GameTestHelper helper) {
         Object blockEntity = helper.getLevel().getBlockEntity(helper.absolutePos(SHULKER_POS));
         if (blockEntity instanceof ShulkerBoxBlockEntity shulker) {
@@ -161,6 +218,17 @@ public final class PortableContainerNestingGameTest {
             }
         }
         return true;
+    }
+
+    private static int countItem(Container container, Item item) {
+        int count = 0;
+        for (int slot = 0; slot < container.getContainerSize(); slot++) {
+            ItemStack stack = container.getItem(slot);
+            if (stack.is(item)) {
+                count += stack.getCount();
+            }
+        }
+        return count;
     }
 
     private static void require(GameTestHelper helper, boolean condition, String message) {

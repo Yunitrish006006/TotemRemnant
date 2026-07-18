@@ -1,6 +1,6 @@
 package com.adaptor.deadrecall.mixin;
 
-import com.adaptor.deadrecall.DiscordBridge;
+import com.adaptor.deadrecall.discord.DiscordEventNotifications;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.commands.DifficultyCommand;
 import net.minecraft.world.Difficulty;
@@ -17,6 +17,9 @@ public abstract class DifficultyCommandMixin {
             Difficulty difficulty,
             CallbackInfoReturnable<Integer> cir
     ) {
-        DiscordBridge.sendDifficultyChanged(DiscordMixinFormatting.actor(source), difficulty.getSerializedName());
+        DiscordEventNotifications.difficultyChanged(
+                DiscordMixinFormatting.actor(source),
+                difficulty.getSerializedName()
+        );
     }
 }

@@ -6,12 +6,16 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.Container;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DispenserBlock;
 import net.minecraft.world.level.block.entity.DispenserBlockEntity;
 import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
+import net.minecraft.world.phys.AABB;
+
+import java.util.List;
 
 public final class PortableContainerDropperGameTest {
     private static final BlockPos SHULKER_POS = new BlockPos(2, 1, 2);
@@ -51,11 +55,66 @@ public final class PortableContainerDropperGameTest {
         });
     }
 
+    @GameTest(maxTicks = 40)
+    public void dispenserEjectsBackpackWithoutNestingItInShulker(GameTestHelper helper) {
+        placeFixture(helper, Blocks.DISPENSER);
+        DispenserBlockEntity dispenser = dropper(helper);
+        ShulkerBoxBlockEntity shulker = shulker(helper);
+        dispenser.setItem(0, new ItemStack(ModItems.BACKPACK_ADVANCED));
+        helper.setBlock(POWER_POS, Blocks.REDSTONE_BLOCK);
+
+        helper.runAtTickTime(12, () -> {
+            List<ItemEntity> backpacks = dropsAroundFixture(helper).stream()
+                    .filter(entity -> entity.getItem().is(ModItems.BACKPACK_ADVANCED))
+                    .toList();
+            require(helper, dispenser.getItem(0).isEmpty(),
+                    "Dispenser retained the backpack instead of completing its native ejection");
+            require(helper, backpacks.size() == 1 && backpacks.getFirst().getItem().getCount() == 1,
+                    "Dispenser did not preserve exactly one ejected backpack");
+            require(helper, isEmpty(shulker), "Dispenser nested the backpack inside a Shulker Box");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(maxTicks = 40)
+    public void dispenserOrdinaryItemControlRemainsNativeEjection(GameTestHelper helper) {
+        placeFixture(helper, Blocks.DISPENSER);
+        DispenserBlockEntity dispenser = dropper(helper);
+        ShulkerBoxBlockEntity shulker = shulker(helper);
+        dispenser.setItem(0, new ItemStack(Items.DIRT));
+        helper.setBlock(POWER_POS, Blocks.REDSTONE_BLOCK);
+
+        helper.runAtTickTime(12, () -> {
+            long dirtDrops = dropsAroundFixture(helper).stream()
+                    .filter(entity -> entity.getItem().is(Items.DIRT) && entity.getItem().getCount() == 1)
+                    .count();
+            require(helper, dispenser.getItem(0).isEmpty(),
+                    "Control Dispenser retained the ordinary item");
+            require(helper, dirtDrops == 1L,
+                    "Control Dispenser did not emit exactly one ordinary item");
+            require(helper, isEmpty(shulker),
+                    "Control Dispenser unexpectedly used Dropper inventory-transfer behavior");
+            helper.succeed();
+        });
+    }
+
     private static void placeFixture(GameTestHelper helper) {
+        placeFixture(helper, Blocks.DROPPER);
+    }
+
+    private static void placeFixture(GameTestHelper helper, net.minecraft.world.level.block.Block automationBlock) {
         helper.setBlock(SHULKER_POS, Blocks.SHULKER_BOX);
         helper.setBlock(
                 DROPPER_POS,
-                Blocks.DROPPER.defaultBlockState().setValue(DispenserBlock.FACING, Direction.DOWN)
+                automationBlock.defaultBlockState().setValue(DispenserBlock.FACING, Direction.DOWN)
+        );
+    }
+
+    private static List<ItemEntity> dropsAroundFixture(GameTestHelper helper) {
+        return helper.getLevel().getEntitiesOfClass(
+                ItemEntity.class,
+                new AABB(helper.absolutePos(SHULKER_POS)).inflate(4.0D),
+                ItemEntity::isAlive
         );
     }
 

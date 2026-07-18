@@ -22,9 +22,16 @@
 
 ## 4. Tests
 
-- [ ] 4.1 雙向好友可直接啟動 PLAYER 傳送的多人整合測試。
-- [ ] 4.2 非好友、單向邀請與自己都無法作為 PLAYER 目標的多人整合測試。
+- [x] 4.1 雙向好友可直接啟動 PLAYER 傳送的多人整合測試。
+  - `DirectFriendPlayerTeleportGameTest.bilateralFriendsStartDirectPlayerSession` 使用兩個已註冊於 Server `PlayerList` 的 mock `ServerPlayer`，經真實 Friend SavedData 建立雙向好友並驗證 PLAYER session 的 requester／target UUID。
+- [x] 4.2 非好友、單向邀請與自己都無法作為 PLAYER 目標的多人整合測試。
+  - 同一個 Server world 依序驗證沒有關係、只有 pending invite 與 self target，三者皆不得留下 session。
 - [x] 4.3 雙方向好友關係 session 配對、無關 session 排除，以及 PLAYER 目標狀態優先序與翻譯 key 已有單元測試。
-- [ ] 4.4 完成時使用目標最新位置並找到安全落點。
+- [x] 4.4 完成時使用目標最新位置並找到安全落點。
+  - 倒數期間移除舊落點、將目標移至新的唯一安全方塊，完成後 requester 必須落在最新座標；跨 Dimension 測試會跟隨目標進入 Nether 的最新安全落點。
+  - 成功傳送的成本只扣除一次，完成後額外 Server ticks 不得再次扣款。
 - [x] 4.5 Java 25 build 與 Dedicated Server 啟動／Mixin 套用煙霧測試通過。
-- [ ] 4.6 兩名以上真實玩家的多人回歸測試，包括解除好友、離線、死亡與切維度。
+- [x] 4.6 兩名以上真實玩家的多人回歸測試，包括解除好友、離線、死亡與切維度。
+  - 解除好友同一呼叫內移除雙方向 session，且保留第三名玩家的無關 session。
+  - 目標死亡或從 `PlayerList` 離線後，下一次 authoritative session tick 取消且不扣成本。
+  - 目標在倒數期間切換 Dimension 後，完成階段重新解析其最新 Dimension、位置與安全落點。

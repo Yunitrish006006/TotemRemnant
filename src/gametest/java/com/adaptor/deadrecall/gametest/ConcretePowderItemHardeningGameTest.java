@@ -17,9 +17,13 @@ import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.saveddata.WeatherData;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public final class ConcretePowderItemHardeningGameTest {
     private static final BlockPos ITEM_POS = new BlockPos(2, 2, 2);
     private static final Component TEST_NAME = Component.literal("DeadRecall concrete powder GameTest");
+    private static final int STRESS_ENTITY_COUNT = 512;
 
     @GameTest(maxTicks = 40)
     public void sourceWaterHardensAndPreservesEntityState(GameTestHelper helper) {
@@ -123,6 +127,47 @@ public final class ConcretePowderItemHardeningGameTest {
             } finally {
                 setWeather(weather, false);
             }
+        });
+    }
+
+    @GameTest(maxTicks = 80)
+    public void largeItemEntityBatchHardensWithoutReplacingOrScanning(GameTestHelper helper) {
+        helper.setBlock(ITEM_POS.below(), Blocks.STONE);
+        helper.setBlock(ITEM_POS, Blocks.WATER);
+
+        List<ItemEntity> entities = new ArrayList<>(STRESS_ENTITY_COUNT);
+        for (int index = 0; index < STRESS_ENTITY_COUNT; index++) {
+            boolean supportedPowder = index % 2 == 0;
+            ItemStack stack = new ItemStack(item(supportedPowder ? "red_concrete_powder" : "stone"));
+            stack.set(DataComponents.CUSTOM_NAME, Component.literal("DeadRecall concrete stress " + index));
+
+            ItemEntity entity = spawn(helper, ITEM_POS, stack, Vec3.ZERO);
+            entity.setNoGravity(true);
+            entities.add(entity);
+        }
+
+        helper.runAtTickTime(10, () -> {
+            require(helper, entities.size() == STRESS_ENTITY_COUNT, "Stress fixture did not retain every tracked ItemEntity");
+            for (int index = 0; index < entities.size(); index++) {
+                ItemEntity entity = entities.get(index);
+                boolean supportedPowder = index % 2 == 0;
+
+                require(helper, entity.isAlive(), "Stress ItemEntity was discarded at index " + index);
+                require(
+                        helper,
+                        helper.getLevel().getEntity(entity.getId()) == entity,
+                        "Stress hardening replaced ItemEntity identity at index " + index
+                );
+                require(
+                        helper,
+                        entity.getItem().is(item(supportedPowder ? "red_concrete" : "stone")),
+                        supportedPowder
+                                ? "Stress powder did not harden at index " + index
+                                : "Stress non-powder item changed at index " + index
+                );
+                require(helper, entity.getItem().getCount() == 1, "Stress conversion changed count at index " + index);
+            }
+            helper.succeed();
         });
     }
 

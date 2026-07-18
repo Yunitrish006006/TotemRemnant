@@ -101,6 +101,8 @@ ItemEntity tick
 - 不使用 `ServerLevel#getEntities` 全量查詢。
 - 不載入未載入區塊。
 
+自動壓力回歸在同一個水中 fixture 建立 512 個帶不同自訂名稱、因此不可合併的 ItemEntity：一半為支援粉末、一半為普通物品。測試要求 10 tick 內完成，且每個粉末都在原實體上轉換、普通物品保持不變。這是偵測明顯退化與錯誤全量掃描的 deterministic regression，不以易受 CI 主機負載影響的 wall-clock 門檻充當 microbenchmark。
+
 若實際 profile 顯示每 tick fluid 判定成本過高，可在保持行為一致的前提下降低檢查頻率，但第一版不應加入會造成長時間延遲的節流。
 
 ## 8. Effects

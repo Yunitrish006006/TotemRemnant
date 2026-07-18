@@ -1,6 +1,6 @@
 package com.adaptor.deadrecall.mixin;
 
-import com.adaptor.deadrecall.DiscordBridge;
+import com.adaptor.deadrecall.discord.DiscordEventNotifications;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.advancements.DisplayInfo;
@@ -37,9 +37,9 @@ public abstract class PlayerAdvancementsMixin {
 
         advancement.value().display()
                 .filter(DisplayInfo::shouldAnnounceChat)
-                .ifPresent(display -> DiscordBridge.sendAdvancement(
+                .ifPresent(display -> DiscordEventNotifications.advancement(
                         player.getName().getString(),
-                        display.getTitle().getString(),
+                        display.getTitle(),
                         display.getType().getSerializedName()
                 ));
     }

@@ -35,6 +35,7 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.level.gamerules.GameRules;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -56,8 +57,12 @@ public final class DeathBackpackCaptureService {
     private DeathBackpackCaptureService() {
     }
 
-    /** Runs immediately before vanilla {@code Inventory.dropAll()}. */
+    /** Runs at {@code Player.dropEquipment} entry before vanilla and addon death drops. */
     public static boolean captureBeforeVanillaDrop(ServerPlayer player, ServerLevel level) {
+        if (level.getGameRules().get(GameRules.KEEP_INVENTORY)) {
+            return false;
+        }
+
         Inventory inventory = player.getInventory();
         List<TransientStack> transientStacks = collectTransientStacks(player);
         processUncapturedTransientStacks(player, inventory, transientStacks);
@@ -214,7 +219,7 @@ public final class DeathBackpackCaptureService {
         List<CapturedSlot> captured = new ArrayList<>();
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
             ItemStack stack = inventory.getItem(slot);
-            if (isCapturable(stack)) {
+            if (isCapturable(stack) && !isPreventedFromDeathDrop(stack)) {
                 captured.add(new CapturedSlot(slot, stack.copy()));
             }
         }

@@ -2,10 +2,11 @@ package com.adaptor.deadrecall.mixin.client;
 
 import com.adaptor.deadrecall.client.DeadrecallClient;
 import com.adaptor.deadrecall.network.SortBackpackPayload;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.Minecraft;
 import net.minecraft.world.inventory.Slot;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -20,15 +21,25 @@ public abstract class AbstractContainerScreenMixin {
     protected Slot hoveredSlot;
 
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
-    private void deadrecall$handleSortKey(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+    private void deadrecall$handleContainerKey(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+        AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+        boolean editingText = screen.getFocused() instanceof EditBox editBox && editBox.isFocused();
+
+        if (editingText) {
+            if (Minecraft.getInstance().options.keyInventory.matches(event)) {
+                cir.setReturnValue(true);
+            }
+            return;
+        }
+
         if (DeadrecallClient.sortBackpackKey.matches(event)) {
             SortBackpackPayload.Target target = DeadrecallClient.resolveSortTarget(
-                    (AbstractContainerScreen<?>) (Object) this,
+                    screen,
                     this.hoveredSlot,
                     Minecraft.getInstance()
             );
             if (target != null) {
-                DeadrecallClient.requestContainerSort(net.minecraft.client.Minecraft.getInstance(), target);
+                DeadrecallClient.requestContainerSort(Minecraft.getInstance(), target);
                 cir.setReturnValue(true);
             }
         }
@@ -43,7 +54,7 @@ public abstract class AbstractContainerScreenMixin {
                     Minecraft.getInstance()
             );
             if (target != null) {
-                DeadrecallClient.requestContainerSort(net.minecraft.client.Minecraft.getInstance(), target);
+                DeadrecallClient.requestContainerSort(Minecraft.getInstance(), target);
                 cir.setReturnValue(true);
             }
         }

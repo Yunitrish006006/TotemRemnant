@@ -7,6 +7,7 @@ import com.adaptor.deadrecall.space.SpaceUnitRecord;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -38,13 +39,14 @@ public abstract class SpaceUnitHandlerCatalystMixin {
         return AmethystCatalystDiscount.quoteForEndpoints(
                 baseCost,
                 sourceLodestone,
-                deadrecall$storedCatalystBlocks(units, sourceAccessor.deadrecall$getId()),
+                deadrecall$quoteCatalystBlocks(units, sourceAccessor.deadrecall$getId()),
                 targetLodestone,
-                deadrecall$storedCatalystBlocks(units, targetAccessor.deadrecall$getId())
+                deadrecall$quoteCatalystBlocks(units, targetAccessor.deadrecall$getId())
         ).finalCost();
     }
 
-    private static int deadrecall$storedCatalystBlocks(
+    @Unique
+    private static int deadrecall$quoteCatalystBlocks(
             DeadRecallSpaceUnitSavedData units,
             java.util.UUID unitId
     ) {

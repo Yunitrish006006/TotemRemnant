@@ -102,6 +102,50 @@ public final class BackpackMenuNestingInteractionGameTest {
         helper.succeed();
     }
 
+    @SuppressWarnings("removal")
+    @GameTest(maxTicks = 20)
+    public void sameTickMultiplayerInsertionRacePreservesBothPortableContainers(GameTestHelper helper) {
+        ServerPlayer first = helper.makeMockServerPlayerInLevel();
+        ServerPlayer second = helper.makeMockServerPlayerInLevel();
+        try {
+            BackpackInventory firstStorage = openBackpack(first, 3);
+            BackpackInventory secondStorage = openBackpack(second, 4);
+            first.getInventory().setItem(1, new ItemStack(Items.BUNDLE));
+            second.getInventory().setItem(2, new ItemStack(Items.SHULKER_BOX));
+
+            first.containerMenu.clicked(0, 1, ContainerInput.SWAP, first);
+            second.containerMenu.clicked(0, 2, ContainerInput.SWAP, second);
+
+            require(helper, first.getInventory().getItem(1).is(Items.BUNDLE),
+                    "First player's same-tick insertion lost the Bundle");
+            require(helper, second.getInventory().getItem(2).is(Items.SHULKER_BOX),
+                    "Second player's same-tick insertion lost the Shulker Box");
+            require(helper, firstStorage.isEmpty() && secondStorage.isEmpty(),
+                    "Same-tick multiplayer operations inserted a portable container into a backpack");
+            helper.succeed();
+        } finally {
+            first.discard();
+            second.discard();
+        }
+    }
+
+    private static BackpackInventory openBackpack(ServerPlayer player, int containerId) {
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.BACKPACK_BASIC));
+        BackpackInventory storage = new BackpackInventory(
+                player,
+                InteractionHand.MAIN_HAND,
+                TieredBackpackItem.BackpackTier.BASIC
+        );
+        player.containerMenu = new BackpackMenu(
+                MenuType.GENERIC_9x1,
+                containerId,
+                player.getInventory(),
+                storage,
+                1
+        );
+        return storage;
+    }
+
     private static int playerMenuSlot(
             BackpackMenu menu,
             ServerPlayer player,

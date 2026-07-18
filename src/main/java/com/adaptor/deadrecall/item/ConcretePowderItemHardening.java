@@ -49,17 +49,21 @@ public final class ConcretePowderItemHardening {
     }
 
     public static boolean tryHarden(ItemEntity itemEntity) {
-        if (!(itemEntity.level() instanceof ServerLevel) || !itemEntity.isInWater()) {
+        if (!(itemEntity.level() instanceof ServerLevel)) {
             return false;
         }
 
         ItemStack current = itemEntity.getItem();
-        ItemStack hardened = harden(current);
-        if (hardened == current) {
+        if (current.isEmpty()) {
             return false;
         }
 
-        itemEntity.setItem(hardened);
+        Item hardenedItem = hardenedItem(current.getItem());
+        if (hardenedItem == null || !itemEntity.isInWater()) {
+            return false;
+        }
+
+        itemEntity.setItem(current.transmuteCopy(hardenedItem, current.getCount()));
         return true;
     }
 

@@ -8,6 +8,7 @@ import com.adaptor.deadrecall.network.StartSpaceUnitTeleportPayload;
 import com.adaptor.deadrecall.network.ToggleSpaceUnitFavoritePayload;
 import com.adaptor.deadrecall.network.UpdateSpaceUnitAccessPayload;
 import com.adaptor.deadrecall.network.UpdateSpaceUnitVisibilityPayload;
+import com.adaptor.deadrecall.space.TeleportInterfaceType;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -223,8 +224,18 @@ public class SpaceUnitMapScreen extends Screen {
         extractor.text(this.font, this.title, panelX + PANEL_PADDING, panelY + 9, 0xFFFFFFFF);
         int summaryX = panelX + PANEL_PADDING + 150;
         int summaryWidth = Math.max(0, friendsButtonX() - summaryX - 8);
-        if (summaryWidth > 8) {
-            extractor.text(this.font, trimToWidth(sourceSummary(), summaryWidth), summaryX, panelY + 9, 0xFFB8C0C8);
+        if (summaryWidth > 26) {
+            extractor.item(interfaceIcon(), summaryX, panelY + 1);
+            if (isInside(mouseX, mouseY, summaryX, panelY + 1, 16, 16)) {
+                extractor.setTooltipForNextFrame(interfaceTooltip(), mouseX, mouseY);
+            }
+            extractor.text(
+                    this.font,
+                    trimToWidth(sourceSummary(), summaryWidth - 18),
+                    summaryX + 18,
+                    panelY + 9,
+                    0xFFB8C0C8
+            );
         }
 
         drawDimensionTabs(extractor, mouseX, mouseY);
@@ -589,7 +600,8 @@ public class SpaceUnitMapScreen extends Screen {
         if (!selected.canTeleport() && selected.blockedReason() != null && !selected.blockedReason().isBlank()) {
             extractor.text(this.font, trimToWidth(Component.translatable(selected.blockedReason()).getString(), width), x, y + 30, 0xFFFFD166);
         } else {
-            extractor.text(this.font, trimToWidth(managementSummary(selected), width), x, y + 30, 0xFF93A4B5);
+            extractor.text(this.font, trimToWidth(interfaceFooterSummary(selected), width), x, y + 30,
+                    selected.interfaceBonusActive() ? 0xFF8BD9A0 : 0xFF93A4B5);
         }
     }
 
@@ -608,8 +620,15 @@ public class SpaceUnitMapScreen extends Screen {
                         Component.translatable("message.deadrecall.space_unit.metric.distance", distanceText(entry))),
                 new QuoteMetric(
                         new ItemStack(Items.GOLDEN_CARROT),
-                        Integer.toString(entry.saturationCost()),
-                        Component.translatable("message.deadrecall.space_unit.metric.saturation", entry.saturationCost())),
+                        comparisonValue(entry.baseFoodCost(), entry.finalFoodCost()),
+                        Component.translatable(
+                                "message.deadrecall.space_unit.metric.food_quote",
+                                entry.baseFoodCost(),
+                                entry.finalFoodCost(),
+                                entry.saturationCost(),
+                                entry.hungerCost(),
+                                entry.foodPointsNeeded(),
+                                entry.safeFoodPointsAvailable())),
                 new QuoteMetric(
                         new ItemStack(Items.COOKED_BEEF),
                         Integer.toString(entry.hungerCost()),
@@ -626,8 +645,11 @@ public class SpaceUnitMapScreen extends Screen {
                                 entry.amethystCost(), entry.amethystAvailable())),
                 new QuoteMetric(
                         new ItemStack(Items.CLOCK),
-                        Integer.toString(seconds(entry.prepareTicks())),
-                        Component.translatable("message.deadrecall.space_unit.metric.time", seconds(entry.prepareTicks()))),
+                        comparisonValue(seconds(entry.basePrepareTicks()), seconds(entry.prepareTicks())),
+                        Component.translatable(
+                                "message.deadrecall.space_unit.metric.time_quote",
+                                seconds(entry.basePrepareTicks()),
+                                seconds(entry.prepareTicks()))),
                 new QuoteMetric(
                         new ItemStack(Items.COMPASS),
                         Long.toString(Math.round(entry.resonance() * 100.0D)),
@@ -635,12 +657,22 @@ public class SpaceUnitMapScreen extends Screen {
                                 Math.round(entry.resonance() * 100.0D))),
                 new QuoteMetric(
                         new ItemStack(Items.ENDER_PEARL),
-                        Integer.toString(entry.maxHorizontalDeviation()),
-                        Component.translatable("message.deadrecall.space_unit.metric.drift", entry.maxHorizontalDeviation())),
+                        comparisonValue(
+                                entry.baseMaxHorizontalDeviation(),
+                                entry.maxHorizontalDeviation()),
+                        Component.translatable(
+                                "message.deadrecall.space_unit.metric.drift_quote",
+                                entry.baseMaxHorizontalDeviation(),
+                                entry.maxHorizontalDeviation())),
                 new QuoteMetric(
                         new ItemStack(Items.CRACKED_STONE_BRICKS),
-                        entry.damageChancePercent() + "%",
-                        Component.translatable("message.deadrecall.space_unit.metric.wear", entry.damageChancePercent()))
+                        comparisonPercentValue(
+                                entry.baseStructureWearChancePercent(),
+                                entry.structureWearChancePercent()),
+                        Component.translatable(
+                                "message.deadrecall.space_unit.metric.wear_quote",
+                                entry.baseStructureWearChancePercent(),
+                                entry.structureWearChancePercent()))
         );
 
         int cursorX = x;
@@ -901,8 +933,41 @@ public class SpaceUnitMapScreen extends Screen {
     }
 
     private String sourceSummary() {
-        return Component.translatable("message.deadrecall.space_unit.map_source_summary",
-                this.payload.sourceName(), this.payload.entries().size()).getString();
+        return Component.translatable(
+                "message.deadrecall.space_unit.interface_source_summary",
+                Component.translatable(interfaceNameKey()),
+                this.payload.sourceName(),
+                this.payload.entries().size()
+        ).getString();
+    }
+
+    private ItemStack interfaceIcon() {
+        return new ItemStack(switch (this.payload.interfaceType()) {
+            case COMPASS -> Items.COMPASS;
+            case RECOVERY_COMPASS -> Items.RECOVERY_COMPASS;
+            case BOOK -> Items.BOOK;
+            case FILLED_MAP -> Items.FILLED_MAP;
+        });
+    }
+
+    private Component interfaceTooltip() {
+        SpaceUnitMapPayload.Entry selected = selectedEntry();
+        return selected == null
+                ? Component.translatable(interfaceNameKey())
+                : Component.translatable(selected.interfaceBonusMessageKey());
+    }
+
+    private String interfaceNameKey() {
+        return "message.deadrecall.space_unit.interface_name." + this.payload.interfaceType().id();
+    }
+
+    private boolean hasCompassCapabilities() {
+        return this.payload.interfaceType() == TeleportInterfaceType.COMPASS;
+    }
+
+    private String interfaceFooterSummary(SpaceUnitMapPayload.Entry entry) {
+        String bonus = Component.translatable(entry.interfaceBonusMessageKey()).getString();
+        return hasCompassCapabilities() ? bonus + " | " + managementSummary(entry) : bonus;
     }
 
     private String entrySummary(SpaceUnitMapPayload.Entry entry) {
@@ -955,7 +1020,19 @@ public class SpaceUnitMapScreen extends Screen {
     }
 
     private static int totalFoodCost(SpaceUnitMapPayload.Entry entry) {
-        return entry.saturationCost() + entry.hungerCost() + entry.foodPointsNeeded();
+        return entry.finalFoodCost();
+    }
+
+    private static String comparisonValue(int baseValue, int finalValue) {
+        return baseValue == finalValue
+                ? Integer.toString(finalValue)
+                : baseValue + "→" + finalValue;
+    }
+
+    private static String comparisonPercentValue(int baseValue, int finalValue) {
+        return baseValue == finalValue
+                ? finalValue + "%"
+                : baseValue + "%→" + finalValue + "%";
     }
 
     private static int seconds(int ticks) {
@@ -1054,6 +1131,8 @@ public class SpaceUnitMapScreen extends Screen {
             this.friendsButton.setX(friendsButtonX());
             this.friendsButton.setY(friendsButtonY());
             this.friendsButton.setWidth(friendsButtonWidth());
+            this.friendsButton.visible = hasCompassCapabilities();
+            this.friendsButton.active = this.friendsButton.visible;
         }
         if (this.favoriteButton != null) {
             this.favoriteButton.setX(favoriteButtonX());
@@ -1067,7 +1146,10 @@ public class SpaceUnitMapScreen extends Screen {
             this.visibilityButton.setY(visibilityButtonY());
             this.visibilityButton.setWidth(visibilityButtonWidth());
             SpaceUnitMapPayload.Entry selected = selectedEntry();
-            this.visibilityButton.active = selected != null && canChangeVisibility(selected);
+            this.visibilityButton.visible = hasCompassCapabilities();
+            this.visibilityButton.active = this.visibilityButton.visible
+                    && selected != null
+                    && canChangeVisibility(selected);
         }
         updateControlMessages();
         if (this.adminButton != null) {
@@ -1103,7 +1185,10 @@ public class SpaceUnitMapScreen extends Screen {
             this.calibrateButton.setY(y);
             this.calibrateButton.setWidth(FOOTER_BUTTON_WIDTH);
             SpaceUnitMapPayload.Entry selected = selectedEntry();
-            this.calibrateButton.active = selected != null && canCalibrate(selected);
+            this.calibrateButton.visible = hasCompassCapabilities();
+            this.calibrateButton.active = this.calibrateButton.visible
+                    && selected != null
+                    && canCalibrate(selected);
         }
         if (this.teleportButton != null) {
             this.teleportButton.setX(teleportButtonX());
@@ -1363,11 +1448,15 @@ public class SpaceUnitMapScreen extends Screen {
         if (this.renameButton != null && this.renameButton.visible) {
             return renameButtonX();
         }
-        return calibrateButtonX();
+        if (this.calibrateButton != null && this.calibrateButton.visible) {
+            return calibrateButtonX();
+        }
+        return teleportButtonX();
     }
 
     private boolean canCalibrate(SpaceUnitMapPayload.Entry entry) {
-        return entry.manageable()
+        return hasCompassCapabilities()
+                && entry.manageable()
                 && "lodestone".equals(entry.type())
                 && entry.dimension().equals(this.payload.sourceDimension())
                 && distanceSquaredToSource(entry) <= CALIBRATION_RADIUS_BLOCKS * CALIBRATION_RADIUS_BLOCKS;

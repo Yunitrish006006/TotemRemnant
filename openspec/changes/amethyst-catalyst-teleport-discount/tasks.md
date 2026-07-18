@@ -19,17 +19,17 @@
 
 - [x] 3.1 Payload 加入 base cost、catalyst count 與 discount。
 - [x] 3.2 地圖資訊面板顯示「原始成本 - 石碑折抵 = 最終成本」。
-- [ ] 3.3 Client／Server codec 同步並加上長度與範圍限制。
+- [x] 3.3 Client／Server codec 同步並加上長度與範圍限制。
 - [x] 3.4 第一階段沿用既有 `amethystCost` 欄位回傳最終成本，避免先破壞 Client／Server codec。
 
 ## 4. Tests
 
 - [x] 4.1 0、3、4、8、12 以上催化方塊成本矩陣單元測試。
-- [ ] 4.2 玩家來源、玩家目標與死亡節點不錯誤提供折抵的整合測試。
+- [x] 4.2 玩家來源、玩家目標與死亡節點不錯誤提供折抵的整合測試。
   - [x] 4.2a 報價端點資格單元矩陣：玩家來源、玩家目標與死亡節點的儲存催化數一律正規化為 0。
-- [ ] 4.3 報價後拆除水晶，啟動或完成時成本更新的遊戲內測試。
-- [ ] 4.4 舊世界 snapshot 實際載入 migration 測試。
+- [x] 4.3 報價後拆除水晶，啟動或完成時成本更新的遊戲內測試。
+- [x] 4.4 舊世界 snapshot 實際載入 migration 測試。
   - [x] 4.4a 使用 legacy JSON 經正式 `SpaceStructureSnapshot.CODEC` 載入，確認缺少催化欄位時預設為 0。
 - [x] 4.5 Java 25 `./gradlew build` 通過。
 - [x] 4.6 Dedicated Server 成功啟動到 `Done`，催化相關 Mixin 設定沒有啟動期錯誤。
-- [ ] 4.7 實際跨維度報價、扣款與兩端催化方塊整合測試。
+- [x] 4.7 實際跨維度報價、扣款與兩端催化方塊整合測試。

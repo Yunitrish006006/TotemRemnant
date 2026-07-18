@@ -41,15 +41,15 @@
 - [x] 5.4 水源、流動水、非接觸水與雨天 Server GameTest。
 - [x] 5.5 同一 ItemEntity identity、age、位置範圍、速度與 pickup delay GameTest。
 - [x] 5.6 Dedicated Server 可成功啟動到 `Done`，`ItemEntityMixin` 沒有啟動期套用錯誤。
-- [x] 5.7 Fabric Loom `gametest` source set、測試模組 entrypoint 與 `runGameTest` 已接入 `build`；5 個 required tests 全部通過。
+- [x] 5.7 Fabric Loom `gametest` source set、測試模組 entrypoint 與 `runGameTest` 已接入 `build`；6 個 required tests 全部通過。
 - [ ] 5.8 兩名以上真實玩家同時將物品丟入水流的多人測試。
-- [ ] 5.9 大量 ItemEntity 壓力測試，確認沒有全世界 entity 掃描及明顯 tick 延遲。
+- [x] 5.9 512 個不可合併 ItemEntity（256 個粉末、256 個非粉末）壓力 GameTest 在 10 tick 內完成，驗證同一實體 identity、正確轉換／短路；實作只由單一 ItemEntity tick 呼叫，不使用世界 entity 查詢。
 
 ## 6. Documentation and release
 
 - [x] 6.1 更新玩家功能文件。
-- [ ] 6.2 更新 changelog／版本變更清單。
+- [x] 6.2 更新 changelog／版本變更清單，記錄 16 色轉換、資料保存與 512 實體壓力回歸。
 - [x] 6.3 記錄水鍋不在第一版範圍內。
 - [x] 6.4 執行 `./gradlew build`；Java 25 CI、JUnit 與 Server GameTests 通過。
-- [x] 6.5 執行 Dedicated Server 與 Fabric GameTest 回歸；只剩真人多人與大量實體壓力測試。
+- [x] 6.5 執行 Dedicated Server 與 Fabric GameTest 回歸；大量實體壓力測試已自動化，只剩真人多人驗收。
 - [x] 6.6 將自動驗證結果與剩餘風險同步到 `openspec/roadmap.md`。

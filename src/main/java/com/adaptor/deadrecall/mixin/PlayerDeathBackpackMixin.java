@@ -13,10 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class PlayerDeathBackpackMixin {
     @Inject(
             method = "dropEquipment",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/world/entity/player/Inventory;dropAll()V"
-            )
+            at = @At("HEAD")
     )
     private void deadrecall$captureInventoryBeforeVanillaDeathDrops(ServerLevel level, CallbackInfo ci) {
         Player self = (Player) (Object) this;

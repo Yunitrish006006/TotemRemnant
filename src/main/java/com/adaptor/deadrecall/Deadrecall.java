@@ -7,6 +7,8 @@ import com.adaptor.deadrecall.advancement.ModCriteriaTriggers;
 import com.adaptor.deadrecall.block.ModBlocks;
 import com.adaptor.deadrecall.block.entity.ModBlockEntities;
 import com.adaptor.deadrecall.effect.ModMobEffects;
+import com.adaptor.deadrecall.discord.DiscordEventNotifications;
+import com.adaptor.deadrecall.discord.DiscordLocalizationService;
 import com.adaptor.deadrecall.item.ModItemGroups;
 import com.adaptor.deadrecall.item.ModItems;
 import com.adaptor.deadrecall.item.copper.CopperGolemLlmService;
@@ -120,6 +122,7 @@ public class Deadrecall implements ModInitializer {
         ModRecipes.registerModRecipes();
 
         // 初始化 Discord 橋接
+        DiscordLocalizationService.registerReloadListener();
         DiscordBridge.init(FabricLoader.getInstance().getConfigDir());
 
         // 註冊自定義封包
@@ -435,12 +438,13 @@ public class Deadrecall implements ModInitializer {
         // 註冊死亡背包功能 - 當玩家死亡時收集掉落物品
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
             if (entity instanceof ServerPlayer player) {
-                DiscordBridge.sendDeathMessage(damageSource.getLocalizedDeathMessage(player).getString());
+                DiscordEventNotifications.death(damageSource.getLocalizedDeathMessage(player));
                 DeathLocationManager.setDeathLocation(player, player.blockPosition(), player.level());
-            } else if (entity instanceof EnderDragon) {
-                DiscordBridge.sendBossDefeated("終界龍", damageSourcePlayerName(damageSource.getEntity()));
-            } else if (entity instanceof WitherBoss) {
-                DiscordBridge.sendBossDefeated("凋零", damageSourcePlayerName(damageSource.getEntity()));
+            } else if (entity instanceof EnderDragon || entity instanceof WitherBoss) {
+                DiscordEventNotifications.bossDefeated(
+                        entity.getDisplayName(),
+                        damageSourcePlayerName(damageSource.getEntity())
+                );
             } else if (entity instanceof net.minecraft.world.entity.animal.golem.CopperGolem golem) {
                 CopperGolemWrenchHandler.dropGatheringInventory(golem);
             }

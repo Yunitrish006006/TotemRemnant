@@ -12,10 +12,10 @@
 
 ## Proposed change
 
-在 Minecraft 26.2 的 `Player.dropEquipment(ServerLevel)` 中，於原版 `Inventory.dropAll()` 執行前直接讀取玩家權威 Inventory：
+在 Minecraft 26.2 的 `Player.dropEquipment(ServerLevel)` 入口、任何原版／addon equipment drop 與 `Inventory.dropAll()` 執行前，直接讀取玩家權威 Inventory：
 
-1. 原版先處理 `keepInventory` 與消失詛咒。
-2. DeadRecall 建立不可變的槽位快照。
+1. DeadRecall 先檢查 `keepInventory`，啟用時不開始 transaction。
+2. DeadRecall 建立不可變的槽位快照，並排除具有防掉落／消失效果的 stack。
 3. 排除所有 DeadRecall 背包，避免背包巢狀；排除物仍交給原版掉落。
 4. 從快照建立死亡背包 ItemStack 與死亡 Space Unit 節點。
 5. 成功生成並綁定死亡背包後提交交易。
@@ -28,8 +28,8 @@
 
 ## Compatibility
 
-- `keepInventory=true` 時不觸發，因為原版不會到達 `Inventory.dropAll()` 呼叫點。
-- 消失詛咒維持原版先銷毀的行為。
+- `keepInventory=true` 時由 capture service 在入口明確跳過。
+- 消失詛咒 stack 不進入 transaction，並由接續的原版死亡流程銷毀。
 - 所有 DeadRecall 背包維持世界掉落，不放進新死亡背包。
 - 舊 pre-death UUID 掃描與 post-drop nearby collector 已由相容 Mixin 從執行路徑停用。
 - 直接擷取失敗時，玩家物品回到原版世界掉落，不建立 fallback 死亡背包。

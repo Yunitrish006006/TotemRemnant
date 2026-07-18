@@ -1,5 +1,6 @@
 package com.adaptor.deadrecall;
 
+import com.adaptor.deadrecall.discord.DiscordEventNotifications;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -358,9 +359,8 @@ public class DiscordBridge {
      * 通知玩家死亡訊息到 Discord（非同步）
      */
     public static void sendDeathMessage(String deathMessage) {
-        if (!enabled || deathMessage == null || deathMessage.isBlank()) return;
-
-        sendMinecraftEvent("player_death", "死亡訊息", deathMessage.trim());
+        if (deathMessage == null || deathMessage.isBlank()) return;
+        DiscordEventNotifications.death(net.minecraft.network.chat.Component.literal(deathMessage.trim()));
     }
 
     /**
@@ -440,10 +440,10 @@ public class DiscordBridge {
     public static void sendBossDefeated(String bossName, String killerName) {
         String boss = normalizeText(bossName);
         if (boss.isEmpty()) return;
-
-        String killer = normalizePlayerName(killerName);
-        String message = killer.isEmpty() ? boss + " 被擊敗了" : killer + " 擊敗了 " + boss;
-        sendMinecraftEvent("boss_defeated", killer.isEmpty() ? "系統" : killer, message);
+        DiscordEventNotifications.bossDefeated(
+                net.minecraft.network.chat.Component.literal(boss),
+                killerName
+        );
     }
 
     public static void sendRaidStarted(String playerName) {
@@ -461,9 +461,7 @@ public class DiscordBridge {
     }
 
     public static void sendRaidEnded(String result) {
-        String normalizedResult = normalizeText(result);
-        String message = normalizedResult.isEmpty() ? "襲擊已結束" : "襲擊已結束：" + normalizedResult;
-        sendMinecraftEvent("raid_ended", "系統", message);
+        DiscordEventNotifications.raidEnded(result);
     }
 
     public static synchronized void sendRaidEnded(String raidKey, String result) {
@@ -475,11 +473,8 @@ public class DiscordBridge {
     }
 
     public static void sendDifficultyChanged(String actor, String difficulty) {
-        String value = normalizeText(difficulty);
-        if (value.isEmpty()) return;
-
-        String source = normalizeActor(actor);
-        sendMinecraftEvent("difficulty_changed", source, source + " 將難度改為 " + value);
+        if (normalizeText(difficulty).isEmpty()) return;
+        DiscordEventNotifications.difficultyChanged(actor, difficulty);
     }
 
     public static void sendGameruleChanged(String actor, String rule, String value) {

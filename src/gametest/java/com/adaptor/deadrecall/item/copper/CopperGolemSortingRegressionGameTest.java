@@ -149,7 +149,9 @@ public final class CopperGolemSortingRegressionGameTest {
         helper.setBlock(SOURCE_POS, Blocks.CHEST);
         helper.setBlock(DESTINATION_POS, Blocks.CHEST);
         Container source = containerAt(helper, SOURCE_POS);
+        Container destination = containerAt(helper, DESTINATION_POS);
         source.setItem(0, new ItemStack(Items.EMERALD, 32));
+        destination.setItem(0, new ItemStack(Items.EMERALD));
 
         CopperGolem golem = createGolem(helper, GOLEM_POS);
         try {

@@ -1338,7 +1338,12 @@ public final class CopperGolemWrenchHandler {
         }
 
         if (getGatheringToolStack(golem).isEmpty()) {
-            return CopperGolemActivity.BLOCKED_NO_TOOL;
+            CopperGolemActivity stored = CopperGolemActivity.fromId(
+                    getEntityCustomDataTag(golem).getStringOr(TAG_ACTIVITY, "")
+            );
+            return stored == CopperGolemActivity.BLOCKED_TOOL_BROKEN
+                    ? stored
+                    : CopperGolemActivity.BLOCKED_NO_TOOL;
         }
 
         if (!hasFuelAvailable(golem, level)) {
@@ -1398,7 +1403,12 @@ public final class CopperGolemWrenchHandler {
         }
 
         if (getGatheringToolStack(golem).isEmpty()) {
-            setActivity(golem, CopperGolemActivity.BLOCKED_NO_TOOL);
+            CopperGolemActivity stored = CopperGolemActivity.fromId(
+                    getEntityCustomDataTag(golem).getStringOr(TAG_ACTIVITY, "")
+            );
+            setActivity(golem, stored == CopperGolemActivity.BLOCKED_TOOL_BROKEN
+                    ? stored
+                    : CopperGolemActivity.BLOCKED_NO_TOOL);
             stopGatheringNavigation(golem);
             clearGatheringDisplayedItem(golem);
             return;
@@ -3463,55 +3473,15 @@ public final class CopperGolemWrenchHandler {
         }
 
         int sourceSlot = Math.max(0, Math.min(rememberedSlot, container.getContainerSize() - 1));
-        ItemStack returning = carried.copy();
-        returning = absorbSourceRemainder(container, sourceSlot, returning);
-
-        ItemStack remaining = insertIntoRangeBackToFront(container, returning, sourceSlot + 1, container.getContainerSize() - 1);
-        if (remaining.isEmpty()) {
-            return ItemStack.EMPTY;
-        }
-
-        if (container.getItem(sourceSlot).isEmpty()) {
-            if (sourceSlot < container.getContainerSize() - 1 && container.canPlaceItem(container.getContainerSize() - 1, remaining)) {
-                shiftRangeLeft(container, sourceSlot, container.getContainerSize() - 1);
-                container.setItem(container.getContainerSize() - 1, remaining.copy());
-                return ItemStack.EMPTY;
-            }
-
-            if (container.canPlaceItem(sourceSlot, remaining)) {
-                container.setItem(sourceSlot, remaining.copy());
-                return ItemStack.EMPTY;
-            }
-        }
-
-        return remaining;
-    }
-
-    private static ItemStack absorbSourceRemainder(Container container, int sourceSlot, ItemStack returning) {
-        ItemStack sourceStack = container.getItem(sourceSlot);
-        if (sourceStack.isEmpty()
-                || !ItemStack.isSameItemSameComponents(sourceStack, returning)
-                || !container.canPlaceItem(sourceSlot, returning)) {
-            return returning;
-        }
-
-        ItemStack combined = returning.copy();
-        int maxStackSize = Math.min(sourceStack.getMaxStackSize(), container.getMaxStackSize(combined));
-        int moveCount = Math.min(sourceStack.getCount(), maxStackSize - combined.getCount());
-        if (moveCount <= 0) {
-            return combined;
-        }
-
-        combined.grow(moveCount);
-        sourceStack.shrink(moveCount);
-        container.setItem(sourceSlot, sourceStack.isEmpty() ? ItemStack.EMPTY : sourceStack);
-        return combined;
-    }
-
-    private static void shiftRangeLeft(Container container, int emptySlot, int lastSlot) {
-        for (int slot = emptySlot; slot < lastSlot; slot++) {
-            container.setItem(slot, container.getItem(slot + 1).copy());
-        }
+        ItemStack remaining = carried.copy();
+        mergeIntoSlot(container, sourceSlot, remaining);
+        placeIntoEmptySlot(container, sourceSlot, remaining);
+        return insertIntoRangeBackToFront(
+                container,
+                remaining,
+                sourceSlot + 1,
+                container.getContainerSize() - 1
+        );
     }
 
     private static void mergeIntoSlot(Container container, int slot, ItemStack remaining) {

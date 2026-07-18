@@ -2,7 +2,7 @@
 
 ## 1. Specification and API verification
 
-- [x] 1.1 確認 Minecraft 26.2 `Player.dropEquipment(ServerLevel)` 在 `keepInventory=false` 且消失詛咒處理後呼叫 `Inventory.dropAll()`。
+- [x] 1.1 確認 Minecraft 26.2 `Player.dropEquipment(ServerLevel)` 的 superclass／addon equipment drops 早於 `Inventory.dropAll()`，因此 authoritative addon capture 必須位於 method entry。
 - [x] 1.2 定義第一階段擷取範圍為原版 Inventory 與 Equipment slots。
 - [x] 1.3 定義所有 DeadRecall 背包排除並交由原版掉落。
 - [x] 1.4 確認 active menu 游標 stack、玩家 2×2 crafting slots 與外部持久容器槽位的死亡語意。
@@ -15,7 +15,7 @@
 ## 2. Direct capture implementation
 
 - [x] 2.1 新增 `DeathBackpackCaptureService` 與不可變 CapturedSlot 快照。
-- [x] 2.2 在 `Inventory.dropAll()` 前執行 Server-side 直接擷取。
+- [x] 2.2 在 `Player.dropEquipment(ServerLevel)` 入口、原版／addon equipment drops 與 `Inventory.dropAll()` 前執行 Server-side 直接擷取。
 - [x] 2.3 使用 stack copy 寫入 `DataComponents.CONTAINER`，不經世界 ItemEntity 回收。
 - [x] 2.4 保留死亡背包唯一 ID、死亡節點 binding、拾取延遲與 unlimited lifetime。
 - [x] 2.5 成功後只讓原版掉落排除的背包類物品。

@@ -116,3 +116,11 @@
 - **WHEN** 更新入口執行
 - **THEN** 系統 SHALL 在常數時間映射檢查後返回
 - **AND** SHALL NOT 執行全世界 entity 查詢
+
+#### Scenario: Large mixed ItemEntity batch
+
+- **GIVEN** 同一個已載入區域中有 512 個不可合併的 ItemEntity，且支援粉末與非粉末各半
+- **WHEN** Server 更新這批實體
+- **THEN** 支援粉末 SHALL 在原 ItemEntity 上硬化
+- **AND** 非粉末 SHALL 保持不變
+- **AND** 回歸測試 SHALL 在 10 個 server tick 內完成

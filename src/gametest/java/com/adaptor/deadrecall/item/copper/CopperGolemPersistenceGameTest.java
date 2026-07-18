@@ -10,11 +10,14 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.animal.golem.CopperGolem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -59,12 +62,20 @@ public final class CopperGolemPersistenceGameTest {
             CopperGolemData.writeEntityTag(original, customData);
             int expectedRevision = CopperGolemData.revision(original);
 
-            CompoundTag serialized = new CompoundTag();
-            invokeEntity(original, "saveWithoutId", new Class<?>[]{CompoundTag.class}, serialized);
+            TagValueOutput output = TagValueOutput.createWithContext(
+                    ProblemReporter.DISCARDING,
+                    helper.getLevel().registryAccess()
+            );
+            original.saveWithoutId(output);
+            CompoundTag serialized = output.buildResult();
             original.discard();
 
             replacement = constructGolem(helper, GOLEM_POS.offset(1, 0, 0), false);
-            invokeEntity(replacement, "load", new Class<?>[]{CompoundTag.class}, serialized);
+            replacement.load(TagValueInput.create(
+                    ProblemReporter.DISCARDING,
+                    helper.getLevel().registryAccess(),
+                    serialized
+            ));
             require(helper, helper.getLevel().addFreshEntity(replacement),
                     "Could not add the reloaded copper golem entity");
 
@@ -207,23 +218,6 @@ public final class CopperGolemPersistenceGameTest {
         } catch (ReflectiveOperationException exception) {
             throw new RuntimeException("Could not invoke CopperGolemWrenchHandler#" + name, exception);
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T> T invokeEntity(Object target, String name, Class<?>[] parameterTypes, Object... arguments) {
-        Class<?> type = target.getClass();
-        while (type != null) {
-            try {
-                Method method = type.getDeclaredMethod(name, parameterTypes);
-                method.setAccessible(true);
-                return (T) method.invoke(target, arguments);
-            } catch (NoSuchMethodException ignored) {
-                type = type.getSuperclass();
-            } catch (ReflectiveOperationException exception) {
-                throw new RuntimeException("Could not invoke entity method " + name, exception);
-            }
-        }
-        throw new IllegalStateException("Could not find entity method " + name);
     }
 
     private static void require(GameTestHelper helper, boolean condition, String message) {
