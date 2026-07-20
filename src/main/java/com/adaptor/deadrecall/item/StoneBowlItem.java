@@ -1,5 +1,6 @@
 package com.adaptor.deadrecall.item;
 
+import com.adaptor.deadrecall.registry.LegacyGameplayItemRegistration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -28,7 +29,7 @@ public class StoneBowlItem extends Item {
         if (!world.isClientSide()) {
             Player player = context.getPlayer();
             ItemStack inHand = context.getItemInHand();
-            ItemStack sulfurBowl = new ItemStack(ModItems.SULFUR_BOWL);
+            ItemStack sulfurBowl = new ItemStack(LegacyGameplayItemRegistration.SULFUR_BOWL);
 
             world.removeBlock(pos, false);
 

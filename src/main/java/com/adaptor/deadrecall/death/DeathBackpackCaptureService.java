@@ -6,7 +6,7 @@ import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryProvider;
 import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryRegistry;
 import com.adaptor.deadrecall.api.death.DeathBackpackAddonSlot;
 import com.adaptor.deadrecall.inventory.PortableContainerPolicy;
-import com.adaptor.deadrecall.item.ModItems;
+import com.adaptor.deadrecall.registry.TotemRemnantItemRegistration;
 import com.adaptor.deadrecall.space.DeadRecallSpaceDiscoverySavedData;
 import com.adaptor.deadrecall.space.DeadRecallSpaceUnitSavedData;
 import com.adaptor.deadrecall.space.SpaceUnitHandler;
@@ -360,7 +360,7 @@ public final class DeathBackpackCaptureService {
     }
 
     private static ItemStack createDeathBackpack(List<ItemStack> contents) {
-        ItemStack deathBackpack = new ItemStack(ModItems.DEATH_BACKPACK);
+        ItemStack deathBackpack = new ItemStack(TotemRemnantItemRegistration.DEATH_BACKPACK);
         CompoundTag tag = new CompoundTag();
         tag.putString(TAG_DEATH_BACKPACK_ID, UUID.randomUUID().toString());
         deathBackpack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));

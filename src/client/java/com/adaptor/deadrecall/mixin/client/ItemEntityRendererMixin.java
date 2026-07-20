@@ -1,7 +1,7 @@
 package com.adaptor.deadrecall.mixin.client;
 
 import com.adaptor.deadrecall.client.render.DeathBackpackBeamState;
-import com.adaptor.deadrecall.item.ModItems;
+import com.adaptor.deadrecall.registry.TotemRemnantItemRegistration;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -35,7 +35,7 @@ public class ItemEntityRendererMixin {
             at = @At("TAIL")
     )
     private void deadrecall$markDeathBackpackBeam(ItemEntity entity, ItemEntityRenderState state, float tickDelta, CallbackInfo ci) {
-        ((DeathBackpackBeamState) state).deadrecall$setDeathBackpackBeam(entity.getItem().is(ModItems.DEATH_BACKPACK));
+        ((DeathBackpackBeamState) state).deadrecall$setDeathBackpackBeam(entity.getItem().is(TotemRemnantItemRegistration.DEATH_BACKPACK));
     }
 
     @Inject(

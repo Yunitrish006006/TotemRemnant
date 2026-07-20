@@ -1,0 +1,22 @@
+{
+  "required": true,
+  "package": "com.adaptor.deadrecall.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "DeadRecallSpaceDiscoverySavedDataAccessor",
+    "DeadRecallSpaceUnitCatalystMixin",
+    "DeadRecallSpaceUnitSavedDataAccessor",
+    "ServerPlayerDistributedSpawnMixin",
+    "SpaceUnitHandlerCatalystMixin",
+    "SpaceUnitHandlerRefreshMixin",
+    "SpaceUnitMapCatalystBreakdownMixin",
+    "SpaceUnitMapSourceAccessor",
+    "SpaceUnitOfflinePlayerNameMixin",
+    "SpaceUnitTeleportSessionAccessor",
+    "SpaceUnitTeleportTargetAccessor"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

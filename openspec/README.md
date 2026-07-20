@@ -44,7 +44,10 @@ Totem Core
 - [`changes/teleport-interface-item-specializations/`](changes/teleport-interface-item-specializations/)：普通羅盤、回生羅盤、書本與已繪製地圖的傳送介面與特化規格。
 - [`changes/lectern-recipe-override/`](changes/lectern-recipe-override/)：以木半磚與書覆寫講台配方。
 - [`changes/concrete-powder-item-hardening/`](changes/concrete-powder-item-hardening/)：混凝土粉末掉落物水中硬化功能。
+- [`changes/safe-multi-repo-modularization/`](changes/safe-multi-repo-modularization/)：一次一個功能 repository、DeadRecall compatibility bundle、識別碼基線與可回滾拆分流程。
 
 ## 目前專案名稱
 
 現有 repository 與模組暫時維持 `DeadRecall`。模組化拆分完成前，不要求立即修改 mod ID、package 或儲存資料識別碼。重新命名必須提供資料 migration，避免玩家既有世界資料消失。
+
+實體拆分採多 repository 架構；`DeadRecall` 在觀察期內保留為鎖定精確模組版本的 compatibility bundle。新 repository 通過獨立安裝、bundle、舊世界、restart 與 Dedicated Server 驗證前，不得刪除原實作。

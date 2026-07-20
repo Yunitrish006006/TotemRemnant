@@ -87,12 +87,14 @@
 - 正常 Dedicated Server restart probe 基礎：死亡背包 `runRestartProbe` 與銅傀儡 `runCopperRestartProbe` 使用獨立 world、跨 JVM phase marker、entity region／SavedData reload 與失敗 artifact。
 - 混凝土粉末自動回歸：水源、非水源流動水、未接觸水、雨天、64 格數量、自訂名稱、同一 ItemEntity、age、位置、速度、pickup delay，以及 512 個不可合併 ItemEntity 壓力 fixture；6 個 required GameTests 全部通過。
 - 最新 `master` Dedicated Server 煙霧測試成功：Fabric／Mixin 初始化、1,594 個 recipe、1,699 個 advancement、三維度建立、保存與正常停止均完成。
+- Modrinth 自動發布流程：`master` 版本號變更完成 build 後上傳正式 JAR，並以 project ID／token 隔離與 SHA-512 冪等檢查防止錯誤覆蓋。
 
 ## 進行中
 
 - 離線玩家身體 OpenSpec 與實作：登出保留身體、重連接回、死亡處理與防複製。
 - OpenSpec 統一與平台架構整理。
 - DeadRecall 向 Totem 模組化架構過渡。
+- 安全多 repository 拆分 Phase 0：repository ownership、相容 identifier/resource 基線、CI 護欄與逐模組 rollback protocol 已建立；下一步先在單一 artifact 內拆 bootstrap、Payload、Mixin 與 registry ownership。
 - Nexus 進階地圖功能、石碑管理與好友權限模型。
 - 混凝土粉末掉落物硬化：Server GameTest 與 512 個 ItemEntity 壓力回歸已完成；只剩兩名以上真人玩家水流驗收。
 - 傳送介面物品特化：Phase A–D 自動化排程完成；只剩兩名以上真人 Client 的 UI、動態目標與多人驗收。
@@ -160,8 +162,8 @@
 1. 在混凝土粉末真人多人驗收平行待辦期間，實作傳送介面物品特化 Phase A–D，完成目前 Nexus 使用者介面主線。
 2. 完成真人多人可用時才能執行的混凝土粉末水流驗收。
 3. 實作 Remnant 離線玩家身體及其死亡背包、死亡節點與 Discord 整合。
-4. 抽出 Totem Core 最小共用層，再逐步建立穩定公開 API 與 migration framework。
-5. 完成 DeadRecall 向 Totem 模組化架構過渡及 addon 文件。
+4. 先在 DeadRecall 內切分 bootstrap、Payload、Mixin、registry 與 resource ownership，再抽出 Totem Core 最小共用層及穩定公開 API／migration framework。
+5. 依 Discord Bridge pilot、Remnant、Automata、Nexus 的順序建立獨立 repository；DeadRecall 保留為精確版本 compatibility bundle 與跨 repository E2E 驗收。
 6. 移植 Excavation。
 7. 最後建立 Cognition Agent Framework，作為可選模組。
 

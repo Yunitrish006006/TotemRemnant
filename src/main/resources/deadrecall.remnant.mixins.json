@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "com.adaptor.deadrecall.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "EntityMixin",
+    "ItemEntityMixin",
+    "PlayerDeathBackpackMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,129 @@
+name: Publish Modrinth
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - gradle.properties
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: Modrinth release channel (auto derives it from mod_version)
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - release
+          - beta
+          - alpha
+
+permissions:
+  contents: read
+
+concurrency:
+  group: modrinth-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect a new mod version
+        id: release
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          current="$(sed -n 's/^mod_version=//p' gradle.properties)"
+          test -n "${current}"
+
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "Manual retry requested for ${current}."
+            echo "should_publish=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          previous="$(git show "${BEFORE_SHA}:gradle.properties" 2>/dev/null \
+            | sed -n 's/^mod_version=//p' || true)"
+          if [[ -n "${previous}" && "${previous}" == "${current}" ]]; then
+            echo "mod_version is still ${current}; nothing to publish."
+            echo "should_publish=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "Detected mod_version change: ${previous:-unknown} -> ${current}."
+            echo "should_publish=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Verify Modrinth configuration
+        if: steps.release.outputs.should_publish == 'true'
+        shell: bash
+        env:
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "${MODRINTH_PROJECT_ID}" || {
+            echo "Repository variable MODRINTH_PROJECT_ID is not configured." >&2
+            exit 1
+          }
+          test -n "${MODRINTH_TOKEN}" || {
+            echo "Repository secret MODRINTH_TOKEN is not configured." >&2
+            exit 1
+          }
+
+      - name: Set up Java 25
+        if: steps.release.outputs.should_publish == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        if: steps.release.outputs.should_publish == 'true'
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make scripts executable
+        if: steps.release.outputs.should_publish == 'true'
+        run: chmod +x gradlew .github/scripts/publish-modrinth.sh
+
+      - name: Verify release metadata
+        if: steps.release.outputs.should_publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^mod_version=//p' gradle.properties)"
+          test -n "${version}"
+          test -f "docs/releases/${version}.md"
+          grep -F -- "- [${version}](${version}.md)" docs/releases/README.md
+
+      - name: Build and run server GameTests
+        if: steps.release.outputs.should_publish == 'true'
+        run: ./gradlew build --no-daemon --stacktrace
+
+      - name: Publish version to Modrinth
+        if: steps.release.outputs.should_publish == 'true'
+        id: modrinth
+        env:
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODRINTH_VERSION_TYPE: ${{ inputs.version_type }}
+        run: .github/scripts/publish-modrinth.sh
+
+      - name: Store JAR when publishing fails
+        if: failure() && steps.release.outputs.should_publish == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: modrinth-publish-failure-${{ github.sha }}
+          if-no-files-found: ignore
+          path: build/libs/*.jar

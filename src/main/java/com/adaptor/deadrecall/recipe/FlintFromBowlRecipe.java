@@ -1,6 +1,6 @@
 package com.adaptor.deadrecall.recipe;
 
-import com.adaptor.deadrecall.item.ModItems;
+import com.adaptor.deadrecall.registry.LegacyGameplayItemRegistration;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -37,7 +37,7 @@ public class FlintFromBowlRecipe extends CustomRecipe {
                 hasGravel = true;
                 continue;
             }
-            if (stack.is(ModItems.STONE_BOWL)) {
+            if (stack.is(LegacyGameplayItemRegistration.STONE_BOWL)) {
                 hasBowl = true;
                 continue;
             }
@@ -56,8 +56,8 @@ public class FlintFromBowlRecipe extends CustomRecipe {
     public NonNullList<ItemStack> getRemainingItems(CraftingInput input) {
         NonNullList<ItemStack> remaining = NonNullList.withSize(input.size(), ItemStack.EMPTY);
         for (int i = 0; i < input.size(); i++) {
-            if (input.getItem(i).is(ModItems.STONE_BOWL)) {
-                remaining.set(i, new ItemStack(ModItems.STONE_BOWL));
+            if (input.getItem(i).is(LegacyGameplayItemRegistration.STONE_BOWL)) {
+                remaining.set(i, new ItemStack(LegacyGameplayItemRegistration.STONE_BOWL));
             }
         }
         return remaining;

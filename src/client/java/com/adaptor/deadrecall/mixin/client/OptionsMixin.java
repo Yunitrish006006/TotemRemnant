@@ -23,9 +23,8 @@ public abstract class OptionsMixin {
     public KeyMapping[] keyMappings;
 
     @Inject(method = "<init>", at = @At("TAIL"))
-    private void deadrecall$injectDiscordConfigKey(net.minecraft.client.Minecraft minecraft, File file, CallbackInfo ci) {
+    private void deadrecall$injectContainerSortKey(net.minecraft.client.Minecraft minecraft, File file, CallbackInfo ci) {
         KeyMapping[] keys = new KeyMapping[] {
-                DeadrecallClient.openDiscordConfigKey,
                 DeadrecallClient.sortBackpackKey
         };
         for (KeyMapping key : keys) {

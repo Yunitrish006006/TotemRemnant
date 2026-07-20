@@ -1,0 +1,24 @@
+{
+  "required": true,
+  "package": "com.adaptor.deadrecall.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "BanPlayerCommandsMixin",
+    "DifficultyCommandMixin",
+    "DiscordBridgeTransientNotificationMixin",
+    "GameRuleCommandMixin",
+    "KickCommandMixin",
+    "MinecraftServerPublishMixin",
+    "PardonCommandMixin",
+    "PlayerAdvancementsMixin",
+    "PlayerListMixin",
+    "RaidMixin",
+    "RaidsMixin",
+    "VillagerEntityMixin",
+    "WhitelistCommandMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,6 +1,6 @@
 package com.adaptor.deadrecall.recipe;
 
-import com.adaptor.deadrecall.item.ModItems;
+import com.adaptor.deadrecall.registry.LegacyGameplayItemRegistration;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -42,7 +42,7 @@ public class CocoaPowderRecipe extends CustomRecipe {
                 hasSugar = true;
                 continue;
             }
-            if (stack.is(ModItems.STONE_BOWL)) {
+            if (stack.is(LegacyGameplayItemRegistration.STONE_BOWL)) {
                 hasBowl = true;
                 continue;
             }
@@ -54,7 +54,7 @@ public class CocoaPowderRecipe extends CustomRecipe {
 
     @Override
     public ItemStack assemble(CraftingInput input) {
-        return new ItemStack(ModItems.COCOA_POWDER);
+        return new ItemStack(LegacyGameplayItemRegistration.COCOA_POWDER);
     }
 
     @Override

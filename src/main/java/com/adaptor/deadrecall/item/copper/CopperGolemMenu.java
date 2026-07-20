@@ -1,6 +1,6 @@
 package com.adaptor.deadrecall.item.copper;
 
-import com.adaptor.deadrecall.menu.ModMenus;
+import com.adaptor.deadrecall.registry.TotemAutomataMenuRegistration;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -64,7 +64,7 @@ public class CopperGolemMenu extends AbstractContainerMenu {
             UUID golemId,
             ServerLevel serverLevel,
             Container golemSlots) {
-        super(ModMenus.COPPER_GOLEM, containerId);
+        super(TotemAutomataMenuRegistration.COPPER_GOLEM, containerId);
         checkContainerSize(golemSlots, GOLEM_SLOT_COUNT);
         this.playerInventory = playerInventory;
         this.golem = golem;

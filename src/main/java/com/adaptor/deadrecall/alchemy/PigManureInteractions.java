@@ -1,6 +1,6 @@
 package com.adaptor.deadrecall.alchemy;
 
-import com.adaptor.deadrecall.advancement.ModCriteriaTriggers;
+import com.adaptor.deadrecall.registry.LegacyGameplayCriteriaRegistration;
 import com.adaptor.deadrecall.block.ModBlocks;
 import com.adaptor.deadrecall.effect.ModMobEffects;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -56,10 +56,10 @@ public final class PigManureInteractions {
     public static void applyStink(ServerLevel level, LivingEntity target, Entity source) {
         target.addEffect(new MobEffectInstance(ModMobEffects.STINKY, STINK_DURATION_TICKS, 0), source);
         if (source instanceof ServerPlayer player) {
-            ModCriteriaTriggers.PIG_MANURE_HIT_ENTITY.trigger(player);
+            LegacyGameplayCriteriaRegistration.PIG_MANURE_HIT_ENTITY.trigger(player);
         }
         if (target instanceof ServerPlayer player) {
-            ModCriteriaTriggers.PIG_MANURE_GOT_HIT.trigger(player);
+            LegacyGameplayCriteriaRegistration.PIG_MANURE_GOT_HIT.trigger(player);
         }
         level.playSound(null, target.blockPosition(), SoundEvents.SLIME_SQUISH_SMALL, SoundSource.PLAYERS, 0.8F, 0.8F);
     }

@@ -10,6 +10,7 @@
 - [死亡節點管理介面](death-node-admin.md)
 - [目前完成與未完成內容](status.md)
 - [完整 OpenSpec](../../openspec/specs/space-unit-lodestone/spec.md)
+- [未來自適應多方塊傳送陣設計](../../openspec/future/totem-nexus-adaptive-multiblock.md)（Totem Nexus 拆分後再開發）
 
 ## 快速操作
 

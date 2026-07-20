@@ -26,9 +26,29 @@
     ]
   },
   "mixins": [
-    "deadrecall.mixins.json",
+    "deadrecall.discord.mixins.json",
+    "deadrecall.remnant.mixins.json",
+    "deadrecall.automata.mixins.json",
+    "deadrecall.nexus.mixins.json",
+    "deadrecall.legacy.mixins.json",
     {
-      "config": "deadrecall.client.mixins.json",
+      "config": "deadrecall.discord.client.mixins.json",
+      "environment": "client"
+    },
+    {
+      "config": "deadrecall.legacy.client.mixins.json",
+      "environment": "client"
+    },
+    {
+      "config": "deadrecall.automata.client.mixins.json",
+      "environment": "client"
+    },
+    {
+      "config": "deadrecall.remnant.client.mixins.json",
+      "environment": "client"
+    },
+    {
+      "config": "deadrecall.nexus.client.mixins.json",
       "environment": "client"
     }
   ],

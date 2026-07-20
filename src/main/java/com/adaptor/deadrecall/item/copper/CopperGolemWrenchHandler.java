@@ -1,8 +1,8 @@
 package com.adaptor.deadrecall.item.copper;
 
-import com.adaptor.deadrecall.advancement.ModCriteriaTriggers;
+import com.adaptor.deadrecall.registry.TotemAutomataCriteriaRegistration;
 import com.adaptor.deadrecall.item.BackpackItemHelper;
-import com.adaptor.deadrecall.item.ModItems;
+import com.adaptor.deadrecall.registry.TotemAutomataItemRegistration;
 import com.adaptor.deadrecall.item.TieredBackpackItem;
 import com.adaptor.deadrecall.network.CopperGolemGatheringTargetPayload;
 import com.adaptor.deadrecall.network.CopperGolemVisualizationPayload;
@@ -170,7 +170,7 @@ public final class CopperGolemWrenchHandler {
     public static void register() {
         AttackBlockCallback.EVENT.register((player, world, hand, clickedPos, direction) -> {
             ItemStack stack = player.getItemInHand(hand);
-            if (player.isSpectator() || !stack.is(ModItems.COPPER_WRENCH)) {
+            if (player.isSpectator() || !stack.is(TotemAutomataItemRegistration.COPPER_WRENCH)) {
                 return InteractionResult.PASS;
             }
 
@@ -254,7 +254,7 @@ public final class CopperGolemWrenchHandler {
                 return InteractionResult.SUCCESS;
             }
 
-            if (!stack.is(ModItems.COPPER_WRENCH)) {
+            if (!stack.is(TotemAutomataItemRegistration.COPPER_WRENCH)) {
                 return InteractionResult.PASS;
             }
 
@@ -277,7 +277,7 @@ public final class CopperGolemWrenchHandler {
 
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
             ItemStack stack = player.getItemInHand(hand);
-            if (!stack.is(ModItems.COPPER_WRENCH)) {
+            if (!stack.is(TotemAutomataItemRegistration.COPPER_WRENCH)) {
                 return InteractionResult.PASS;
             }
 
@@ -317,7 +317,7 @@ public final class CopperGolemWrenchHandler {
             if (isCopperSourceContainer(world, clickedPos)) {
                 boolean changed = setSourceContainer(golem, binding);
                 if (player instanceof ServerPlayer serverPlayer) {
-                    ModCriteriaTriggers.FIRST_COPPER_GOLEM_BINDING.trigger(serverPlayer);
+                    TotemAutomataCriteriaRegistration.FIRST_COPPER_GOLEM_BINDING.trigger(serverPlayer);
                 }
                 showParticlePath(serverLevel, golem, clickedPos);
                 notify(player, Component.translatable(changed
@@ -361,7 +361,7 @@ public final class CopperGolemWrenchHandler {
 
             boolean added = addBinding(golem, binding);
             if (added && player instanceof ServerPlayer serverPlayer) {
-                ModCriteriaTriggers.FIRST_COPPER_GOLEM_BINDING.trigger(serverPlayer);
+                TotemAutomataCriteriaRegistration.FIRST_COPPER_GOLEM_BINDING.trigger(serverPlayer);
             }
             showParticlePath(serverLevel, golem, clickedPos);
             notify(player, Component.translatable(added
@@ -537,7 +537,7 @@ public final class CopperGolemWrenchHandler {
     }
 
     private static boolean isBoundWrench(ItemStack stack, UUID golemId) {
-        return stack.is(ModItems.COPPER_WRENCH) && golemId.equals(getSelectedGolem(stack));
+        return stack.is(TotemAutomataItemRegistration.COPPER_WRENCH) && golemId.equals(getSelectedGolem(stack));
     }
 
     private static void migrateGolemData(CopperGolem golem) {
@@ -2567,7 +2567,7 @@ public final class CopperGolemWrenchHandler {
     }
 
     private static boolean isGatheringTool(ItemStack stack) {
-        if (stack.isEmpty() || stack.is(ModItems.COPPER_WRENCH)) {
+        if (stack.isEmpty() || stack.is(TotemAutomataItemRegistration.COPPER_WRENCH)) {
             return false;
         }
 

@@ -1,7 +1,7 @@
 package com.adaptor.deadrecall.mixin;
 
 import com.adaptor.deadrecall.alchemy.PigManureInteractions;
-import com.adaptor.deadrecall.item.ModItems;
+import com.adaptor.deadrecall.registry.LegacyGameplayItemRegistration;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.throwableitemprojectile.Snowball;
@@ -18,7 +18,7 @@ public abstract class SnowballMixin {
     @Inject(method = "onHitEntity", at = @At("HEAD"), cancellable = true)
     private void deadrecall$applyPigManureStink(EntityHitResult hitResult, CallbackInfo ci) {
         Snowball snowball = (Snowball) (Object) this;
-        if (!snowball.getItem().is(ModItems.PIG_MANURE)) {
+        if (!snowball.getItem().is(LegacyGameplayItemRegistration.PIG_MANURE)) {
             return;
         }
 
@@ -32,7 +32,7 @@ public abstract class SnowballMixin {
     @Inject(method = "onHit", at = @At("HEAD"))
     private void deadrecall$spreadPigManureOnGrass(HitResult hitResult, CallbackInfo ci) {
         Snowball snowball = (Snowball) (Object) this;
-        if (!snowball.getItem().is(ModItems.PIG_MANURE)
+        if (!snowball.getItem().is(LegacyGameplayItemRegistration.PIG_MANURE)
                 || !(snowball.level() instanceof ServerLevel serverLevel)
                 || !(hitResult instanceof BlockHitResult blockHitResult)) {
             return;

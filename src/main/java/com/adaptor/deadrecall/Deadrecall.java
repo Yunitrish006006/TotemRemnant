@@ -1,50 +1,9 @@
 package com.adaptor.deadrecall;
 
-import com.adaptor.deadrecall.alchemy.AlchemyHandler;
-import com.adaptor.deadrecall.alchemy.CherryBrewInteractions;
-import com.adaptor.deadrecall.alchemy.PigManureInteractions;
-import com.adaptor.deadrecall.advancement.ModCriteriaTriggers;
-import com.adaptor.deadrecall.block.ModBlocks;
-import com.adaptor.deadrecall.block.entity.ModBlockEntities;
-import com.adaptor.deadrecall.effect.ModMobEffects;
+import com.adaptor.deadrecall.bootstrap.DeadRecallServerBootstrap;
 import com.adaptor.deadrecall.discord.DiscordEventNotifications;
-import com.adaptor.deadrecall.discord.DiscordLocalizationService;
-import com.adaptor.deadrecall.item.ModItemGroups;
-import com.adaptor.deadrecall.item.ModItems;
-import com.adaptor.deadrecall.item.copper.CopperGolemLlmService;
 import com.adaptor.deadrecall.item.copper.CopperGolemWrenchHandler;
-import com.adaptor.deadrecall.menu.ModMenus;
-import com.adaptor.deadrecall.network.CalibrateSpaceUnitPayload;
-import com.adaptor.deadrecall.network.ConfirmSpaceUnitRegistrationPayload;
-import com.adaptor.deadrecall.network.CopperGolemOperationPayload;
-import com.adaptor.deadrecall.network.CopperGolemGatheringTargetPayload;
-import com.adaptor.deadrecall.network.CopperGolemModePayload;
-import com.adaptor.deadrecall.network.CopperGolemVisualizationPayload;
-import com.adaptor.deadrecall.network.CopperWrenchBindingsPayload;
-import com.adaptor.deadrecall.network.DiscordConfigSyncPayload;
-import com.adaptor.deadrecall.network.ManageDiscordChannelPayload;
-import com.adaptor.deadrecall.network.RenameSpaceUnitPayload;
-import com.adaptor.deadrecall.network.RemoveSpaceUnitFriendPayload;
-import com.adaptor.deadrecall.network.RequestDiscordConfigPayload;
-import com.adaptor.deadrecall.network.RequestCopperGolemVisualizationPayload;
-import com.adaptor.deadrecall.network.RequestSpaceUnitFriendsPayload;
-import com.adaptor.deadrecall.network.RequestSpaceUnitMapPayload;
-import com.adaptor.deadrecall.network.SaveCopperGolemLlmConfigPayload;
-import com.adaptor.deadrecall.network.SortBackpackPayload;
-import com.adaptor.deadrecall.network.SaveDiscordConfigPayload;
-import com.adaptor.deadrecall.network.SpaceUnitFriendsPayload;
-import com.adaptor.deadrecall.network.SpaceUnitMapPayload;
-import com.adaptor.deadrecall.network.SpaceUnitRegistrationPreviewPayload;
-import com.adaptor.deadrecall.network.StartSpaceUnitTeleportPayload;
-import com.adaptor.deadrecall.network.TestCopperGolemLlmConnectionPayload;
-import com.adaptor.deadrecall.network.ToggleSpaceUnitFavoritePayload;
-import com.adaptor.deadrecall.network.UpdateSpaceUnitAccessPayload;
-import com.adaptor.deadrecall.network.UpdateSpaceUnitVisibilityPayload;
-import com.adaptor.deadrecall.network.UpdateCopperGolemBindingCachePayload;
-import com.adaptor.deadrecall.network.UpdateCopperGolemBindingLlmPayload;
-import com.adaptor.deadrecall.network.UpdateCopperGolemGatheringLlmPayload;
-import com.adaptor.deadrecall.recipe.ModRecipes;
-import com.adaptor.deadrecall.space.DistributedSpawnHandler;
+import com.adaptor.deadrecall.network.registration.DeadRecallPayloadRegistration;
 import com.adaptor.deadrecall.space.SpaceUnitHandler;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -54,9 +13,7 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.Commands;
@@ -66,23 +23,17 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
-import net.minecraft.server.players.NameAndId;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.entity.Relative;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
-import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.InventoryMenu;
-import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -90,7 +41,6 @@ import java.util.UUID;
 public class Deadrecall implements ModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("DeadRecall");
     private static final int BOOKSHELF_REPLACE_INTERVAL_TICKS = 20;
-    private static final int PLAYER_HOTBAR_SLOT_COUNT = 9;
     private static final int DISCORD_HEALTH_SAMPLE_INTERVAL_TICKS = 20 * 10;
     private static final int DISCORD_LOW_TPS_REQUIRED_SAMPLES = 3;
     private static final double DISCORD_LOW_TPS_THRESHOLD = 15.0D;
@@ -105,328 +55,8 @@ public class Deadrecall implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        // 註冊物品與方塊
-        ModBlocks.registerModBlocks();
-        ModBlockEntities.registerModBlockEntities();
-        ModMobEffects.registerModEffects();
-        ModCriteriaTriggers.registerModCriteriaTriggers();
-        ModMenus.registerModMenus();
-        ModItems.registerModItems();
-        ModItemGroups.registerModItemGroups();
-        AlchemyHandler.register();
-        CherryBrewInteractions.register();
-        PigManureInteractions.register();
-        CopperGolemWrenchHandler.register();
-        DistributedSpawnHandler.register();
-        SpaceUnitHandler.register();
-        ModRecipes.registerModRecipes();
-
-        // 初始化 Discord 橋接
-        DiscordLocalizationService.registerReloadListener();
-        DiscordBridge.init(FabricLoader.getInstance().getConfigDir());
-
-        // 註冊自定義封包
-        PayloadTypeRegistry.serverboundPlay().register(
-                RequestDiscordConfigPayload.TYPE, RequestDiscordConfigPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                SaveDiscordConfigPayload.TYPE, SaveDiscordConfigPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                ManageDiscordChannelPayload.TYPE, ManageDiscordChannelPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                SortBackpackPayload.TYPE, SortBackpackPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                CopperGolemOperationPayload.TYPE, CopperGolemOperationPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                CopperGolemGatheringTargetPayload.TYPE, CopperGolemGatheringTargetPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                CopperGolemModePayload.TYPE, CopperGolemModePayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                SaveCopperGolemLlmConfigPayload.TYPE, SaveCopperGolemLlmConfigPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                TestCopperGolemLlmConnectionPayload.TYPE, TestCopperGolemLlmConnectionPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                UpdateCopperGolemBindingLlmPayload.TYPE, UpdateCopperGolemBindingLlmPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                UpdateCopperGolemBindingCachePayload.TYPE, UpdateCopperGolemBindingCachePayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                UpdateCopperGolemGatheringLlmPayload.TYPE, UpdateCopperGolemGatheringLlmPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                RequestCopperGolemVisualizationPayload.TYPE, RequestCopperGolemVisualizationPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                RequestSpaceUnitMapPayload.TYPE, RequestSpaceUnitMapPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                RequestSpaceUnitFriendsPayload.TYPE, RequestSpaceUnitFriendsPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                RemoveSpaceUnitFriendPayload.TYPE, RemoveSpaceUnitFriendPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                StartSpaceUnitTeleportPayload.TYPE, StartSpaceUnitTeleportPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                ToggleSpaceUnitFavoritePayload.TYPE, ToggleSpaceUnitFavoritePayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                CalibrateSpaceUnitPayload.TYPE, CalibrateSpaceUnitPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                UpdateSpaceUnitVisibilityPayload.TYPE, UpdateSpaceUnitVisibilityPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                RenameSpaceUnitPayload.TYPE, RenameSpaceUnitPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                UpdateSpaceUnitAccessPayload.TYPE, UpdateSpaceUnitAccessPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(
-                ConfirmSpaceUnitRegistrationPayload.TYPE, ConfirmSpaceUnitRegistrationPayload.CODEC);
-        PayloadTypeRegistry.clientboundPlay().register(
-                DiscordConfigSyncPayload.TYPE, DiscordConfigSyncPayload.CODEC);
-        PayloadTypeRegistry.clientboundPlay().register(
-                CopperWrenchBindingsPayload.TYPE, CopperWrenchBindingsPayload.CODEC);
-        PayloadTypeRegistry.clientboundPlay().register(
-                CopperGolemVisualizationPayload.TYPE, CopperGolemVisualizationPayload.CODEC);
-        PayloadTypeRegistry.clientboundPlay().register(
-                SpaceUnitMapPayload.TYPE, SpaceUnitMapPayload.CODEC);
-        PayloadTypeRegistry.clientboundPlay().register(
-                SpaceUnitFriendsPayload.TYPE, SpaceUnitFriendsPayload.CODEC);
-        PayloadTypeRegistry.clientboundPlay().register(
-                SpaceUnitRegistrationPreviewPayload.TYPE, SpaceUnitRegistrationPreviewPayload.CODEC);
-
-        // 收到客戶端請求時，回傳目前設定
-        ServerPlayNetworking.registerGlobalReceiver(RequestDiscordConfigPayload.TYPE,
-                (payload, context) -> {
-                    ServerPlayer player = context.player();
-                    if (!canManageDiscordBridge(player)) {
-                        player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.permission_view").withStyle(ChatFormatting.RED));
-                        LOGGER.warn("[DiscordBridge] 玩家 {} 嘗試未授權讀取設定", player.getName().getString());
-                        return;
-                    }
-
-                    sendDiscordConfigTo(player);
-                });
-
-        // 收到客戶端儲存請求時，更新設定（需要 OP 權限）
-        ServerPlayNetworking.registerGlobalReceiver(SaveDiscordConfigPayload.TYPE,
-                (payload, context) -> {
-                    ServerPlayer player = context.player();
-                    
-                    if (!canManageDiscordBridge(player)) {
-                        player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.permission_modify").withStyle(ChatFormatting.RED));
-                        LOGGER.warn("[DiscordBridge] 玩家 {} 嘗試未授權修改設定", player.getName().getString());
-                        return;
-                    }
-                    
-                    try {
-                        DiscordBridge.updateConfig(payload.enabled(), payload.workerUrl(), payload.apiKey());
-                        player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.settings_updated").withStyle(ChatFormatting.GREEN));
-                        sendDiscordConfigTo(player);
-                    } catch (IllegalArgumentException e) {
-                        player.sendSystemMessage(Component.literal(e.getMessage()).withStyle(ChatFormatting.RED));
-                    } catch (Exception e) {
-                        player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.update_failed", e.getMessage()).withStyle(ChatFormatting.RED));
-                        LOGGER.error("[DiscordBridge] 更新設定失敗", e);
-                    }
-                });
-
-        // 收到頻道管理請求時，添加或移除頻道
-        ServerPlayNetworking.registerGlobalReceiver(ManageDiscordChannelPayload.TYPE,
-                (payload, context) -> {
-                    ServerPlayer player = context.player();
-                    
-                    if (!canManageDiscordBridge(player)) {
-                        player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.permission_channels").withStyle(ChatFormatting.RED));
-                        LOGGER.warn("[DiscordBridge] 玩家 {} 嘗試未授權管理頻道", player.getName().getString());
-                        return;
-                    }
-                    
-                    try {
-                        if ("add".equals(payload.action())) {
-                            DiscordBridge.addChannel(payload.channelId(), payload.channelName());
-                            player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.channel_added", payload.channelName()).withStyle(ChatFormatting.GREEN));
-                        } else if ("remove".equals(payload.action())) {
-                            DiscordBridge.removeChannel(payload.channelId());
-                            player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.channel_removed", payload.channelId()).withStyle(ChatFormatting.GREEN));
-                        } else {
-                            throw new IllegalArgumentException("Unsupported channel operation");
-                        }
-                        sendDiscordConfigTo(player);
-                    } catch (IllegalArgumentException e) {
-                        player.sendSystemMessage(Component.literal(e.getMessage()).withStyle(ChatFormatting.RED));
-                    } catch (Exception e) {
-                        player.sendSystemMessage(Component.translatable("message.deadrecall.discord_config.operation_failed", e.getMessage()).withStyle(ChatFormatting.RED));
-                        LOGGER.error("[DiscordBridge] 管理頻道失敗", e);
-                    }
-                });
-
-        ServerPlayNetworking.registerGlobalReceiver(SortBackpackPayload.TYPE,
-                (payload, context) -> context.server().execute(() -> {
-                    ServerPlayer player = context.player();
-                    sortOpenContainer(player, payload.target());
-                }));
-
-        ServerPlayNetworking.registerGlobalReceiver(CopperGolemOperationPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        CopperGolemWrenchHandler.setTransportEnabledFromUi(context.player(), payload.golemId(), payload.running(), payload.revision())));
-
-        ServerPlayNetworking.registerGlobalReceiver(CopperGolemGatheringTargetPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        CopperGolemWrenchHandler.handleGatheringTargetFromUi(
-                                context.player(),
-                                payload.golemId(),
-                                payload.value(),
-                                payload.tag(),
-                                payload.targetSet(),
-                                payload.action(),
-                                payload.revision()
-                        )));
-
-        ServerPlayNetworking.registerGlobalReceiver(CopperGolemModePayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        CopperGolemWrenchHandler.setModeFromUi(context.player(), payload.golemId(), payload.mode(), payload.revision())));
-
-        ServerPlayNetworking.registerGlobalReceiver(SaveCopperGolemLlmConfigPayload.TYPE,
-                (payload, context) -> context.server().execute(() -> {
-                    ServerPlayer player = context.player();
-                    if (!canManageDiscordBridge(player)) {
-                        player.sendSystemMessage(Component.translatable("message.deadrecall.copper_wrench.llm_permission_modify").withStyle(ChatFormatting.RED));
-                        LOGGER.warn("[CopperGolemLLM] 玩家 {} 嘗試未授權修改設定", player.getName().getString());
-                        return;
-                    }
-
-                    CopperGolemWrenchHandler.setGolemLlmConfigFromUi(player, payload.golemId(), payload.apiUrl(), payload.apiKey(), payload.model(), payload.revision());
-                    player.sendSystemMessage(Component.translatable("message.deadrecall.copper_wrench.llm_config_updated").withStyle(ChatFormatting.GREEN));
-                }));
-
-        ServerPlayNetworking.registerGlobalReceiver(TestCopperGolemLlmConnectionPayload.TYPE,
-                (payload, context) -> context.server().execute(() -> {
-                    ServerPlayer player = context.player();
-                    if (!canManageDiscordBridge(player)) {
-                        player.sendSystemMessage(Component.translatable("message.deadrecall.copper_wrench.llm_permission_test").withStyle(ChatFormatting.RED));
-                        LOGGER.warn("[CopperGolemLLM] 玩家 {} 嘗試未授權測試連線", player.getName().getString());
-                        return;
-                    }
-
-                    CopperGolemLlmService.testConnection(
-                            context.server(),
-                            player.getUUID(),
-                            payload.apiUrl(),
-                            payload.apiKey(),
-                            payload.model()
-                    );
-                }));
-
-        ServerPlayNetworking.registerGlobalReceiver(UpdateCopperGolemBindingLlmPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        CopperGolemWrenchHandler.setBindingLlmFromUi(
-                                context.player(),
-                                payload.golemId(),
-                                payload.dimension(),
-                                payload.x(),
-                                payload.y(),
-                                payload.z(),
-                                payload.enabled(),
-                                payload.prompt(),
-                                payload.revision()
-                        )));
-
-        ServerPlayNetworking.registerGlobalReceiver(UpdateCopperGolemBindingCachePayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        CopperGolemWrenchHandler.moveBindingLlmCacheFromUi(
-                                context.player(),
-                                payload.golemId(),
-                                payload.dimension(),
-                                payload.x(),
-                                payload.y(),
-                                payload.z(),
-                                payload.value(),
-                                payload.tag(),
-                                payload.allowed(),
-                                payload.revision()
-                        )));
-
-        ServerPlayNetworking.registerGlobalReceiver(UpdateCopperGolemGatheringLlmPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        CopperGolemWrenchHandler.setGatheringLlmFromUi(
-                                context.player(),
-                                payload.golemId(),
-                                payload.enabled(),
-                                payload.prompt(),
-                                payload.revision()
-                        )));
-
-        ServerPlayNetworking.registerGlobalReceiver(RequestCopperGolemVisualizationPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        CopperGolemWrenchHandler.sendVisualization(context.player(), payload.golemId())));
-
-        ServerPlayNetworking.registerGlobalReceiver(RequestSpaceUnitMapPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        SpaceUnitHandler.sendSpaceUnitMap(context.player(), payload.sourceType(), payload.sourceUnitId())));
-
-        ServerPlayNetworking.registerGlobalReceiver(RequestSpaceUnitFriendsPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        SpaceUnitHandler.sendFriendList(context.player())));
-
-        ServerPlayNetworking.registerGlobalReceiver(RemoveSpaceUnitFriendPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        SpaceUnitHandler.removeFriend(context.player(), payload.friendId())));
-
-        ServerPlayNetworking.registerGlobalReceiver(StartSpaceUnitTeleportPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        SpaceUnitHandler.startTeleport(context.player(), payload.sourceType(), payload.sourceUnitId(), payload.targetUnitId())));
-
-        ServerPlayNetworking.registerGlobalReceiver(ToggleSpaceUnitFavoritePayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        SpaceUnitHandler.setFavorite(
-                                context.player(),
-                                payload.sourceType(),
-                                payload.sourceUnitId(),
-                                payload.targetUnitId(),
-                                payload.favorite()
-                        )));
-
-        ServerPlayNetworking.registerGlobalReceiver(CalibrateSpaceUnitPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        SpaceUnitHandler.calibrateLodestone(
-                                context.player(),
-                                payload.sourceType(),
-                                payload.sourceUnitId(),
-                                payload.targetUnitId()
-                        )));
-
-        ServerPlayNetworking.registerGlobalReceiver(UpdateSpaceUnitVisibilityPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        SpaceUnitHandler.setLodestoneVisibility(
-                                context.player(),
-                                payload.sourceType(),
-                                payload.sourceUnitId(),
-                                payload.targetUnitId(),
-                                payload.visibility()
-                        )));
-
-        ServerPlayNetworking.registerGlobalReceiver(RenameSpaceUnitPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        SpaceUnitHandler.setLodestoneName(
-                                context.player(),
-                                payload.sourceType(),
-                                payload.sourceUnitId(),
-                                payload.targetUnitId(),
-                                payload.name()
-                        )));
-
-        ServerPlayNetworking.registerGlobalReceiver(UpdateSpaceUnitAccessPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        SpaceUnitHandler.setLodestoneAccess(
-                                context.player(),
-                                payload.sourceType(),
-                                payload.sourceUnitId(),
-                                payload.targetUnitId(),
-                                payload.role(),
-                                payload.playerName(),
-                                payload.enabled()
-                        )));
-
-        ServerPlayNetworking.registerGlobalReceiver(ConfirmSpaceUnitRegistrationPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        SpaceUnitHandler.confirmLodestoneRegistration(
-                                context.player(),
-                                payload.dimension(),
-                                payload.x(),
-                                payload.y(),
-                                payload.z()
-                        )));
+        DeadRecallServerBootstrap.register(FabricLoader.getInstance().getConfigDir());
+        DeadRecallPayloadRegistration.register();
 
         ServerLivingEntityEvents.ALLOW_DEATH.register((entity, damageSource, damageAmount) -> {
             if (entity instanceof net.minecraft.world.entity.animal.golem.CopperGolem golem) {
@@ -654,20 +284,6 @@ public class Deadrecall implements ModInitializer {
         }
     }
 
-    private static void sendDiscordConfigTo(ServerPlayer player) {
-        var channels = DiscordBridge.getChannels();
-        var syncedChannels = new ArrayList<DiscordConfigSyncPayload.ChannelData>(channels.size());
-        for (var channel : channels) {
-            syncedChannels.add(new DiscordConfigSyncPayload.ChannelData(channel.id, channel.name));
-        }
-        ServerPlayNetworking.send(player, new DiscordConfigSyncPayload(
-                DiscordBridge.isEnabled(),
-                DiscordBridge.getWorkerUrl(),
-                "",
-                syncedChannels
-        ));
-    }
-
     private static boolean isFirstJoin(ServerPlayer player) {
         return player.getStats().getValue(Stats.CUSTOM, Stats.PLAY_TIME) <= 0;
     }
@@ -733,162 +349,6 @@ public class Deadrecall implements ModInitializer {
         if (changed) {
             player.getInventory().setChanged();
         }
-    }
-
-    private boolean canManageDiscordBridge(ServerPlayer player) {
-        if (player.getAbilities().instabuild || player.isCreative()) {
-            return true;
-        }
-
-        var server = player.level().getServer();
-        if (server == null) {
-            return false;
-        }
-
-        if (server.isSingleplayer()) {
-            var owner = server.getSingleplayerProfile();
-            if (owner != null && owner.id().equals(player.getGameProfile().id())) {
-                return true;
-            }
-        }
-
-        return server.getPlayerList().isOp(new NameAndId(player.getGameProfile()));
-    }
-
-    private boolean sortOpenContainer(ServerPlayer player, SortBackpackPayload.Target target) {
-        AbstractContainerMenu menu = player.containerMenu;
-        if (menu == null) {
-            return false;
-        }
-
-        if (target == SortBackpackPayload.Target.PLAYER) {
-            return sortPlayerInventorySlots(menu, player);
-        }
-
-        boolean sorted;
-        if (menu instanceof InventoryMenu) {
-            sorted = sortSlotRange(menu, 0, InventoryMenu.INV_SLOT_START);
-        } else {
-            int topSlotCount = findTopSlotCount(menu, player);
-            if (topSlotCount <= 0) {
-                return false;
-            }
-            sorted = sortSlotRange(menu, 0, topSlotCount);
-        }
-
-        if (sorted) {
-            menu.broadcastChanges();
-        }
-        return sorted;
-    }
-
-    private boolean sortPlayerInventorySlots(AbstractContainerMenu menu, ServerPlayer player) {
-        List<Integer> playerSlots = new ArrayList<>();
-        int nonEquipmentSlotCount = player.getInventory().getNonEquipmentItems().size();
-        for (int i = 0; i < menu.slots.size(); i++) {
-            Slot slot = menu.slots.get(i);
-            int containerSlot = slot.getContainerSlot();
-            if (slot.container == player.getInventory()
-                    && containerSlot >= PLAYER_HOTBAR_SLOT_COUNT
-                    && containerSlot < nonEquipmentSlotCount) {
-                playerSlots.add(i);
-            }
-        }
-
-        if (playerSlots.isEmpty()) {
-            return false;
-        }
-
-        List<ItemStack> stacks = new ArrayList<>(playerSlots.size());
-        for (int slotIndex : playerSlots) {
-            ItemStack stack = menu.getSlot(slotIndex).getItem();
-            if (!stack.isEmpty()) {
-                stacks.add(stack.copy());
-            }
-        }
-
-        if (stacks.isEmpty()) {
-            return false;
-        }
-
-        applySortedStacks(menu, playerSlots, stacks);
-        menu.broadcastChanges();
-        return true;
-    }
-
-    private int findTopSlotCount(AbstractContainerMenu menu, ServerPlayer player) {
-        int count = 0;
-        for (Slot slot : menu.slots) {
-            if (slot.container == player.getInventory()) {
-                break;
-            }
-            count++;
-        }
-        return count;
-    }
-
-    private boolean sortSlotRange(AbstractContainerMenu menu, int startInclusive, int endExclusive) {
-        List<Integer> slotIndexes = new ArrayList<>();
-        List<ItemStack> stacks = new ArrayList<>();
-        for (int i = startInclusive; i < endExclusive; i++) {
-            slotIndexes.add(i);
-            ItemStack stack = menu.getSlot(i).getItem();
-            if (!stack.isEmpty()) {
-                stacks.add(stack.copy());
-            }
-        }
-
-        if (stacks.isEmpty()) {
-            return false;
-        }
-
-        applySortedStacks(menu, slotIndexes, stacks);
-        return true;
-    }
-
-    private void applySortedStacks(AbstractContainerMenu menu, List<Integer> targetSlots, List<ItemStack> stacks) {
-        stacks.sort((left, right) -> {
-            String leftId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(left.getItem()).toString();
-            String rightId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(right.getItem()).toString();
-            int compare = leftId.compareTo(rightId);
-            if (compare != 0) {
-                return compare;
-            }
-            return Integer.compare(right.getCount(), left.getCount());
-        });
-
-        List<ItemStack> compacted = compactStacks(stacks);
-        for (int i = 0; i < targetSlots.size(); i++) {
-            ItemStack stack = i < compacted.size() ? compacted.get(i).copy() : ItemStack.EMPTY;
-            menu.getSlot(targetSlots.get(i)).setByPlayer(stack);
-        }
-    }
-
-    private List<ItemStack> compactStacks(List<ItemStack> stacks) {
-        List<ItemStack> compacted = new ArrayList<>();
-        for (ItemStack stack : stacks) {
-            ItemStack remaining = stack.copy();
-            if (!compacted.isEmpty()) {
-                ItemStack last = compacted.get(compacted.size() - 1);
-                if (ItemStack.isSameItemSameComponents(last, remaining)) {
-                    int movable = Math.min(last.getMaxStackSize() - last.getCount(), remaining.getCount());
-                    if (movable > 0) {
-                        last.grow(movable);
-                        remaining.shrink(movable);
-                    }
-                }
-            }
-            while (!remaining.isEmpty()) {
-                int count = remaining.getCount();
-                int max = remaining.getMaxStackSize();
-                int take = Math.min(count, max);
-                ItemStack next = remaining.copy();
-                next.setCount(take);
-                compacted.add(next);
-                remaining.shrink(take);
-            }
-        }
-        return compacted;
     }
 
 }

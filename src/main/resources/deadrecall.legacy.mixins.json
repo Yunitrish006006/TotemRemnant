@@ -1,0 +1,23 @@
+{
+  "required": true,
+  "package": "com.adaptor.deadrecall.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "AbstractFurnaceBlockEntityAccessor",
+    "EnchantmentHelperMixin",
+    "EnchantmentMenuMixin",
+    "EnchantingTableBlockMixin",
+    "HopperBlockEntityMixin",
+    "ConcretePowderItemEntityMixin",
+    "PigMixin",
+    "RecipeManagerMixin",
+    "ShulkerBoxBlockEntityMixin",
+    "ShulkerBoxSlotMixin",
+    "SnowballMixin",
+    "StructureTemplateMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

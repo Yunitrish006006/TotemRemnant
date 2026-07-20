@@ -45,6 +45,12 @@ jobs:
           set -o pipefail
           ./gradlew build --no-daemon --stacktrace 2>&1 | tee build.log
 
+      - name: Validate Modrinth publish metadata
+        shell: bash
+        env:
+          MODRINTH_DRY_RUN: 'true'
+        run: bash .github/scripts/publish-modrinth.sh
+
       - name: Verify death backpack across Dedicated Server restarts
         shell: bash
         run: |

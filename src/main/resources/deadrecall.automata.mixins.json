@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "com.adaptor.deadrecall.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "CopperGolemPortableContainerMixin",
+    "CopperGolemEntityMixin",
+    "TransportItemsBetweenContainersMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

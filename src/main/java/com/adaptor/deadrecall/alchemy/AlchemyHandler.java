@@ -2,7 +2,7 @@ package com.adaptor.deadrecall.alchemy;
 
 import com.adaptor.deadrecall.block.ModBlocks;
 import com.adaptor.deadrecall.block.entity.AlchemyCauldronBlockEntity;
-import com.adaptor.deadrecall.item.ModItems;
+import com.adaptor.deadrecall.registry.LegacyGameplayItemRegistration;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
@@ -94,7 +94,7 @@ public final class AlchemyHandler {
         }
 
         world.setBlock(pos, cleanState, 3);
-        ItemStack manure = new ItemStack(ModItems.PIG_MANURE);
+        ItemStack manure = new ItemStack(LegacyGameplayItemRegistration.PIG_MANURE);
         if (!player.addItem(manure)) {
             player.drop(manure, false);
         }

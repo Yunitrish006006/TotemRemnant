@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "compatibilityRepository": "DeadRecall",
+  "compatibilityModId": "deadrecall",
+  "compatibilityNamespace": "deadrecall",
+  "initialVersioning": "lockstep",
+  "repositories": [
+    {
+      "id": "core",
+      "repository": "TotemCore",
+      "status": "planned",
+      "owns": [
+        "versioned public API conventions",
+        "event and lifecycle contracts",
+        "migration/version helpers",
+        "shared primitives proven to have at least two consumers"
+      ],
+      "mustNotOwn": [
+        "death backpack gameplay",
+        "Space Unit or teleport gameplay",
+        "Copper Golem gameplay",
+        "Discord implementation",
+        "alchemy or recipe gameplay"
+      ]
+    },
+    {
+      "id": "discord-bridge",
+      "repository": "TotemDiscordBridge",
+      "status": "pilot",
+      "currentAreas": [
+        "src/main/java/com/adaptor/deadrecall/DiscordBridge.java",
+        "src/main/java/com/adaptor/deadrecall/discord/**",
+        "Discord network payloads and receivers",
+        "Discord event mixins",
+        "Discord configuration client UI and language resources"
+      ]
+    },
+    {
+      "id": "remnant",
+      "repository": "TotemRemnant",
+      "status": "planned-after-pilot",
+      "currentAreas": [
+        "src/main/java/com/adaptor/deadrecall/api/death/**",
+        "src/main/java/com/adaptor/deadrecall/death/**",
+        "death backpack inventory and items",
+        "src/main/java/com/adaptor/deadrecall/integration/trinkets/**",
+        "death/backpack payloads, mixins, client UI and tests"
+      ]
+    },
+    {
+      "id": "automata",
+      "repository": "TotemAutomata",
+      "status": "planned-after-remnant",
+      "currentAreas": [
+        "src/main/java/com/adaptor/deadrecall/item/copper/**",
+        "Copper Golem payloads and receivers",
+        "Copper Golem client UI and visualization",
+        "Copper Golem mixins and restart probes"
+      ]
+    },
+    {
+      "id": "nexus",
+      "repository": "TotemNexus",
+      "status": "planned-after-automata",
+      "currentAreas": [
+        "src/main/java/com/adaptor/deadrecall/space/**",
+        "Space Unit, friend, teleport and death-node payloads",
+        "Space Unit client UI",
+        "Space Unit, teleport and distributed-spawn mixins",
+        "Nexus SavedData and restart tests"
+      ]
+    }
+  ],
+  "sharedSeamsRequiringRefactor": [
+    "src/main/java/com/adaptor/deadrecall/Deadrecall.java",
+    "src/client/java/com/adaptor/deadrecall/client/DeadrecallClient.java",
+    "src/main/java/com/adaptor/deadrecall/item/ModItems.java",
+    "src/main/java/com/adaptor/deadrecall/menu/ModMenus.java",
+    "src/main/java/com/adaptor/deadrecall/network/**",
+    "src/main/java/com/adaptor/deadrecall/mixin/**",
+    "src/main/resources/deadrecall.mixins.json",
+    "src/client/resources/deadrecall.client.mixins.json",
+    "shared deadrecall language and data resources"
+  ],
+  "unassignedGameplay": {
+    "temporaryRepository": "DeadRecall",
+    "policy": "Remain in DeadRecall until a bounded-context repository is approved; never move gameplay into TotemCore merely to empty the compatibility repository.",
+    "knownAreas": [
+      "alchemy and cauldron gameplay",
+      "enchanting changes",
+      "recipe overrides",
+      "concrete-powder item behavior",
+      "portable-container restrictions",
+      "other vanilla gameplay tweaks"
+    ]
+  },
+  "dependencyRules": [
+    "TotemCore must not depend on feature repositories",
+    "Feature repositories depend only on TotemCore by default",
+    "Cross-feature behavior uses versioned public APIs, events or optional adapters",
+    "DeadRecall pins exact tested module versions",
+    "No cyclic repository dependency is allowed"
+  ]
+}

@@ -1,6 +1,6 @@
 package com.adaptor.deadrecall.client;
 
-import com.adaptor.deadrecall.item.ModItems;
+import com.adaptor.deadrecall.registry.TotemAutomataItemRegistration;
 import com.adaptor.deadrecall.item.copper.CopperGolemWrenchHandler;
 import com.adaptor.deadrecall.network.CopperGolemVisualizationPayload;
 import com.adaptor.deadrecall.network.RequestCopperGolemVisualizationPayload;
@@ -78,7 +78,7 @@ public final class CopperGolemVisualizationClient {
     }
 
     private static UUID selectedGolem(ItemStack stack) {
-        if (!stack.is(ModItems.COPPER_WRENCH)) {
+        if (!stack.is(TotemAutomataItemRegistration.COPPER_WRENCH)) {
             return null;
         }
         return CopperGolemWrenchHandler.getSelectedGolem(stack);
