@@ -162,6 +162,24 @@ public final class DeathBackpackLifecycleGameTest {
         }
     }
 
+    @SuppressWarnings("removal")
+    @GameTest(maxTicks = 40)
+    public void closingEmptyTierInventoryKeepsPortableBackpack(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ItemStack backpack = new ItemStack(RemnantItemRegistration.BACKPACK_BASIC);
+        player.setItemInHand(InteractionHand.MAIN_HAND, backpack);
+        try {
+            DeathBackpackInventory inventory = new DeathBackpackInventory(player, InteractionHand.MAIN_HAND, 9);
+            inventory.clearContent();
+            inventory.stopOpen(player);
+            require(helper, player.getMainHandItem() == backpack,
+                    "Closing an empty tier backpack incorrectly removed it");
+            helper.succeed();
+        } finally {
+            player.discard();
+        }
+    }
+
     private static void require(GameTestHelper helper, boolean condition, String message) {
         if (!condition) throw helper.assertionException(message);
     }

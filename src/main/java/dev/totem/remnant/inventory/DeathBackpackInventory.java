@@ -2,6 +2,7 @@ package dev.totem.remnant.inventory;
 
 import dev.totem.remnant.death.DeathBackpackRecoveryService;
 import dev.totem.remnant.item.BackpackItemHelper;
+import dev.totem.remnant.item.DeathBackpackItem;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerPlayer;
@@ -60,7 +61,7 @@ public final class DeathBackpackInventory implements Container {
     }
     @Override public boolean stillValid(Player player) { return player == owner && owner.getItemInHand(hand) == backpack; }
     @Override public void stopOpen(ContainerUser user) {
-        if (user instanceof ServerPlayer player && isEmpty()) {
+        if (user instanceof ServerPlayer player && isEmpty() && backpack.getItem() instanceof DeathBackpackItem) {
             DeathBackpackRecoveryService.recoverBoundNode(player, backpack);
             player.setItemInHand(hand, ItemStack.EMPTY);
         }
