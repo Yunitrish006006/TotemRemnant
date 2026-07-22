@@ -5,6 +5,9 @@
   "name": "TotemRemnant GameTests",
   "environment": "server",
   "entrypoints": {
+    "main": [
+      "dev.totem.remnant.gametest.RemnantRestartProbe"
+    ],
     "fabric-gametest": [
       "dev.totem.remnant.death.DeathBackpackLifecycleGameTest"
     ]

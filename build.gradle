@@ -25,6 +25,7 @@ loom {
         'totem-core' { sourceSet sourceSets.core }
         'totem-remnant' { sourceSet sourceSets.main }
     }
+
 }
 
 fabricApi {
@@ -40,6 +41,27 @@ fabricApi {
 sourceSets.named("gametest") {
     compileClasspath += sourceSets.core.output
     runtimeClasspath += sourceSets.core.output
+}
+
+loom {
+    runs {
+        remnantRestartProbe {
+            server()
+            setConfigName("TotemRemnant Restart Probe")
+            ideConfigGenerated(false)
+            runDir("run/remnantRestartProbe")
+            source sourceSets.gametest
+            programArg("--nogui")
+        }
+    }
+}
+
+tasks.named("runRemnantRestartProbe").configure {
+    doFirst {
+        File runDirectory = file("run/remnantRestartProbe")
+        runDirectory.mkdirs()
+        new File(runDirectory, "eula.txt").text = "eula=true\n"
+    }
 }
 
 repositories {
