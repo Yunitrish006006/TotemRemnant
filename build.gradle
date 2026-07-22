@@ -7,6 +7,26 @@ version = project.mod_version
 group = project.maven_group
 base { archivesName = project.archives_base_name }
 
+sourceSets {
+    core {
+        java.srcDir("TotemCore/src/main/java")
+        resources.srcDir("TotemCore/src/main/resources")
+        compileClasspath += sourceSets.main.compileClasspath
+        runtimeClasspath += output + compileClasspath
+    }
+    main {
+        compileClasspath += sourceSets.core.output
+        runtimeClasspath += sourceSets.core.output
+    }
+}
+
+loom {
+    mods {
+        'totem-core' { sourceSet sourceSets.core }
+        'totem-remnant' { sourceSet sourceSets.main }
+    }
+}
+
 repositories {
     mavenCentral()
     maven { url = 'https://repo.codemc.io/repository/relativitymc/' }
