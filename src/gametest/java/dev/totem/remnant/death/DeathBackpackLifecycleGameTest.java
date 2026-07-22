@@ -190,6 +190,32 @@ public final class DeathBackpackLifecycleGameTest {
         helper.succeed();
     }
 
+    @SuppressWarnings("removal")
+    @GameTest(maxTicks = 40)
+    public void playerInventoryCaptureUsesRemnantTransaction(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        BlockPos position = helper.absolutePos(DEATH_POS);
+        player.snapTo(position.getX() + .5D, position.getY(), position.getZ() + .5D, 0, 0);
+        player.getInventory().setItem(0, new ItemStack(Items.DIAMOND, 9));
+        ItemEntity[] entity = {null};
+        try {
+            require(helper, DeathBackpackCaptureService.captureBeforeVanillaDrop(player, helper.getLevel()),
+                    "Remnant did not capture the player inventory");
+            require(helper, player.getInventory().getItem(0).isEmpty(), "Captured inventory slot was not cleared");
+            entity[0] = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(position).inflate(3),
+                    candidate -> candidate.isAlive() && candidate.getItem().is(RemnantItemRegistration.DEATH_BACKPACK))
+                    .stream().findFirst().orElseThrow(() -> helper.assertionException("Remnant did not create the captured backpack"));
+            List<ItemStack> stored = entity[0].getItem().getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY)
+                    .nonEmptyItemCopyStream().toList();
+            require(helper, stored.size() == 1 && stored.getFirst().is(Items.DIAMOND) && stored.getFirst().getCount() == 9,
+                    "Captured player inventory was not preserved in the Remnant backpack");
+            helper.succeed();
+        } finally {
+            if (entity[0] != null) entity[0].discard();
+            player.discard();
+        }
+    }
+
     private static void require(GameTestHelper helper, boolean condition, String message) {
         if (!condition) throw helper.assertionException(message);
     }
