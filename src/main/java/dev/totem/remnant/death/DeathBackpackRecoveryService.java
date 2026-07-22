@@ -1,6 +1,5 @@
 package dev.totem.remnant.death;
 
-import com.adaptor.deadrecall.api.death.DeathBackpackNodeBinding;
 import dev.totem.core.api.v1.death.DeathBackpackNodeLifecycle;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
