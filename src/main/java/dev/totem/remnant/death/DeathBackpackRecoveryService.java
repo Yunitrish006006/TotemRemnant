@@ -27,6 +27,14 @@ public final class DeathBackpackRecoveryService {
                 .orElse(false);
         if (!disabled) return false;
         notifyRecoveredSafely(recoveringPlayer);
+        DeathBackpackNotifications notifications = DeathBackpackNotifications.current();
+        if (notifications != null) {
+            try {
+                notifications.recovered(recoveringPlayer);
+            } catch (RuntimeException exception) {
+                LOGGER.warn("Death node was recovered, but bundle notification failed for {}", recoveringPlayer.getName().getString(), exception);
+            }
+        }
         return true;
     }
 
