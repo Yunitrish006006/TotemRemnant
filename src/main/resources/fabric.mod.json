@@ -5,5 +5,6 @@
   "name": "TotemRemnant",
   "environment": "*",
   "entrypoints": { "main": ["dev.totem.remnant.TotemRemnant"] },
+  "mixins": ["totem-remnant.mixins.json"],
   "depends": { "fabricloader": ">=0.19.3", "minecraft": "~26.2", "java": ">=25", "totem-core": "*" }
 }
