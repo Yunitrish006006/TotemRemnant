@@ -3,6 +3,7 @@ package dev.totem.remnant.death;
 import dev.totem.core.api.v1.death.DeathBackpackNodeLifecycle;
 import dev.totem.remnant.registry.RemnantItemRegistration;
 import dev.totem.remnant.inventory.DeathBackpackInventory;
+import dev.totem.remnant.inventory.PortableContainerPolicy;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -178,6 +179,15 @@ public final class DeathBackpackLifecycleGameTest {
         } finally {
             player.discard();
         }
+    }
+
+    @GameTest(maxTicks = 40)
+    public void configuredPortableContainersCannotNestInsideRemnantBackpacks(GameTestHelper helper) {
+        require(helper, !PortableContainerPolicy.mayInsertIntoBackpack(new ItemStack(Items.ENDER_CHEST)),
+                "Configured portable container was accepted by a Remnant backpack");
+        require(helper, PortableContainerPolicy.mayInsertIntoBackpack(new ItemStack(Items.DIAMOND)),
+                "Ordinary item was rejected by a Remnant backpack");
+        helper.succeed();
     }
 
     private static void require(GameTestHelper helper, boolean condition, String message) {
