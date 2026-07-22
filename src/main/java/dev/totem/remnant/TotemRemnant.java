@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import dev.totem.remnant.death.DeathBackpackCaptureLifecycle;
 import dev.totem.remnant.death.DeathBackpackFactory;
+import dev.totem.remnant.death.DeathBackpackRecoveryService;
 import dev.totem.remnant.registry.RemnantItemRegistration;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
@@ -25,8 +26,13 @@ public final class TotemRemnant implements ModInitializer {
             backpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(contents));
             return backpack;
         });
-        installDeadRecallCaptureTransport();
+        installDeadRecallTransports();
         LOGGER.info("TotemRemnant initialized without Nexus dependency");
+    }
+
+    private static void installDeadRecallTransports() {
+        installDeadRecallCaptureTransport();
+        installDeadRecallRecoveryTransport();
     }
 
     private static void installDeadRecallCaptureTransport() {
@@ -45,6 +51,23 @@ public final class TotemRemnant implements ModInitializer {
             // Standalone Remnant has no DeadRecall compatibility facade.
         } catch (ReflectiveOperationException exception) {
             LOGGER.warn("Unable to install DeadRecall capture transport", exception);
+        }
+    }
+
+    private static void installDeadRecallRecoveryTransport() {
+        try {
+            Class<?> transport = Class.forName("com.adaptor.deadrecall.core.api.DeathBackpackRecoveryTransport");
+            Object adapter = Proxy.newProxyInstance(TotemRemnant.class.getClassLoader(), new Class<?>[] {transport},
+                    (proxy, method, arguments) -> method.getName().equals("recover") && arguments != null && arguments.length == 2
+                            ? DeathBackpackRecoveryService.recoverBoundNode(
+                                    (net.minecraft.server.level.ServerPlayer) arguments[0],
+                                    (net.minecraft.world.item.ItemStack) arguments[1])
+                            : null);
+            transport.getMethod("register", transport).invoke(null, adapter);
+        } catch (ClassNotFoundException ignored) {
+            // Standalone Remnant has no DeadRecall compatibility facade.
+        } catch (ReflectiveOperationException exception) {
+            LOGGER.warn("Unable to install DeadRecall recovery transport", exception);
         }
     }
 }
