@@ -2,6 +2,7 @@ package dev.totem.remnant.death;
 
 import dev.totem.core.api.v1.death.DeathBackpackNodeLifecycle;
 import dev.totem.remnant.registry.RemnantItemRegistration;
+import dev.totem.remnant.inventory.DeathBackpackInventory;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -11,6 +12,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ItemContainerContents;
@@ -133,6 +135,30 @@ public final class DeathBackpackLifecycleGameTest {
             if (firstEntity[0] != null) firstEntity[0].discard();
             if (secondEntity[0] != null) secondEntity[0].discard();
             firstOwner.discard(); secondOwner.discard(); recoveringPlayer.discard();
+        }
+    }
+
+    @SuppressWarnings("removal")
+    @GameTest(maxTicks = 40)
+    public void closingEmptyRemnantInventoryRecoversAndRemovesBackpack(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        UUID nodeId = UUID.randomUUID();
+        boolean[] recovered = {false};
+        ItemStack backpack = new ItemStack(RemnantItemRegistration.DEATH_BACKPACK);
+        backpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(new ItemStack(Items.GOLD_INGOT, 2))));
+        DeathBackpackNodeBinding.write(backpack, nodeId);
+        player.setItemInHand(InteractionHand.MAIN_HAND, backpack);
+        DeathBackpackNodeLifecycle.register(new TestNodeLifecycle(nodeId, recovered));
+        try {
+            DeathBackpackInventory inventory = new DeathBackpackInventory(player, InteractionHand.MAIN_HAND, 9);
+            inventory.clearContent();
+            inventory.stopOpen(player);
+            require(helper, player.getMainHandItem().isEmpty(), "Empty Remnant death backpack remained in hand");
+            require(helper, recovered[0], "Closing empty Remnant inventory did not recover the bound node");
+            helper.succeed();
+        } finally {
+            DeathBackpackNodeLifecycle.register(null);
+            player.discard();
         }
     }
 
