@@ -18,6 +18,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /** Verifies Remnant's real capture and recovery lifecycle without the compatibility bundle. */
@@ -80,6 +82,58 @@ public final class DeathBackpackLifecycleGameTest {
         require(helper, nodeId.equals(DeathBackpackNodeBinding.read(decoded)),
                 "Death backpack node binding did not survive NBT serialization");
         helper.succeed();
+    }
+
+    @SuppressWarnings("removal")
+    @GameTest(maxTicks = 40)
+    public void nonOwnerRecoveryOnlyCompletesTheBoundNode(GameTestHelper helper) {
+        BlockPos firstPosition = helper.absolutePos(DEATH_POS);
+        BlockPos secondPosition = firstPosition.offset(5, 0, 0);
+        helper.setBlock(DEATH_POS.below(), Blocks.STONE);
+        helper.setBlock(DEATH_POS.offset(5, -1, 0), Blocks.STONE);
+        ServerPlayer firstOwner = helper.makeMockServerPlayerInLevel();
+        ServerPlayer secondOwner = helper.makeMockServerPlayerInLevel();
+        ServerPlayer recoveringPlayer = helper.makeMockServerPlayerInLevel();
+        firstOwner.snapTo(firstPosition.getX() + .5D, firstPosition.getY(), firstPosition.getZ() + .5D, 0, 0);
+        secondOwner.snapTo(secondPosition.getX() + .5D, secondPosition.getY(), secondPosition.getZ() + .5D, 0, 0);
+        UUID firstNode = UUID.randomUUID();
+        UUID secondNode = UUID.randomUUID();
+        Set<UUID> recovered = new HashSet<>();
+        ItemEntity[] firstEntity = {null};
+        ItemEntity[] secondEntity = {null};
+        DeathBackpackNodeLifecycle.register(new DeathBackpackNodeLifecycle() {
+            @Override public UUID create(ServerPlayer owner, ServerLevel level, BlockPos position) {
+                return owner == firstOwner ? firstNode : secondNode;
+            }
+            @Override public void rollback(ServerPlayer owner, ServerLevel level, UUID nodeId) { }
+            @Override public boolean recover(ServerPlayer player, UUID nodeId) { return recovered.add(nodeId); }
+        });
+        try {
+            require(helper, DeathBackpackCaptureLifecycle.commit(firstOwner, helper.getLevel(), firstPosition,
+                    List.of(new ItemStack(Items.DIAMOND, 3))), "First owner capture failed");
+            require(helper, DeathBackpackCaptureLifecycle.commit(secondOwner, helper.getLevel(), secondPosition,
+                    List.of(new ItemStack(Items.EMERALD, 5))), "Second owner capture failed");
+            List<ItemEntity> entities = helper.getLevel().getEntitiesOfClass(ItemEntity.class,
+                    new AABB(firstPosition).minmax(new AABB(secondPosition)).inflate(3),
+                    entity -> entity.isAlive() && entity.getItem().is(RemnantItemRegistration.DEATH_BACKPACK));
+            firstEntity[0] = entities.stream().filter(entity -> entity.getItem().getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY)
+                    .nonEmptyItemCopyStream().anyMatch(stack -> stack.is(Items.DIAMOND))).findFirst()
+                    .orElseThrow(() -> helper.assertionException("First owner backpack missing"));
+            secondEntity[0] = entities.stream().filter(entity -> entity.getItem().getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY)
+                    .nonEmptyItemCopyStream().anyMatch(stack -> stack.is(Items.EMERALD))).findFirst()
+                    .orElseThrow(() -> helper.assertionException("Second owner backpack missing"));
+            require(helper, DeathBackpackRecoveryService.recoverBoundNode(recoveringPlayer, firstEntity[0].getItem()),
+                    "Non-owner recovery failed");
+            require(helper, recovered.equals(Set.of(firstNode)), "Recovery completed an unrelated node");
+            require(helper, secondNode.equals(DeathBackpackNodeBinding.read(secondEntity[0].getItem())),
+                    "Unrelated backpack binding changed");
+            helper.succeed();
+        } finally {
+            DeathBackpackNodeLifecycle.register(null);
+            if (firstEntity[0] != null) firstEntity[0].discard();
+            if (secondEntity[0] != null) secondEntity[0].discard();
+            firstOwner.discard(); secondOwner.discard(); recoveringPlayer.discard();
+        }
     }
 
     private static void require(GameTestHelper helper, boolean condition, String message) {
