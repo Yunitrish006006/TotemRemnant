@@ -6,6 +6,8 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -57,6 +59,27 @@ public final class DeathBackpackLifecycleGameTest {
             if (deathBackpackEntity[0] != null) deathBackpackEntity[0].discard();
             player.discard();
         }
+    }
+
+    @GameTest(maxTicks = 40)
+    public void legacyDeathBackpackDataSurvivesItemStackNbtRoundTrip(GameTestHelper helper) {
+        UUID nodeId = UUID.randomUUID();
+        ItemStack legacyDeathBackpack = new ItemStack(RemnantItemRegistration.DEATH_BACKPACK);
+        legacyDeathBackpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(new ItemStack(Items.EMERALD, 7))));
+        DeathBackpackNodeBinding.write(legacyDeathBackpack, nodeId);
+
+        Tag encoded = ItemStack.OPTIONAL_CODEC.encodeStart(NbtOps.INSTANCE, legacyDeathBackpack).getOrThrow();
+        ItemStack decoded = ItemStack.OPTIONAL_CODEC.parse(NbtOps.INSTANCE, encoded).getOrThrow();
+
+        List<ItemStack> stored = decoded.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY)
+                .nonEmptyItemCopyStream().toList();
+        require(helper, decoded.is(RemnantItemRegistration.DEATH_BACKPACK),
+                "Legacy deadrecall:death_backpack item ID did not survive NBT serialization");
+        require(helper, stored.size() == 1 && stored.getFirst().is(Items.EMERALD) && stored.getFirst().getCount() == 7,
+                "Death backpack contents did not survive NBT serialization");
+        require(helper, nodeId.equals(DeathBackpackNodeBinding.read(decoded)),
+                "Death backpack node binding did not survive NBT serialization");
+        helper.succeed();
     }
 
     private static void require(GameTestHelper helper, boolean condition, String message) {
