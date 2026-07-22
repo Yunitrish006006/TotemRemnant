@@ -5,6 +5,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dev.totem.remnant.death.DeathBackpackCaptureLifecycle;
+import dev.totem.remnant.death.DeathBackpackFactory;
+import dev.totem.remnant.registry.RemnantItemRegistration;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemContainerContents;
 
 import java.lang.reflect.Proxy;
 
@@ -14,6 +19,12 @@ public final class TotemRemnant implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        RemnantItemRegistration.register();
+        DeathBackpackFactory.register(contents -> {
+            ItemStack backpack = new ItemStack(RemnantItemRegistration.DEATH_BACKPACK);
+            backpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(contents));
+            return backpack;
+        });
         installDeadRecallCaptureTransport();
         LOGGER.info("TotemRemnant initialized without Nexus dependency");
     }
