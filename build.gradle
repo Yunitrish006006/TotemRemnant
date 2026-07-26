@@ -98,12 +98,10 @@ tasks.named('processResources', ProcessResources) {
 
 // A lockstep artifact is pinned by SHA-512, so its bytes must not depend on
 // filesystem timestamps or Loom's host-dependent manifest entry ordering.
-tasks.named('jar', Jar) {
-    preserveFileTimestamps = false
-    reproducibleFileOrder = true
-
-    doLast {
-        def archive = archiveFile.get().asFile
+// `jar` is Loom's development JAR; the production JAR installed in
+// `build/libs` is emitted by `remapJar`. Normalize both so development and
+// lockstep production builds use the same deterministic archive procedure.
+def normalizeArchive = { File archive ->
         def replacement = new File(archive.parentFile, "${archive.name}.normalized")
         def source = new java.util.jar.JarFile(archive)
 
@@ -169,5 +167,19 @@ tasks.named('jar', Jar) {
                 archive.toPath(),
                 java.nio.file.StandardCopyOption.REPLACE_EXISTING
         )
+}
+
+tasks.named('jar', Jar) {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+
+    doLast {
+        normalizeArchive(archiveFile.get().asFile)
+    }
+}
+
+tasks.named('remapJar') {
+    doLast {
+        normalizeArchive(archiveFile.get().asFile)
     }
 }

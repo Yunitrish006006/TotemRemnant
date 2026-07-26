@@ -11,7 +11,7 @@ types in the DeadRecall bundle for at least two releases.
 
 ## Immutable bundle artifact
 
-The first bundle artifact is `totem-remnant-0.1.0.jar`. It is built against the
+The first bundle artifact is `totem-remnant-0.1.1.jar`. It is built against the
 pinned `TotemCore 0.1.2` JAR and normalized after Loom packages it, so the
 DeadRecall lockstep manifest can verify its SHA-512. The rollback graph omits
 Remnant and activates DeadRecall's guarded legacy implementation instead.
