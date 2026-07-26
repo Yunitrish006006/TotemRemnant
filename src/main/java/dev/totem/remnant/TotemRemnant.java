@@ -1,5 +1,7 @@
 package dev.totem.remnant;
 
+import dev.totem.remnant.item.BackpackItemHelper;
+import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
 
 import java.lang.reflect.Proxy;
+import java.util.function.Predicate;
 
 /** Entry point for the standalone death-backpack module. */
 public final class TotemRemnant implements ModInitializer {
@@ -21,6 +24,7 @@ public final class TotemRemnant implements ModInitializer {
     @Override
     public void onInitialize() {
         RemnantItemRegistration.register();
+        installContainerSafetyIntegration();
         DeathBackpackFactory.register(contents -> {
             ItemStack backpack = new ItemStack(RemnantItemRegistration.DEATH_BACKPACK);
             backpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(contents));
@@ -28,6 +32,22 @@ public final class TotemRemnant implements ModInitializer {
         });
         installDeadRecallTransports();
         LOGGER.info("TotemRemnant initialized without Nexus dependency");
+    }
+
+    /** Registers Remnant backpacks with the optional container-safety module. */
+    private static void installContainerSafetyIntegration() {
+        if (!FabricLoader.getInstance().isModLoaded("totem-container-safety")) {
+            return;
+        }
+        try {
+            Class<?> api = Class.forName("dev.totem.containersafety.api.v1.PortableContainerSafetyApi");
+            Predicate<ItemStack> backpackClassifier = BackpackItemHelper::isBackpackItem;
+            api.getMethod("registerBackpackClassifier", String.class, Predicate.class)
+                    .invoke(null, "totem-remnant", backpackClassifier);
+            LOGGER.info("Registered Remnant backpacks with TotemContainerSafety");
+        } catch (ReflectiveOperationException exception) {
+            LOGGER.warn("Unable to register Remnant backpacks with TotemContainerSafety", exception);
+        }
     }
 
     private static void installDeadRecallTransports() {

@@ -7,25 +7,21 @@ version = project.mod_version
 group = project.maven_group
 base { archivesName = project.archives_base_name }
 
-sourceSets {
-    core {
-        java.srcDir("TotemCore/src/main/java")
-        resources.srcDir("TotemCore/src/main/resources")
-        compileClasspath += sourceSets.main.compileClasspath
-        runtimeClasspath += output + compileClasspath
-    }
-    main {
-        compileClasspath += sourceSets.core.output
-        runtimeClasspath += sourceSets.core.output
-    }
-}
+// A Loom run is launched from Gradle's JVM, whose environment may have been
+// captured before a shell-scoped variable was added.  Accept Gradle properties
+// as the deterministic CI transport while retaining the documented env-var
+// interface for direct invocations.
+def remnantRestartProbePhase = providers.gradleProperty("totemRemnantRestartProbePhase")
+        .orElse(providers.environmentVariable("TOTEM_REMNANT_RESTART_PROBE_PHASE"))
+        .orNull
+def remnantRestartProbeMarkerDirectory = providers.gradleProperty("totemRemnantRestartProbeMarkerDir")
+        .orElse(providers.environmentVariable("TOTEM_REMNANT_RESTART_PROBE_MARKER_DIR"))
+        .orNull
+def totemCoreJar = file(providers.gradleProperty("totemCoreJar")
+        .getOrElse("../TotemCore/build/libs/totem-core-0.1.1.jar"))
 
 loom {
-    mods {
-        'totem-core' { sourceSet sourceSets.core }
-        'totem-remnant' { sourceSet sourceSets.main }
-    }
-
+    mods { 'totem-remnant' { sourceSet sourceSets.main } }
 }
 
 fabricApi {
@@ -38,11 +34,6 @@ fabricApi {
     }
 }
 
-sourceSets.named("gametest") {
-    compileClasspath += sourceSets.core.output
-    runtimeClasspath += sourceSets.core.output
-}
-
 loom {
     runs {
         remnantRestartProbe {
@@ -52,6 +43,12 @@ loom {
             runDir("run/remnantRestartProbe")
             source sourceSets.gametest
             programArg("--nogui")
+            if (remnantRestartProbePhase != null) {
+                environmentVariable("TOTEM_REMNANT_RESTART_PROBE_PHASE", remnantRestartProbePhase)
+            }
+            if (remnantRestartProbeMarkerDirectory != null) {
+                environmentVariable("TOTEM_REMNANT_RESTART_PROBE_MARKER_DIR", remnantRestartProbeMarkerDirectory)
+            }
         }
     }
 }
@@ -62,6 +59,14 @@ tasks.named("runRemnantRestartProbe").configure {
         runDirectory.mkdirs()
         new File(runDirectory, "eula.txt").text = "eula=true\n"
     }
+}
+
+// Loom serializes run environments into the DLI configuration.  Make the
+// phase/marker inputs explicit so separate seed and verify invocations cannot
+// reuse the previous JVM's generated launch environment.
+tasks.named("generateDLIConfig").configure {
+    inputs.property("totemRemnantRestartProbePhase", remnantRestartProbePhase ?: "")
+    inputs.property("totemRemnantRestartProbeMarkerDirectory", remnantRestartProbeMarkerDirectory ?: "")
 }
 
 repositories {
@@ -75,6 +80,11 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     compileOnly "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     runtimeOnly "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // Keep Core as a real external Fabric module.  Embedding its sources made
+    // standalone verification accidentally test a second in-project mod instead
+    // of the artifact Remnant will consume in a compatibility bundle.
+    modImplementation files(totemCoreJar)
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
