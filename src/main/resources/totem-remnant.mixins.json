@@ -2,6 +2,12 @@
   "required": true,
   "package": "dev.totem.remnant.mixin",
   "compatibilityLevel": "JAVA_25",
-  "mixins": ["EntityMixin", "ItemEntityMixin", "PlayerDeathBackpackMixin"],
+  "mixins": [
+    "EntityMixin",
+    "ItemEntityMixin",
+    "PlayerDeathBackpackMixin",
+    "ShulkerBoxBlockEntityMixin",
+    "ShulkerBoxSlotMixin"
+  ],
   "injectors": { "defaultRequire": 1 }
 }

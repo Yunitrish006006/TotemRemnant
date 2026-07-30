@@ -9,7 +9,11 @@
       "dev.totem.remnant.gametest.RemnantRestartProbe"
     ],
     "fabric-gametest": [
-      "dev.totem.remnant.death.DeathBackpackLifecycleGameTest"
+      "dev.totem.remnant.death.DeathBackpackLifecycleGameTest",
+      "dev.totem.remnant.gametest.BackpackMenuNestingInteractionGameTest",
+      "dev.totem.remnant.gametest.ContainerNestingDiagnosticsGameTest",
+      "dev.totem.remnant.gametest.PortableContainerDropperGameTest",
+      "dev.totem.remnant.gametest.PortableContainerNestingGameTest"
     ]
   },
   "depends": {

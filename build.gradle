@@ -18,10 +18,17 @@ def remnantRestartProbeMarkerDirectory = providers.gradleProperty("totemRemnantR
         .orElse(providers.environmentVariable("TOTEM_REMNANT_RESTART_PROBE_MARKER_DIR"))
         .orNull
 def totemCoreJar = file(providers.gradleProperty("totemCoreJar")
-        .getOrElse("../TotemCore/build/libs/totem-core-0.1.2.jar"))
+        .getOrElse("../TotemCore/build/libs/totem-core-0.2.0.jar"))
 
 loom {
-    mods { 'totem-remnant' { sourceSet sourceSets.main } }
+    splitEnvironmentSourceSets()
+
+    mods {
+        'totem-remnant' {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
 }
 
 fabricApi {
@@ -72,6 +79,7 @@ tasks.named("generateDLIConfig").configure {
 repositories {
     mavenCentral()
     maven { url = 'https://repo.codemc.io/repository/relativitymc/' }
+    maven { url = 'https://maven.nucleoid.xyz/releases' }
 }
 
 dependencies {
@@ -80,6 +88,8 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     compileOnly "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     runtimeOnly "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    compileOnly "eu.pb4:trinkets:4.1.0-beta.2+26.2"
+    compileOnly "dev.yumi.mc.core:yumi-mc-foundation:1.1.1+26.2"
 
     // Keep Core as a real external Fabric module.  Embedding its sources made
     // standalone verification accidentally test a second in-project mod instead
@@ -94,6 +104,14 @@ java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_25; targetCom
 tasks.named('processResources', ProcessResources) {
     inputs.property 'version', project.version
     filesMatching('fabric.mod.json') { expand(version: project.version) }
+    // zh_cn intentionally reuses zh_tw; maintain only the Traditional Chinese source.
+    doLast {
+        copy {
+            from(file('src/main/resources/assets/deadrecall/lang/zh_tw.json'))
+            into(file("${destinationDir}/assets/deadrecall/lang"))
+            rename { 'zh_cn.json' }
+        }
+    }
 }
 
 // A lockstep artifact is pinned by SHA-512, so its bytes must not depend on

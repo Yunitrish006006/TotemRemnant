@@ -28,6 +28,12 @@ public final class DeathBackpackCaptureLifecycle {
             entity.setUnlimitedLifetime();
             if (!level.addFreshEntity(entity)) throw new IllegalStateException("Minecraft rejected the death backpack ItemEntity");
             nodeId = DeathBackpackNodeLifecycle.current().map(adapter -> adapter.create(player, level, position)).orElse(null);
+            if (nodeId != null) {
+                UUID boundNodeId = nodeId;
+                UUID backpackEntityId = entity.getUUID();
+                DeathBackpackNodeLifecycle.current()
+                        .ifPresent(adapter -> adapter.bind(level, boundNodeId, backpackEntityId));
+            }
             DeathBackpackNodeBinding.write(backpack, nodeId);
             entity.setItem(backpack);
         } catch (RuntimeException exception) {

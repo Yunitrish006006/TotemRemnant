@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:smithing_transform",
+  "addition": "minecraft:netherite_ingot",
+  "base": "deadrecall:backpack_advanced",
+  "template": "minecraft:netherite_upgrade_smithing_template",
+  "result": {
+    "id": "deadrecall:backpack_netherite"
+  }
+}

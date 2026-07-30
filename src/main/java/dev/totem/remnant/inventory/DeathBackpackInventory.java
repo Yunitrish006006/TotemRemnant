@@ -1,7 +1,6 @@
 package dev.totem.remnant.inventory;
 
 import dev.totem.remnant.death.DeathBackpackRecoveryService;
-import dev.totem.remnant.item.BackpackItemHelper;
 import dev.totem.remnant.item.DeathBackpackItem;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
@@ -52,7 +51,9 @@ public final class DeathBackpackInventory implements Container {
         return result;
     }
     @Override public void setItem(int slot, ItemStack stack) { items.set(slot, stack); setChanged(); }
-    @Override public boolean canPlaceItem(int slot, ItemStack stack) { return !BackpackItemHelper.isBackpackItem(stack); }
+    @Override public boolean canPlaceItem(int slot, ItemStack stack) {
+        return PortableContainerPolicy.mayInsertIntoBackpack(stack);
+    }
     @Override public void clearContent() { items.clear(); setChanged(); }
     @Override public void setChanged() {
         List<ItemStack> contents = new ArrayList<>(items.size());
@@ -60,6 +61,7 @@ public final class DeathBackpackInventory implements Container {
         backpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(contents));
     }
     @Override public boolean stillValid(Player player) { return player == owner && owner.getItemInHand(hand) == backpack; }
+    public ItemStack getBackpackStack() { return backpack; }
     @Override public void stopOpen(ContainerUser user) {
         if (user instanceof ServerPlayer player && isEmpty() && backpack.getItem() instanceof DeathBackpackItem) {
             DeathBackpackRecoveryService.recoverBoundNode(player, backpack);

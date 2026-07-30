@@ -30,6 +30,48 @@ public final class DeathBackpackLifecycleGameTest {
     private static final BlockPos DEATH_POS = new BlockPos(2, 2, 2);
 
     @SuppressWarnings("removal")
+    @GameTest(maxTicks = 60)
+    public void realPlayerDeathCreatesBackpackAndSuppressesCapturedVanillaDrops(GameTestHelper helper) {
+        helper.setBlock(DEATH_POS.below(), Blocks.STONE);
+        BlockPos position = helper.absolutePos(DEATH_POS);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.snapTo(position.getX() + 0.5D, position.getY(), position.getZ() + 0.5D, 0.0F, 0.0F);
+        player.getInventory().setItem(0, new ItemStack(Items.DIAMOND, 9));
+
+        player.die(helper.getLevel().damageSources().generic());
+
+        helper.runAtTickTime(5, () -> {
+            try {
+                List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(
+                        ItemEntity.class,
+                        new AABB(position).inflate(3.0D),
+                        ItemEntity::isAlive
+                );
+                List<ItemEntity> deathBackpacks = drops.stream()
+                        .filter(entity -> entity.getItem().is(RemnantItemRegistration.DEATH_BACKPACK))
+                        .toList();
+                require(helper, deathBackpacks.size() == 1,
+                        "Real player death did not create exactly one Remnant death backpack");
+                List<ItemStack> stored = deathBackpacks.getFirst().getItem()
+                        .getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY)
+                        .nonEmptyItemCopyStream()
+                        .toList();
+                require(helper, stored.size() == 1
+                                && stored.getFirst().is(Items.DIAMOND)
+                                && stored.getFirst().getCount() == 9,
+                        "Real player death did not preserve the captured inventory in the backpack");
+                require(helper, drops.stream().noneMatch(entity -> entity.getItem().is(Items.DIAMOND)),
+                        "Captured diamonds were also emitted as vanilla world drops");
+                require(helper, player.getInventory().isEmpty(),
+                        "Vanilla death processing did not clear the dead player's inventory");
+                helper.succeed();
+            } finally {
+                player.discard();
+            }
+        });
+    }
+
+    @SuppressWarnings("removal")
     @GameTest(maxTicks = 40)
     public void captureThenRecoveryPreservesContentsAndCompletesBoundNode(GameTestHelper helper) {
         helper.setBlock(DEATH_POS.below(), Blocks.STONE);
@@ -38,8 +80,9 @@ public final class DeathBackpackLifecycleGameTest {
         player.snapTo(position.getX() + 0.5D, position.getY(), position.getZ() + 0.5D, 0.0F, 0.0F);
         UUID nodeId = UUID.randomUUID();
         boolean[] recovered = {false};
+        UUID[] boundBackpackEntityId = {null};
         ItemEntity[] deathBackpackEntity = {null};
-        DeathBackpackNodeLifecycle.register(new TestNodeLifecycle(nodeId, recovered));
+        DeathBackpackNodeLifecycle.register(new TestNodeLifecycle(nodeId, recovered, boundBackpackEntityId));
 
         try {
             ItemStack diamonds = new ItemStack(Items.DIAMOND, 12);
@@ -55,6 +98,8 @@ public final class DeathBackpackLifecycleGameTest {
                     "Remnant death backpack did not preserve captured contents");
             require(helper, nodeId.equals(DeathBackpackNodeBinding.read(deathBackpack)),
                     "Remnant death backpack did not preserve the Core node binding");
+            require(helper, deathBackpackEntity[0].getUUID().equals(boundBackpackEntityId[0]),
+                    "Remnant did not report the backpack entity UUID to the Core node lifecycle");
             require(helper, DeathBackpackRecoveryService.recoverBoundNode(player, deathBackpack),
                     "Remnant recovery lifecycle did not complete the bound node");
             require(helper, recovered[0], "Core node lifecycle was not invoked during Remnant recovery");
@@ -85,6 +130,47 @@ public final class DeathBackpackLifecycleGameTest {
         require(helper, nodeId.equals(DeathBackpackNodeBinding.read(decoded)),
                 "Death backpack node binding did not survive NBT serialization");
         helper.succeed();
+    }
+
+    @SuppressWarnings("removal")
+    @GameTest(maxTicks = 40)
+    public void reverseBindingFailureRollsBackNodeAndBackpackEntity(GameTestHelper helper) {
+        helper.setBlock(DEATH_POS.below(), Blocks.STONE);
+        BlockPos position = helper.absolutePos(DEATH_POS);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        UUID nodeId = UUID.randomUUID();
+        boolean[] rolledBack = {false};
+        DeathBackpackNodeLifecycle.register(new DeathBackpackNodeLifecycle() {
+            @Override public UUID create(ServerPlayer owner, ServerLevel level, BlockPos ignored) {
+                return nodeId;
+            }
+            @Override public void bind(ServerLevel level, UUID boundNodeId, UUID backpackEntityId) {
+                throw new IllegalStateException("forced reverse-binding failure");
+            }
+            @Override public void rollback(ServerPlayer owner, ServerLevel level, UUID rolledBackNodeId) {
+                rolledBack[0] = nodeId.equals(rolledBackNodeId);
+            }
+            @Override public boolean recover(ServerPlayer recoveringPlayer, UUID recoveredNodeId) {
+                return false;
+            }
+        });
+
+        try {
+            require(helper, !DeathBackpackCaptureLifecycle.commit(
+                            player, helper.getLevel(), position, List.of(new ItemStack(Items.DIAMOND))),
+                    "Capture unexpectedly committed after reverse-binding failure");
+            require(helper, rolledBack[0], "Reverse-binding failure did not roll back the created node");
+            require(helper, helper.getLevel().getEntitiesOfClass(
+                            ItemEntity.class,
+                            new AABB(position).inflate(3.0D),
+                            entity -> entity.isAlive() && entity.getItem().is(RemnantItemRegistration.DEATH_BACKPACK)
+                    ).isEmpty(),
+                    "Reverse-binding failure left a death backpack entity behind");
+            helper.succeed();
+        } finally {
+            DeathBackpackNodeLifecycle.register(null);
+            player.discard();
+        }
     }
 
     @SuppressWarnings("removal")
@@ -149,7 +235,7 @@ public final class DeathBackpackLifecycleGameTest {
         backpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(new ItemStack(Items.GOLD_INGOT, 2))));
         DeathBackpackNodeBinding.write(backpack, nodeId);
         player.setItemInHand(InteractionHand.MAIN_HAND, backpack);
-        DeathBackpackNodeLifecycle.register(new TestNodeLifecycle(nodeId, recovered));
+        DeathBackpackNodeLifecycle.register(new TestNodeLifecycle(nodeId, recovered, new UUID[1]));
         try {
             DeathBackpackInventory inventory = new DeathBackpackInventory(player, InteractionHand.MAIN_HAND, 9);
             inventory.clearContent();
@@ -220,8 +306,14 @@ public final class DeathBackpackLifecycleGameTest {
         if (!condition) throw helper.assertionException(message);
     }
 
-    private record TestNodeLifecycle(UUID nodeId, boolean[] recovered) implements DeathBackpackNodeLifecycle {
+    private record TestNodeLifecycle(
+            UUID nodeId,
+            boolean[] recovered,
+            UUID[] boundBackpackEntityId) implements DeathBackpackNodeLifecycle {
         @Override public UUID create(ServerPlayer owner, ServerLevel level, BlockPos position) { return nodeId; }
+        @Override public void bind(ServerLevel level, UUID boundNodeId, UUID backpackEntityId) {
+            if (nodeId.equals(boundNodeId)) boundBackpackEntityId[0] = backpackEntityId;
+        }
         @Override public void rollback(ServerPlayer owner, ServerLevel level, UUID ignored) { }
         @Override public boolean recover(ServerPlayer recoveringPlayer, UUID recoveredNodeId) {
             recovered[0] = nodeId.equals(recoveredNodeId);

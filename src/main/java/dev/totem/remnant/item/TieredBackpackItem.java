@@ -1,5 +1,6 @@
 package dev.totem.remnant.item;
 
+import dev.totem.remnant.inventory.BackpackMenu;
 import dev.totem.remnant.inventory.DeathBackpackInventory;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -7,7 +8,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
@@ -24,10 +24,10 @@ public final class TieredBackpackItem extends AbstractBackpackItem {
             int rows = tier.slots() / 9;
             DeathBackpackInventory inventory = new DeathBackpackInventory(serverPlayer, hand, tier.slots());
             serverPlayer.openMenu(new SimpleMenuProvider((syncId, playerInventory, ignored) -> switch (rows) {
-                case 1 -> new ChestMenu(MenuType.GENERIC_9x1, syncId, playerInventory, inventory, 1);
-                case 2 -> new ChestMenu(MenuType.GENERIC_9x2, syncId, playerInventory, inventory, 2);
-                case 3 -> new ChestMenu(MenuType.GENERIC_9x3, syncId, playerInventory, inventory, 3);
-                default -> new ChestMenu(MenuType.GENERIC_9x4, syncId, playerInventory, inventory, 4);
+                case 1 -> new BackpackMenu(MenuType.GENERIC_9x1, syncId, playerInventory, inventory, 1);
+                case 2 -> new BackpackMenu(MenuType.GENERIC_9x2, syncId, playerInventory, inventory, 2);
+                case 3 -> new BackpackMenu(MenuType.GENERIC_9x3, syncId, playerInventory, inventory, 3);
+                default -> new BackpackMenu(MenuType.GENERIC_9x4, syncId, playerInventory, inventory, 4);
             }, Component.translatable("container.deadrecall.backpack." + tier.name().toLowerCase())));
         }
         return InteractionResult.SUCCESS;

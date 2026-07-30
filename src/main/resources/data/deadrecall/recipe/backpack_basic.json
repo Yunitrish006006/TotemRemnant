@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:smithing_transform",
+  "addition": "minecraft:leather",
+  "base": "minecraft:bundle",
+  "template": "minecraft:bundle",
+  "result": {
+    "id": "deadrecall:backpack_basic"
+  }
+}
