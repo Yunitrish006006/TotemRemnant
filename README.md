@@ -1,22 +1,105 @@
 # TotemRemnant
 
-TotemRemnant is the optional death-backpack module for Totem.  It depends on
-TotemCore, but not TotemNexus: a Nexus death node is supplied only through the
-versioned optional lifecycle adapter when Nexus is installed.
+TotemRemnant 是 Totem 系列的背包、死亡物品保護與可攜式容器安全模組。
+目前候選版本為 **0.1.4**，精確搭配 TotemCore **0.2.0**。
 
-`0.1.4` is the current candidate built against TotemCore `0.2.0`; it reports
-the spawned death-backpack ItemEntity UUID through Core's optional reverse
-binding callback, rolls back the transaction when persistence fails, and owns
-the complete portable-container nesting policy and diagnostics. It also owns
-the death-backpack beam, optional Trinkets inventory adapter and the preserved
-`deadrecall:main` creative tab.
-`0.1.1` remains the first immutable lockstep artifact and rollback baseline.
+## 安裝
 
-## Verification
+將下列 JAR 放入 Client 與 Server 的 `mods/`：
 
-The Java 25 build and unit suite pass. The Fabric runner reports all 23 required
-GameTests passing, including backpack click routes, Shulker Box menu and sided
-automation, Hopper, Hopper Minecart, Dropper, diagnostics and legacy-data
-guards. A nine-module candidate Dedicated Server also reached `Done`, executed
-the Remnant-owned `/deadrecall containers scan` command once and stopped
-cleanly.
+1. Fabric API `0.154.2+26.2`
+2. TotemCore `0.2.0`
+3. TotemRemnant `0.1.4`
+
+| 項目 | 需求 |
+| --- | --- |
+| Minecraft | 26.2 |
+| Fabric Loader | 0.19.3+ |
+| Java | 25+ |
+| 選配 | Trinkets Updated 4.1.0-beta.2+ |
+
+使用 DeadRecall 2.4.4 整合 JAR 時不要再安裝獨立 TotemRemnant；整合包已
+內含相同模組。
+
+## 一般背包教學
+
+所有背包都在鍛造台升級。前三階使用 Bundle 作為 template：
+
+| 結果 | Template | Base | Addition | 容量 |
+| --- | --- | --- | --- | ---: |
+| 基礎背包 | Bundle | Bundle | 皮革 | 9 |
+| 標準背包 | Bundle | 基礎背包 | 鐵錠 | 18 |
+| 進階背包 | Bundle | 標準背包 | 鑽石 | 27 |
+| 獄髓背包 | 獄髓升級模板 | 進階背包 | 獄髓錠 | 36 |
+
+右鍵背包即可開啟。內容保存於物品 Data Components，支援原版拖曳與
+Shift-click。
+
+| 等級 | 額外防護 |
+| --- | --- |
+| 基礎 | 無 |
+| 標準 | 仙人掌 |
+| 進階 | 仙人掌、爆炸 |
+| 獄髓 | 火、熔岩、仙人掌、爆炸與自然消失 |
+
+一般背包掉入虛空仍可能遺失；虛空保護只屬於死亡背包。
+
+## 死亡背包
+
+玩家死亡且 `keepInventory=false` 時，Server 會在原版生成掉落物之前
+封裝物品欄、裝備、副手、游標、玩家合成格與支援工作站輸入：
+
+- 容量依死亡物品數動態調整，最多 54 格。
+- 死亡背包不會自然消失，免疫一般傷害，並在虛空下方被向上救回。
+- 地面上的背包會顯示紅色定位光柱。
+- DeadRecall 背包與其他可攜式容器維持獨立掉落，不會被巢狀封裝。
+- 背包完全清空並關閉後會移除；任何協助回收的玩家都可完成此流程。
+
+若同時安裝 TotemNexus，Remnant 會透過 TotemCore 的選配生命週期建立
+死亡 Space Unit，保存死亡節點 ↔ 背包 Entity UUID 的雙向關聯。沒有
+Nexus 時死亡背包仍可獨立使用。
+
+> `/back` 是 DeadRecall 相容整合包的額外功能，不是 TotemRemnant
+> standalone API 的一部分。
+
+## 可攜式容器安全
+
+Remnant 禁止 Bundle、Shulker Box、DeadRecall 背包與
+`deadrecall:portable_containers` tag 物品互相非法巢狀。限制涵蓋 GUI、
+Shift-click、漏斗、漏斗礦車、投擲器／發射器與相容自動化。
+
+舊世界已存在的非法內容不會被刪除：可以取出，但不能再次放回。
+
+管理員可執行唯讀診斷：
+
+```text
+/deadrecall containers scan
+/deadrecall containers scan <player>
+```
+
+掃描不移動物品、不自動修復資料，也不載入未載入區塊。
+
+## 選配整合
+
+- **TotemNexus**：建立、綁定與回收死亡 Space Unit。
+- **Trinkets Updated**：擷取已驗證的選配飾品 inventory。
+- **TotemAutomata**：透過 Remnant 公開 policy 阻止銅魁儡把背包塞入
+  不安全容器。
+
+Remnant 不直接依賴 Nexus 或 Automata；所有跨模組行為都必須安全地
+在對方不存在時停用。
+
+## 開發與驗證
+
+```bash
+./gradlew build
+```
+
+正式 JAR 輸出至 `build/libs/`。測試涵蓋死亡擷取／回收、restart、
+背包操作、Shulker Box、Hopper、Hopper Minecart、Dropper、容器診斷
+與 legacy data。所有權與相容契約見 [EXTRACTION.md](EXTRACTION.md)。
+
+## 驗證狀態
+
+0.1.4 的 Java 25 build 與 23/23 required Fabric GameTests 已通過；完整
+九模組 Dedicated Server 也已確認只註冊一份 Remnant authority。
