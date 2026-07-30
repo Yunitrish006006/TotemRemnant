@@ -4,6 +4,6 @@
   "base": "minecraft:bundle",
   "template": "minecraft:bundle",
   "result": {
-    "id": "deadrecall:backpack_basic"
+    "id": "totem:remnant/backpack_basic"
   }
 }

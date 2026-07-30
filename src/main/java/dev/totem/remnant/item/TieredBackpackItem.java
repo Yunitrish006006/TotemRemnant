@@ -2,6 +2,7 @@ package dev.totem.remnant.item;
 
 import dev.totem.remnant.inventory.BackpackMenu;
 import dev.totem.remnant.inventory.DeathBackpackInventory;
+import dev.totem.remnant.registry.RemnantItemRegistration;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -10,6 +11,7 @@ import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 /** Remnant-owned tier metadata for legacy portable backpack identifiers. */
@@ -21,6 +23,11 @@ public final class TieredBackpackItem extends AbstractBackpackItem {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
+            ItemStack held = player.getItemInHand(hand);
+            ItemStack migrated = RemnantItemRegistration.migrateLegacy(held);
+            if (migrated != held) {
+                player.setItemInHand(hand, migrated);
+            }
             int rows = tier.slots() / 9;
             DeathBackpackInventory inventory = new DeathBackpackInventory(serverPlayer, hand, tier.slots());
             serverPlayer.openMenu(new SimpleMenuProvider((syncId, playerInventory, ignored) -> switch (rows) {

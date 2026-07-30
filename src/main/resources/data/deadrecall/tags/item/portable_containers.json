@@ -1,6 +1,16 @@
 {
   "replace": false,
   "values": [
+    "totem:remnant/backpack_basic",
+    "totem:remnant/backpack_standard",
+    "totem:remnant/backpack_advanced",
+    "totem:remnant/backpack_netherite",
+    "totem:remnant/death_backpack",
+    "deadrecall:backpack_basic",
+    "deadrecall:backpack_standard",
+    "deadrecall:backpack_advanced",
+    "deadrecall:backpack_netherite",
+    "deadrecall:death_backpack",
     "minecraft:bundle",
     "minecraft:shulker_box",
     "minecraft:white_shulker_box",

@@ -1,9 +1,9 @@
 {
   "type": "minecraft:smithing_transform",
   "addition": "minecraft:diamond",
-  "base": "deadrecall:backpack_standard",
+  "base": "#totem:remnant/backpacks/standard",
   "template": "minecraft:bundle",
   "result": {
-    "id": "deadrecall:backpack_advanced"
+    "id": "totem:remnant/backpack_advanced"
   }
 }

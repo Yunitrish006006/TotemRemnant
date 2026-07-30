@@ -8,31 +8,77 @@ import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
-/** Remnant item owner retaining legacy deadrecall resource identifiers. */
+/** Remnant item owner exposing canonical IDs while retaining legacy save compatibility. */
 public final class RemnantItemRegistration {
-    public static final Item BACKPACK_BASIC = registerTiered("backpack_basic", TieredBackpackItem.BackpackTier.BASIC, false);
-    public static final Item BACKPACK_STANDARD = registerTiered("backpack_standard", TieredBackpackItem.BackpackTier.STANDARD, false);
-    public static final Item BACKPACK_ADVANCED = registerTiered("backpack_advanced", TieredBackpackItem.BackpackTier.ADVANCED, false);
-    public static final Item BACKPACK_NETHERITE = registerTiered("backpack_netherite", TieredBackpackItem.BackpackTier.NETHERITE, true);
-    private static final Identifier DEATH_BACKPACK_ID = Identifier.fromNamespaceAndPath("deadrecall", "death_backpack");
-    private static final ResourceKey<Item> DEATH_BACKPACK_KEY = ResourceKey.create(Registries.ITEM, DEATH_BACKPACK_ID);
-    public static final Item DEATH_BACKPACK = BuiltInRegistries.ITEM.getOptional(DEATH_BACKPACK_KEY)
-            .orElseGet(() -> Registry.register(BuiltInRegistries.ITEM,
-                    DEATH_BACKPACK_ID,
-                    new DeathBackpackItem(new Item.Properties()
-                            .setId(DEATH_BACKPACK_KEY)
-                            .stacksTo(1)
-                            .fireResistant())));
+    public static final Item BACKPACK_BASIC = registerTiered(
+            "totem", "remnant/backpack_basic", TieredBackpackItem.BackpackTier.BASIC, false);
+    public static final Item BACKPACK_STANDARD = registerTiered(
+            "totem", "remnant/backpack_standard", TieredBackpackItem.BackpackTier.STANDARD, false);
+    public static final Item BACKPACK_ADVANCED = registerTiered(
+            "totem", "remnant/backpack_advanced", TieredBackpackItem.BackpackTier.ADVANCED, false);
+    public static final Item BACKPACK_NETHERITE = registerTiered(
+            "totem", "remnant/backpack_netherite", TieredBackpackItem.BackpackTier.NETHERITE, true);
+    public static final Item DEATH_BACKPACK = registerDeathBackpack("totem", "remnant/death_backpack");
+
+    public static final Item LEGACY_BACKPACK_BASIC = registerTiered(
+            "deadrecall", "backpack_basic", TieredBackpackItem.BackpackTier.BASIC, false);
+    public static final Item LEGACY_BACKPACK_STANDARD = registerTiered(
+            "deadrecall", "backpack_standard", TieredBackpackItem.BackpackTier.STANDARD, false);
+    public static final Item LEGACY_BACKPACK_ADVANCED = registerTiered(
+            "deadrecall", "backpack_advanced", TieredBackpackItem.BackpackTier.ADVANCED, false);
+    public static final Item LEGACY_BACKPACK_NETHERITE = registerTiered(
+            "deadrecall", "backpack_netherite", TieredBackpackItem.BackpackTier.NETHERITE, true);
+    public static final Item LEGACY_DEATH_BACKPACK = registerDeathBackpack("deadrecall", "death_backpack");
+
     private RemnantItemRegistration() { }
     public static void register() { }
 
-    private static Item registerTiered(String path, TieredBackpackItem.BackpackTier tier, boolean fireResistant) {
-        Identifier id = Identifier.fromNamespaceAndPath("deadrecall", path);
+    /**
+     * Converts a legacy backpack to its canonical item while retaining its full component patch.
+     * Non-legacy stacks are returned unchanged so callers can use identity to detect migration.
+     */
+    public static ItemStack migrateLegacy(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return stack;
+        }
+        Item canonical = canonicalItem(stack.getItem());
+        return canonical == null ? stack : stack.transmuteCopy(canonical, stack.getCount());
+    }
+
+    public static Item canonicalItem(Item item) {
+        if (item == LEGACY_BACKPACK_BASIC) return BACKPACK_BASIC;
+        if (item == LEGACY_BACKPACK_STANDARD) return BACKPACK_STANDARD;
+        if (item == LEGACY_BACKPACK_ADVANCED) return BACKPACK_ADVANCED;
+        if (item == LEGACY_BACKPACK_NETHERITE) return BACKPACK_NETHERITE;
+        if (item == LEGACY_DEATH_BACKPACK) return DEATH_BACKPACK;
+        return null;
+    }
+
+    public static boolean isLegacy(ItemStack stack) {
+        return stack != null && !stack.isEmpty() && canonicalItem(stack.getItem()) != null;
+    }
+
+    private static Item registerTiered(
+            String namespace,
+            String path,
+            TieredBackpackItem.BackpackTier tier,
+            boolean fireResistant
+    ) {
+        Identifier id = Identifier.fromNamespaceAndPath(namespace, path);
         ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, id);
         Item.Properties properties = new Item.Properties().setId(key).stacksTo(1);
         if (fireResistant) properties.fireResistant();
         return BuiltInRegistries.ITEM.getOptional(key).orElseGet(() ->
                 Registry.register(BuiltInRegistries.ITEM, id, new TieredBackpackItem(properties, tier)));
+    }
+
+    private static Item registerDeathBackpack(String namespace, String path) {
+        Identifier id = Identifier.fromNamespaceAndPath(namespace, path);
+        ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, id);
+        return BuiltInRegistries.ITEM.getOptional(key).orElseGet(() ->
+                Registry.register(BuiltInRegistries.ITEM, id, new DeathBackpackItem(
+                        new Item.Properties().setId(key).stacksTo(1).fireResistant())));
     }
 }

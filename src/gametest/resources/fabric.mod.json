@@ -3,17 +3,22 @@
   "id": "totem-remnant-gametest",
   "version": "1.0.0",
   "name": "TotemRemnant GameTests",
-  "environment": "server",
+  "environment": "*",
   "entrypoints": {
     "main": [
       "dev.totem.remnant.gametest.RemnantRestartProbe"
     ],
     "fabric-gametest": [
       "dev.totem.remnant.death.DeathBackpackLifecycleGameTest",
+      "dev.totem.remnant.gametest.BackpackDyeingGameTest",
+      "dev.totem.remnant.gametest.BackpackItemIdMigrationGameTest",
       "dev.totem.remnant.gametest.BackpackMenuNestingInteractionGameTest",
       "dev.totem.remnant.gametest.ContainerNestingDiagnosticsGameTest",
       "dev.totem.remnant.gametest.PortableContainerDropperGameTest",
       "dev.totem.remnant.gametest.PortableContainerNestingGameTest"
+    ],
+    "fabric-client-gametest": [
+      "dev.totem.remnant.client.BackpackDyeingVisualGameTest"
     ]
   },
   "depends": {

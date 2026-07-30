@@ -36,7 +36,7 @@ fabricApi {
         createSourceSet = true
         modId = "totem-remnant-gametest"
         enableGameTests = true
-        enableClientGameTests = false
+        enableClientGameTests = true
         eula = true
     }
 }
@@ -100,6 +100,18 @@ dependencies {
 }
 
 tasks.withType(Test).configureEach { useJUnitPlatform() }
+
+tasks.matching { task -> task.name == "runClientGameTest" }.configureEach {
+    doLast {
+        copy {
+            from(file("${buildDir}/run/clientGameTest/screenshots"))
+            include("*_backpack-dyeing-four-tiers.png")
+            rename { name -> name.replaceFirst(/^\d+_/, "") }
+            into(file("test-artifacts/screenshots/backpack-dyeing"))
+        }
+    }
+}
+
 java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_25; targetCompatibility = JavaVersion.VERSION_25 }
 tasks.named('processResources', ProcessResources) {
     inputs.property 'version', project.version

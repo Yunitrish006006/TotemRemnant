@@ -3,7 +3,7 @@ package dev.totem.remnant.mixin.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.totem.remnant.client.render.DeathBackpackBeamState;
-import dev.totem.remnant.registry.RemnantItemRegistration;
+import dev.totem.remnant.item.BackpackItemHelper;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.ItemEntityRenderer;
 import net.minecraft.client.renderer.entity.state.ItemEntityRenderState;
@@ -41,7 +41,7 @@ public class ItemEntityRendererMixin {
             CallbackInfo ci
     ) {
         ((DeathBackpackBeamState) state).deadrecall$setDeathBackpackBeam(
-                entity.getItem().is(RemnantItemRegistration.DEATH_BACKPACK)
+                BackpackItemHelper.isDeathBackpackItem(entity.getItem())
         );
     }
 

@@ -5,7 +5,7 @@
       "conditions": {
         "items": [
           {
-            "items": "deadrecall:backpack_advanced"
+            "items": "#totem:remnant/backpacks/advanced"
           }
         ]
       },
@@ -17,7 +17,7 @@
       "translate": "advancements.deadrecall.backpack_advanced.description"
     },
     "icon": {
-      "id": "deadrecall:backpack_advanced"
+      "id": "totem:remnant/backpack_advanced"
     },
     "title": {
       "translate": "advancements.deadrecall.backpack_advanced.title"

@@ -2,6 +2,7 @@ package dev.totem.remnant.item;
 
 import dev.totem.remnant.inventory.BackpackMenu;
 import dev.totem.remnant.inventory.DeathBackpackInventory;
+import dev.totem.remnant.registry.RemnantItemRegistration;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -9,6 +10,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 /** Persistent Remnant death-backpack item. */
@@ -20,7 +22,12 @@ public final class DeathBackpackItem extends AbstractBackpackItem {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
-            int rows = Math.max(1, Math.min(6, (int) Math.ceil(BackpackItemHelper.countStoredStacks(player.getItemInHand(hand)) / 9.0D)));
+            ItemStack held = player.getItemInHand(hand);
+            ItemStack migrated = RemnantItemRegistration.migrateLegacy(held);
+            if (migrated != held) {
+                player.setItemInHand(hand, migrated);
+            }
+            int rows = Math.max(1, Math.min(6, (int) Math.ceil(BackpackItemHelper.countStoredStacks(migrated) / 9.0D)));
             DeathBackpackInventory inventory = new DeathBackpackInventory(serverPlayer, hand, rows * 9);
             serverPlayer.openMenu(new SimpleMenuProvider((syncId, playerInventory, ignored) -> switch (rows) {
                 case 1 -> new BackpackMenu(MenuType.GENERIC_9x1, syncId, playerInventory, inventory, 1);

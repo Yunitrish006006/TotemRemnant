@@ -5,7 +5,7 @@
       "conditions": {
         "items": [
           {
-            "items": "deadrecall:backpack_netherite"
+            "items": "#totem:remnant/backpacks/netherite"
           }
         ]
       },
@@ -18,7 +18,7 @@
     },
     "frame": "challenge",
     "icon": {
-      "id": "deadrecall:backpack_netherite"
+      "id": "totem:remnant/backpack_netherite"
     },
     "title": {
       "translate": "advancements.deadrecall.backpack_netherite.title"
