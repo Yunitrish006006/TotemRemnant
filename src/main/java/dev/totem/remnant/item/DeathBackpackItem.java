@@ -1,8 +1,8 @@
 package dev.totem.remnant.item;
 
+import dev.totem.core.api.v1.migration.LegacyItemMigrationRegistry;
 import dev.totem.remnant.inventory.BackpackMenu;
 import dev.totem.remnant.inventory.DeathBackpackInventory;
-import dev.totem.remnant.registry.RemnantItemRegistration;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -23,7 +23,7 @@ public final class DeathBackpackItem extends AbstractBackpackItem {
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
             ItemStack held = player.getItemInHand(hand);
-            ItemStack migrated = RemnantItemRegistration.migrateLegacy(held);
+            ItemStack migrated = LegacyItemMigrationRegistry.migrate(held);
             if (migrated != held) {
                 player.setItemInHand(hand, migrated);
             }

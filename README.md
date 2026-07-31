@@ -1,15 +1,15 @@
 # TotemRemnant
 
 TotemRemnant 是 Totem 系列的背包、死亡物品保護與可攜式容器安全模組。
-目前版本為 **0.1.6**，精確搭配 TotemCore **0.3.0**。
+目前版本為 **0.1.7**，精確搭配 TotemCore **0.4.0**。
 
 ## 安裝
 
 將下列 JAR 放入 Client 與 Server 的 `mods/`：
 
 1. Fabric API `0.154.2+26.2`
-2. TotemCore `0.3.0`
-3. TotemRemnant `0.1.6`
+2. TotemCore `0.4.0`
+3. TotemRemnant `0.1.7`
 
 | 項目 | 需求 |
 | --- | --- |
@@ -18,7 +18,7 @@ TotemRemnant 是 Totem 系列的背包、死亡物品保護與可攜式容器安
 | Java | 25+ |
 | 選配 | Trinkets Updated 4.1.0-beta.2+ |
 
-使用 DeadRecall 2.4.6 整合 JAR 時不要再安裝獨立 TotemRemnant；整合包已
+使用 DeadRecall 2.4.7 整合 JAR 時不要再安裝獨立 TotemRemnant；整合包已
 內含相同模組。
 
 ## 一般背包教學
@@ -47,10 +47,11 @@ Shift-click。
 `backpack_netherite` 與 `death_backpack`（後四者同樣位於
 `totem:remnant/` 路徑）。
 
-舊世界的 `deadrecall:backpack_*` 與 `deadrecall:death_backpack` 仍會正常
-載入。右鍵使用舊背包時會就地換成對應 canonical 物品，保留內容、名稱、
-染色與其他 Data Components；替舊一般背包染色也會完成相同轉換。系統不會
-在啟動時掃描離線玩家或未載入區塊，因此尚未互動的舊物品會安全保留原 ID。
+Remnant standalone 只註冊上述 canonical ID。安裝 DeadRecall 2.4.7
+整合包時，外層相容主機才會解碼 `deadrecall:backpack_*` 與
+`deadrecall:death_backpack`；右鍵使用舊背包時會就地換成 canonical
+物品，保留內容、名稱、染色與其他 Data Components。系統不會在啟動時
+掃描離線玩家或未載入區塊。
 
 | 等級 | 額外防護 |
 | --- | --- |
@@ -126,5 +127,5 @@ Remnant 不直接依賴 Nexus 或 Automata；所有跨模組行為都必須安�
 
 ## 驗證狀態
 
-0.1.6 的 Java 25 build 與 35/35 required Fabric GameTests 已通過；完整
-九模組 Dedicated Server 也已確認只註冊一份 Remnant authority。
+0.1.7 的 Java 25 build 與 28/28 required Fabric GameTests 已通過；完整
+整合 Dedicated Server 也已確認 canonical 與舊 ID 各只有一份 authority。

@@ -11,7 +11,6 @@
     "fabric-gametest": [
       "dev.totem.remnant.death.DeathBackpackLifecycleGameTest",
       "dev.totem.remnant.gametest.BackpackDyeingGameTest",
-      "dev.totem.remnant.gametest.BackpackItemIdMigrationGameTest",
       "dev.totem.remnant.gametest.BackpackMenuNestingInteractionGameTest",
       "dev.totem.remnant.gametest.ContainerNestingDiagnosticsGameTest",
       "dev.totem.remnant.gametest.PortableContainerDropperGameTest",

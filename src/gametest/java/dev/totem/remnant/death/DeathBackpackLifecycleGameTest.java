@@ -189,27 +189,6 @@ public final class DeathBackpackLifecycleGameTest {
         }
     }
 
-    @GameTest(maxTicks = 40)
-    public void legacyDeathBackpackDataSurvivesItemStackNbtRoundTrip(GameTestHelper helper) {
-        UUID nodeId = UUID.randomUUID();
-        ItemStack legacyDeathBackpack = new ItemStack(RemnantItemRegistration.LEGACY_DEATH_BACKPACK);
-        legacyDeathBackpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(new ItemStack(Items.EMERALD, 7))));
-        DeathBackpackNodeBinding.write(legacyDeathBackpack, nodeId);
-
-        Tag encoded = ItemStack.OPTIONAL_CODEC.encodeStart(NbtOps.INSTANCE, legacyDeathBackpack).getOrThrow();
-        ItemStack decoded = ItemStack.OPTIONAL_CODEC.parse(NbtOps.INSTANCE, encoded).getOrThrow();
-
-        List<ItemStack> stored = decoded.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY)
-                .nonEmptyItemCopyStream().toList();
-        require(helper, decoded.is(RemnantItemRegistration.LEGACY_DEATH_BACKPACK),
-                "Legacy deadrecall:death_backpack item ID did not survive NBT serialization");
-        require(helper, stored.size() == 1 && stored.getFirst().is(Items.EMERALD) && stored.getFirst().getCount() == 7,
-                "Death backpack contents did not survive NBT serialization");
-        require(helper, nodeId.equals(DeathBackpackNodeBinding.read(decoded)),
-                "Death backpack node binding did not survive NBT serialization");
-        helper.succeed();
-    }
-
     @SuppressWarnings("removal")
     @GameTest(maxTicks = 40)
     public void reverseBindingFailureRollsBackNodeAndBackpackEntity(GameTestHelper helper) {

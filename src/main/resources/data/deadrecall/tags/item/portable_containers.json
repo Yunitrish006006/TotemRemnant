@@ -6,11 +6,26 @@
     "totem:remnant/backpack_advanced",
     "totem:remnant/backpack_netherite",
     "totem:remnant/death_backpack",
-    "deadrecall:backpack_basic",
-    "deadrecall:backpack_standard",
-    "deadrecall:backpack_advanced",
-    "deadrecall:backpack_netherite",
-    "deadrecall:death_backpack",
+    {
+      "id": "deadrecall:backpack_basic",
+      "required": false
+    },
+    {
+      "id": "deadrecall:backpack_standard",
+      "required": false
+    },
+    {
+      "id": "deadrecall:backpack_advanced",
+      "required": false
+    },
+    {
+      "id": "deadrecall:backpack_netherite",
+      "required": false
+    },
+    {
+      "id": "deadrecall:death_backpack",
+      "required": false
+    },
     "minecraft:bundle",
     "minecraft:shulker_box",
     "minecraft:white_shulker_box",

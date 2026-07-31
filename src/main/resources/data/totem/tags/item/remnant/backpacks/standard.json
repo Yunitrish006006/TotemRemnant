@@ -2,6 +2,9 @@
   "replace": false,
   "values": [
     "totem:remnant/backpack_standard",
-    "deadrecall:backpack_standard"
+    {
+      "id": "deadrecall:backpack_standard",
+      "required": false
+    }
   ]
 }
