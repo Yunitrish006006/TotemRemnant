@@ -1,6 +1,7 @@
 package dev.totem.remnant.death;
 
 import dev.totem.core.api.v1.death.DeathBackpackNodeLifecycle;
+import dev.totem.core.api.v1.death.DeathRetainedItemPolicy;
 import dev.totem.remnant.registry.RemnantItemRegistration;
 import dev.totem.remnant.inventory.DeathBackpackInventory;
 import dev.totem.remnant.inventory.PortableContainerPolicy;
@@ -10,6 +11,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -69,6 +71,82 @@ public final class DeathBackpackLifecycleGameTest {
                 player.discard();
             }
         });
+    }
+
+    @SuppressWarnings("removal")
+    @GameTest(maxTicks = 40)
+    public void soulboundPolicyRetainsExactlyOneItemAndCapturesTheRestOfItsStack(GameTestHelper helper) {
+        helper.setBlock(DEATH_POS.below(), Blocks.STONE);
+        BlockPos position = helper.absolutePos(DEATH_POS);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.snapTo(position.getX() + 0.5D, position.getY(), position.getZ() + 0.5D, 0.0F, 0.0F);
+        player.getInventory().setItem(0, new ItemStack(Items.COMPASS, 3));
+        player.getInventory().setItem(1, new ItemStack(Items.DIAMOND, 4));
+        DeathRetainedItemPolicy.register((owner, stack) ->
+                owner.getUUID().equals(player.getUUID()) && stack.is(Items.COMPASS));
+
+        try {
+            require(helper, DeathBackpackCaptureService.captureBeforeVanillaDrop(
+                            player,
+                            helper.getLevel()
+                    ),
+                    "Capture did not commit while staging a soulbound teleport item");
+            require(helper, SoulboundDeathItemRetention.hasPending(player),
+                    "Soulbound item was not persisted for respawn");
+            require(helper, player.getInventory().isEmpty(),
+                    "Captured inventory was not cleared after staging the retained item");
+
+            List<ItemEntity> backpacks = helper.getLevel().getEntitiesOfClass(
+                    ItemEntity.class,
+                    new AABB(position).inflate(3.0D),
+                    entity -> entity.isAlive() && entity.getItem().is(RemnantItemRegistration.DEATH_BACKPACK)
+            );
+            require(helper, backpacks.size() == 1,
+                    "Soulbound capture did not create exactly one death backpack");
+            List<ItemStack> stored = backpacks.getFirst().getItem()
+                    .getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY)
+                    .nonEmptyItemCopyStream()
+                    .toList();
+            require(helper, stored.stream().anyMatch(stack ->
+                            stack.is(Items.COMPASS) && stack.getCount() == 2),
+                    "Death backpack did not capture the unretained part of the interface stack");
+            require(helper, stored.stream().anyMatch(stack ->
+                            stack.is(Items.DIAMOND) && stack.getCount() == 4),
+                    "Death backpack lost an unrelated captured stack");
+
+            require(helper, SoulboundDeathItemRetention.restoreAfterRespawn(player),
+                    "Soulbound item was not restored after respawn");
+            require(helper, player.getInventory().getItem(0).is(Items.COMPASS)
+                            && player.getInventory().getItem(0).getCount() == 1,
+                    "Respawn did not restore exactly one interface item to its preferred slot");
+            require(helper, !SoulboundDeathItemRetention.hasPending(player),
+                    "Restored soulbound item remained pending and could be duplicated");
+            helper.succeed();
+        } finally {
+            player.discard();
+        }
+    }
+
+    @GameTest(maxTicks = 20)
+    public void pendingSoulboundItemSurvivesSavedDataCodecRoundTrip(GameTestHelper helper) {
+        UUID playerId = UUID.fromString("00000000-0000-0000-0000-000000000071");
+        SoulboundDeathItemSavedData data = new SoulboundDeathItemSavedData();
+        require(helper, data.putIfAbsent(playerId, new ItemStack(Items.BOOK), 4),
+                "Could not stage the soulbound SavedData fixture");
+
+        RegistryOps<Tag> ops = RegistryOps.create(NbtOps.INSTANCE, helper.getLevel().registryAccess());
+        Tag encoded = SoulboundDeathItemSavedData.CODEC.encodeStart(ops, data).getOrThrow();
+        SoulboundDeathItemSavedData restored =
+                SoulboundDeathItemSavedData.CODEC.parse(ops, encoded).getOrThrow();
+        SoulboundDeathItemSavedData.PendingItem pending = restored.pending(playerId)
+                .orElseThrow(() -> helper.assertionException(
+                        "Soulbound pending item was lost during SavedData round-trip"));
+
+        require(helper, pending.stack().is(Items.BOOK)
+                        && pending.stack().getCount() == 1
+                        && pending.preferredSlot() == 4,
+                "Soulbound pending item changed during SavedData round-trip");
+        helper.succeed();
     }
 
     @SuppressWarnings("removal")

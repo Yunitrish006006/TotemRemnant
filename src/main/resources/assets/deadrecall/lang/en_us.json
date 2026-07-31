@@ -40,5 +40,6 @@
   "message.deadrecall.container_scan.more": "...and %s more findings",
   "message.deadrecall.container_scan.truncated": "Scan results were truncated by safety limits",
   "message.deadrecall.container_scan.direction.inside_backpack": "portable container inside backpack",
-  "message.deadrecall.container_scan.direction.backpack_inside_container": "backpack inside portable container"
+  "message.deadrecall.container_scan.direction.backpack_inside_container": "backpack inside portable container",
+  "message.deadrecall.remnant.soulbound_restored": "%s remained with you through death"
 }

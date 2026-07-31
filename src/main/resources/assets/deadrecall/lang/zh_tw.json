@@ -40,5 +40,6 @@
   "message.deadrecall.container_scan.more": "……另有 %s 筆結果",
   "message.deadrecall.container_scan.truncated": "掃描結果已因安全限制而截斷",
   "message.deadrecall.container_scan.direction.inside_backpack": "可攜式容器位於背包內",
-  "message.deadrecall.container_scan.direction.backpack_inside_container": "背包位於可攜式容器內"
+  "message.deadrecall.container_scan.direction.backpack_inside_container": "背包位於可攜式容器內",
+  "message.deadrecall.remnant.soulbound_restored": "%s 已隨靈魂回到你的物品欄"
 }

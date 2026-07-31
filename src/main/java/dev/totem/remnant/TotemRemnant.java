@@ -3,6 +3,7 @@ package dev.totem.remnant;
 import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryProvider;
 import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryRegistry;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import dev.totem.remnant.death.DeathBackpackCaptureLifecycle;
 import dev.totem.remnant.death.DeathBackpackFactory;
 import dev.totem.remnant.death.DeathBackpackRecoveryService;
+import dev.totem.remnant.death.SoulboundDeathItemRetention;
 import dev.totem.remnant.inventory.ContainerSafetyAdmin;
 import dev.totem.remnant.registry.RemnantItemGroups;
 import dev.totem.remnant.registry.RemnantItemRegistration;
@@ -37,6 +39,12 @@ public final class TotemRemnant implements ModInitializer {
             return backpack;
         });
         installDeadRecallTransports();
+        ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
+            if (!alive) {
+                SoulboundDeathItemRetention.restoreAfterRespawn(newPlayer);
+            }
+        });
+        ServerPlayerEvents.JOIN.register(SoulboundDeathItemRetention::restoreAfterRespawn);
         LOGGER.info("TotemRemnant initialized without Nexus dependency");
     }
 

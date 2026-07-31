@@ -51,6 +51,7 @@ public final class DeathBackpackCaptureService {
         }
 
         Inventory inventory = player.getInventory();
+        SoulboundDeathItemRetention.stageForDeath(player);
         List<TransientStack> transientStacks = collectTransientStacks(player);
         processUncapturedTransientStacks(player, inventory, transientStacks);
 

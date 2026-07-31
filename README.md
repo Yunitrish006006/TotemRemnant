@@ -1,15 +1,15 @@
 # TotemRemnant
 
 TotemRemnant 是 Totem 系列的背包、死亡物品保護與可攜式容器安全模組。
-目前版本為 **0.1.5**，精確搭配 TotemCore **0.2.0**。
+目前版本為 **0.1.6**，精確搭配 TotemCore **0.3.0**。
 
 ## 安裝
 
 將下列 JAR 放入 Client 與 Server 的 `mods/`：
 
 1. Fabric API `0.154.2+26.2`
-2. TotemCore `0.2.0`
-3. TotemRemnant `0.1.5`
+2. TotemCore `0.3.0`
+3. TotemRemnant `0.1.6`
 
 | 項目 | 需求 |
 | --- | --- |
@@ -18,7 +18,7 @@ TotemRemnant 是 Totem 系列的背包、死亡物品保護與可攜式容器安
 | Java | 25+ |
 | 選配 | Trinkets Updated 4.1.0-beta.2+ |
 
-使用 DeadRecall 2.4.5 整合 JAR 時不要再安裝獨立 TotemRemnant；整合包已
+使用 DeadRecall 2.4.6 整合 JAR 時不要再安裝獨立 TotemRemnant；整合包已
 內含相同模組。
 
 ## 一般背包教學
@@ -71,10 +71,17 @@ Shift-click。
 - 地面上的背包會顯示紅色定位光柱。
 - DeadRecall 背包與其他可攜式容器維持獨立掉落，不會被巢狀封裝。
 - 背包完全清空並關閉後會移除；任何協助回收的玩家都可完成此流程。
+- 若 Nexus 已將玩家上次成功傳送使用的介面物品標記為有效靈魂綁定，
+  Remnant 會在死亡交易前保留其中一個，並於重生後 exactly once 還原。
+  同堆疊其餘物品照常進死亡背包；消失詛咒仍優先。
 
 若同時安裝 TotemNexus，Remnant 會透過 TotemCore 的選配生命週期建立
 死亡 Space Unit，保存死亡節點 ↔ 背包 Entity UUID 的雙向關聯。沒有
 Nexus 時死亡背包仍可獨立使用。
+
+死亡背包成功建立或回收時，Remnant 會發布 TotemCore 的型別事件。安裝
+TotemDiscordBridge 時由 Bridge 自行訂閱並送出通知；Remnant 不直接依賴
+Discord，也不需要 DeadRecall 額外安裝 listener。
 
 > `/back` 是 DeadRecall 相容整合包的額外功能，不是 TotemRemnant
 > standalone API 的一部分。
@@ -99,6 +106,7 @@ Shift-click、漏斗、漏斗礦車、投擲器／發射器與相容自動化。
 ## 選配整合
 
 - **TotemNexus**：建立、綁定與回收死亡 Space Unit。
+- **TotemDiscordBridge**：透過 TotemCore event bus 接收死亡背包通知。
 - **Trinkets Updated**：擷取已驗證的選配飾品 inventory。
 - **TotemAutomata**：透過 Remnant 公開 policy 阻止銅魁儡把背包塞入
   不安全容器。
@@ -118,5 +126,5 @@ Remnant 不直接依賴 Nexus 或 Automata；所有跨模組行為都必須安�
 
 ## 驗證狀態
 
-0.1.5 的 Java 25 build 與 33/33 required Fabric GameTests 已通過；完整
+0.1.6 的 Java 25 build 與 35/35 required Fabric GameTests 已通過；完整
 九模組 Dedicated Server 也已確認只註冊一份 Remnant authority。
