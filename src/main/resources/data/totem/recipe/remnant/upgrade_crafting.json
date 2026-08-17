@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {"I": "minecraft:iron_ingot", "R": "minecraft:redstone", "C": "minecraft:crafting_table"},
+  "pattern": ["IRI", "RCR", "IRI"],
+  "result": {"id": "totem:remnant/upgrade_crafting", "count": 1}
+}

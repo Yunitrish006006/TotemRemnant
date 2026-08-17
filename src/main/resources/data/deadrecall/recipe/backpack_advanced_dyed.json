@@ -1,9 +1,0 @@
-{
-  "type": "minecraft:crafting_dye",
-  "dye": "#minecraft:dyes",
-  "group": "dyed_backpacks",
-  "result": {
-    "id": "totem:remnant/backpack_advanced"
-  },
-  "target": "deadrecall:backpack_advanced"
-}

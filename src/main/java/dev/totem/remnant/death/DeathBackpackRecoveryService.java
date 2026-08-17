@@ -1,6 +1,8 @@
 package dev.totem.remnant.death;
 
 import dev.totem.core.api.v1.death.DeathBackpackNodeLifecycle;
+import dev.totem.core.api.v1.event.DeathBackpackRecoveredEvent;
+import dev.totem.core.api.v1.event.TotemEventBus;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -26,14 +28,9 @@ public final class DeathBackpackRecoveryService {
                 .orElse(false);
         if (!disabled) return false;
         notifyRecoveredSafely(recoveringPlayer);
-        DeathBackpackNotifications notifications = DeathBackpackNotifications.current();
-        if (notifications != null) {
-            try {
-                notifications.recovered(recoveringPlayer);
-            } catch (RuntimeException exception) {
-                LOGGER.warn("Death node was recovered, but bundle notification failed for {}", recoveringPlayer.getName().getString(), exception);
-            }
-        }
+        TotemEventBus.publish(new DeathBackpackRecoveredEvent(
+                recoveringPlayer.getName().getString()
+        ));
         return true;
     }
 

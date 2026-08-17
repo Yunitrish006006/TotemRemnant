@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {"E": "minecraft:echo_shard", "G": "minecraft:gold_ingot", "N": "minecraft:netherite_scrap", "P": "minecraft:ender_pearl", "T": "minecraft:totem_of_undying"},
+  "pattern": ["GPG", "ETE", "GNG"],
+  "result": {"id": "totem:remnant/upgrade_soulbound_charge", "count": 1}
+}

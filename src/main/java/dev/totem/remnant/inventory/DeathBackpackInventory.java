@@ -2,6 +2,7 @@ package dev.totem.remnant.inventory;
 
 import dev.totem.remnant.death.DeathBackpackRecoveryService;
 import dev.totem.remnant.item.DeathBackpackItem;
+import dev.totem.remnant.upgrade.BackpackCompaction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerPlayer;
@@ -27,11 +28,7 @@ public final class DeathBackpackInventory implements Container {
         this.hand = hand;
         this.backpack = owner.getItemInHand(hand);
         this.items = NonNullList.withSize(size, ItemStack.EMPTY);
-        int index = 0;
-        for (ItemStack stack : backpack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).nonEmptyItemCopyStream().toList()) {
-            if (index >= size) break;
-            items.set(index++, stack.copy());
-        }
+        backpack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).copyInto(items);
     }
 
     @Override public int getContainerSize() { return items.size(); }
@@ -52,13 +49,20 @@ public final class DeathBackpackInventory implements Container {
     }
     @Override public void setItem(int slot, ItemStack stack) { items.set(slot, stack); setChanged(); }
     @Override public boolean canPlaceItem(int slot, ItemStack stack) {
-        return PortableContainerPolicy.mayInsertIntoBackpack(stack);
+        return owner.level() instanceof net.minecraft.server.level.ServerLevel serverLevel
+                ? PortableContainerPolicy.mayInsertIntoBackpack(serverLevel, stack)
+                : PortableContainerPolicy.mayInsertIntoBackpack(stack);
     }
     @Override public void clearContent() { items.clear(); setChanged(); }
     @Override public void setChanged() {
         List<ItemStack> contents = new ArrayList<>(items.size());
         items.forEach(stack -> contents.add(stack.copy()));
         backpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(contents));
+        if (owner.level() instanceof net.minecraft.server.level.ServerLevel serverLevel
+                && BackpackCompaction.compactIfEnabled(serverLevel, backpack)) {
+            for (int index = 0; index < items.size(); index++) items.set(index, ItemStack.EMPTY);
+            backpack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).copyInto(items);
+        }
     }
     @Override public boolean stillValid(Player player) { return player == owner && owner.getItemInHand(hand) == backpack; }
     public ItemStack getBackpackStack() { return backpack; }

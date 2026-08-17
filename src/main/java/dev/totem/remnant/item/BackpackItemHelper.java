@@ -1,5 +1,7 @@
 package dev.totem.remnant.item;
 
+import dev.totem.remnant.upgrade.BackpackUpgradeData;
+import dev.totem.remnant.upgrade.BackpackUpgradeType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
@@ -35,6 +37,13 @@ public final class BackpackItemHelper {
                 .nonEmptyItemCopyStream().count();
     }
 
+    /** Number of serialized slots through the final non-empty item, including intentional gaps. */
+    public static int storedSlotFootprint(ItemStack backpackStack) {
+        if (!isBackpackItem(backpackStack)) return 0;
+        return (int) backpackStack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY)
+                .allItemsCopyStream().count();
+    }
+
     public static boolean isDeathBackpackItem(ItemStack stack) {
         return stack != null && !stack.isEmpty() && stack.getItem() instanceof DeathBackpackItem;
     }
@@ -42,40 +51,42 @@ public final class BackpackItemHelper {
     public static boolean shouldProtectDroppedBackpackFromDamage(ItemStack stack, DamageSource source) {
         if (!isBackpackItem(stack)) return false;
         if (isDeathBackpackItem(stack)) return true;
-        if (isVoidDamage(source)) return false;
-        return switch (getProtectionLevel(stack)) {
-            case BASIC -> false;
-            case STANDARD -> isCactusDamage(source);
-            case ADVANCED -> isCactusDamage(source) || isExplosionDamage(source);
-            case MAXIMUM -> isCactusDamage(source) || isExplosionDamage(source) || isFireDamage(source);
-        };
+        if (isVoidDamage(source)) {
+            return BackpackUpgradeData.has(stack, BackpackUpgradeType.VOID_PROTECTION);
+        }
+        return (isCactusDamage(source) || isExplosionDamage(source))
+                        && BackpackUpgradeData.has(stack, BackpackUpgradeType.BLAST_PROTECTION)
+                || isFireDamage(source) && (isNetheriteBackpack(stack)
+                        || BackpackUpgradeData.has(stack, BackpackUpgradeType.FIRE_PROTECTION));
     }
 
     public static boolean shouldPreventDroppedBackpackDespawn(ItemStack stack) {
-        return getProtectionLevel(stack) == BackpackProtectionLevel.MAXIMUM;
+        return isDeathBackpackItem(stack)
+                || BackpackUpgradeData.has(stack, BackpackUpgradeType.DESPAWN_PROTECTION);
     }
 
-    public static boolean shouldApplyDeathBackpackVoidMomentum(ItemEntity itemEntity) {
-        return isDeathBackpackItem(itemEntity.getItem()) && itemEntity.getY() < getVoidDamageY(itemEntity);
+    public static boolean shouldApplyBackpackVoidMomentum(ItemEntity itemEntity) {
+        return hasVoidProtection(itemEntity.getItem()) && itemEntity.getY() < getVoidDamageY(itemEntity);
     }
-    public static boolean shouldStopDeathBackpackVoidMomentum(ItemEntity itemEntity) {
-        return isDeathBackpackItem(itemEntity.getItem()) && itemEntity.isNoGravity() && itemEntity.getY() >= itemEntity.level().getMinY();
+    public static boolean shouldStopBackpackVoidMomentum(ItemEntity itemEntity) {
+        return hasVoidProtection(itemEntity.getItem())
+                && itemEntity.isNoGravity() && itemEntity.getY() >= itemEntity.level().getMinY();
     }
-    public static boolean shouldApplyDeathBackpackSlowFalling(ItemEntity itemEntity) {
-        return isDeathBackpackItem(itemEntity.getItem()) && itemEntity.getY() < itemEntity.level().getMinY();
+    public static boolean shouldApplyBackpackSlowFalling(ItemEntity itemEntity) {
+        return hasVoidProtection(itemEntity.getItem()) && itemEntity.getY() < itemEntity.level().getMinY();
     }
-    public static void applyDeathBackpackVoidMomentum(ItemEntity itemEntity) {
+    public static void applyBackpackVoidMomentum(ItemEntity itemEntity) {
         Vec3 movement = itemEntity.getDeltaMovement();
         itemEntity.setDeltaMovement(movement.x * VOID_RESCUE_HORIZONTAL_DAMPING,
                 Math.max(movement.y, VOID_RESCUE_UPWARD_SPEED), movement.z * VOID_RESCUE_HORIZONTAL_DAMPING);
         itemEntity.setNoGravity(false);
     }
-    public static void applyDeathBackpackSlowFalling(ItemEntity itemEntity) {
+    public static void applyBackpackSlowFalling(ItemEntity itemEntity) {
         Vec3 movement = itemEntity.getDeltaMovement();
         if (movement.y < VOID_SLOW_FALL_MAX_DESCENT_SPEED) itemEntity.setDeltaMovement(movement.x, VOID_SLOW_FALL_MAX_DESCENT_SPEED, movement.z);
         itemEntity.setNoGravity(false);
     }
-    public static void stopDeathBackpackVoidMomentum(ItemEntity itemEntity) {
+    public static void stopBackpackVoidMomentum(ItemEntity itemEntity) {
         Vec3 movement = itemEntity.getDeltaMovement();
         itemEntity.setDeltaMovement(movement.x * VOID_RESCUE_HORIZONTAL_DAMPING, 0.0, movement.z * VOID_RESCUE_HORIZONTAL_DAMPING);
         itemEntity.setNoGravity(false);
@@ -104,15 +115,13 @@ public final class BackpackItemHelper {
     }
 
     private static double getVoidDamageY(ItemEntity itemEntity) { return itemEntity.level().getMinY() - VOID_DAMAGE_MARGIN; }
-    private static BackpackProtectionLevel getProtectionLevel(ItemStack stack) {
-        if (isDeathBackpackItem(stack)) return BackpackProtectionLevel.MAXIMUM;
-        if (stack.getItem() instanceof TieredBackpackItem backpack) return switch (backpack.tier()) {
-            case BASIC -> BackpackProtectionLevel.BASIC;
-            case STANDARD -> BackpackProtectionLevel.STANDARD;
-            case ADVANCED -> BackpackProtectionLevel.ADVANCED;
-            case NETHERITE -> BackpackProtectionLevel.MAXIMUM;
-        };
-        return BackpackProtectionLevel.BASIC;
+    private static boolean hasVoidProtection(ItemStack stack) {
+        return isDeathBackpackItem(stack)
+                || BackpackUpgradeData.has(stack, BackpackUpgradeType.VOID_PROTECTION);
+    }
+    private static boolean isNetheriteBackpack(ItemStack stack) {
+        return stack.getItem() instanceof TieredBackpackItem backpack
+                && backpack.tier() == TieredBackpackItem.BackpackTier.NETHERITE;
     }
     private static boolean isCactusDamage(DamageSource source) { return normalizeDamageId(source).contains("cactus"); }
     private static boolean isExplosionDamage(DamageSource source) {
@@ -137,5 +146,4 @@ public final class BackpackItemHelper {
         }
         return horizontal.normalize();
     }
-    private enum BackpackProtectionLevel { BASIC, STANDARD, ADVANCED, MAXIMUM }
 }

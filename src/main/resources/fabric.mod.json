@@ -5,7 +5,10 @@
   "name": "TotemRemnant",
   "icon": "assets/totem-remnant/icon.png",
   "environment": "*",
-  "entrypoints": { "main": ["dev.totem.remnant.TotemRemnant"] },
+  "entrypoints": {
+    "main": ["dev.totem.remnant.TotemRemnant"],
+    "client": ["dev.totem.remnant.client.TotemRemnantClient"]
+  },
   "mixins": [
     "totem-remnant.mixins.json",
     {
@@ -18,7 +21,7 @@
     "fabric-api": "*",
     "minecraft": "~26.2",
     "java": ">=25",
-    "totem-core": "=0.2.0"
+    "totem-core": "=0.6.0"
   },
   "suggests": {
     "trinkets_updated": ">=4.1.0-beta.2"

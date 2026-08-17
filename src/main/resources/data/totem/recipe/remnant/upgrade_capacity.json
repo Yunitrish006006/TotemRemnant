@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "B": {
+      "fabric:type": "fabric:components",
+      "base": "minecraft:bundle",
+      "components": {"minecraft:bundle_contents": []}
+    },
+    "C": "minecraft:chest",
+    "I": "minecraft:iron_ingot",
+    "L": "minecraft:leather"
+  },
+  "pattern": ["LBL", "ICI", "LBL"],
+  "result": {"id": "totem:remnant/upgrade_capacity", "count": 1}
+}

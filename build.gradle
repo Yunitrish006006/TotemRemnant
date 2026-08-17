@@ -18,7 +18,7 @@ def remnantRestartProbeMarkerDirectory = providers.gradleProperty("totemRemnantR
         .orElse(providers.environmentVariable("TOTEM_REMNANT_RESTART_PROBE_MARKER_DIR"))
         .orNull
 def totemCoreJar = file(providers.gradleProperty("totemCoreJar")
-        .getOrElse("../TotemCore/build/libs/totem-core-0.2.0.jar"))
+        .getOrElse("../TotemCore/build/libs/totem-core-0.6.0.jar"))
 
 loom {
     splitEnvironmentSourceSets()
@@ -99,6 +99,15 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+def totemVisualModuleJars = providers.gradleProperty('totemVisualModuleJars').orNull
+if (totemVisualModuleJars != null && !totemVisualModuleJars.isBlank()) {
+    dependencies {
+        totemVisualModuleJars.split(',').each { moduleJar ->
+            modRuntimeOnly files(file(moduleJar.trim()))
+        }
+    }
+}
+
 tasks.withType(Test).configureEach { useJUnitPlatform() }
 
 tasks.matching { task -> task.name == "runClientGameTest" }.configureEach {
@@ -108,6 +117,31 @@ tasks.matching { task -> task.name == "runClientGameTest" }.configureEach {
             include("*_backpack-dyeing-four-tiers.png")
             rename { name -> name.replaceFirst(/^\d+_/, "") }
             into(file("test-artifacts/screenshots/backpack-dyeing"))
+        }
+        copy {
+            from(file("${buildDir}/run/clientGameTest/screenshots"))
+            include("*_inventory-backpack-side-panel*.png")
+            rename { name -> name.replaceFirst(/^\d+_/, "") }
+            into(file("test-artifacts/screenshots/backpack-inventory"))
+        }
+        copy {
+            from(file("${buildDir}/run/clientGameTest/screenshots"))
+            include("*_backpack-upgrade-bay.png")
+            rename { name -> name.replaceFirst(/^\d+_/, "") }
+            into(file("test-artifacts/screenshots/backpack-inventory"))
+        }
+        copy {
+            from(file("${buildDir}/run/clientGameTest/screenshots"))
+            include("*_backpack-capacity-*-modules.png")
+            include("*_backpack-capacity-small-screen-scrolled.png")
+            rename { name -> name.replaceFirst(/^\d+_/, "") }
+            into(file("test-artifacts/screenshots/backpack-inventory"))
+        }
+        copy {
+            from(file("${buildDir}/run/clientGameTest/screenshots"))
+            include("*_backpack-upgrade-recipes.png")
+            rename { name -> name.replaceFirst(/^\d+_/, "") }
+            into(file("test-artifacts/screenshots/backpack-recipes"))
         }
     }
 }

@@ -1,6 +1,7 @@
 package dev.totem.remnant.gametest;
 
 import dev.totem.remnant.death.DeathBackpackNodeBinding;
+import dev.totem.remnant.death.SoulboundDeathItemRestartProbeAccess;
 import dev.totem.remnant.registry.RemnantItemRegistration;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -29,6 +30,8 @@ public final class RemnantRestartProbe implements ModInitializer {
     private static final String MARKER_DIRECTORY_ENV = "TOTEM_REMNANT_RESTART_PROBE_MARKER_DIR";
     private static final BlockPos POS = new BlockPos(8, 200, 8);
     private static final UUID NODE_ID = UUID.fromString("d5cbf77d-6a2e-42ad-8946-3fcfa61ee9cb");
+    private static final UUID SOULBOUND_PLAYER_ID =
+            UUID.fromString("0eed6ddb-a3bc-4d10-a8a0-38c8f90b57b8");
     private static final int CHUNK_X = SectionPos.blockToSectionCoord(POS.getX());
     private static final int CHUNK_Z = SectionPos.blockToSectionCoord(POS.getZ());
 
@@ -62,6 +65,7 @@ public final class RemnantRestartProbe implements ModInitializer {
             backpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(new ItemStack(Items.DIAMOND, 11))));
             DeathBackpackNodeBinding.write(backpack, NODE_ID);
             chest(level).setItem(0, backpack);
+            SoulboundDeathItemRestartProbeAccess.seed(server, SOULBOUND_PLAYER_ID);
             return;
         }
         if ("verify".equals(phase)) {
@@ -72,6 +76,7 @@ public final class RemnantRestartProbe implements ModInitializer {
                     "Restart did not preserve Remnant death backpack contents");
             require(NODE_ID.equals(DeathBackpackNodeBinding.read(backpack)),
                     "Restart did not preserve Remnant death backpack node binding");
+            SoulboundDeathItemRestartProbeAccess.verifyAndRemove(server, SOULBOUND_PLAYER_ID);
             chest(level).setItem(0, ItemStack.EMPTY);
             level.setChunkForced(CHUNK_X, CHUNK_Z, false);
             return;

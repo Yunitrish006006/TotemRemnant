@@ -2,7 +2,11 @@
   "type": "minecraft:smithing_transform",
   "addition": "minecraft:iron_ingot",
   "base": "#totem:remnant/backpacks/basic",
-  "template": "minecraft:bundle",
+  "template": {
+    "fabric:type": "fabric:components",
+    "base": "minecraft:bundle",
+    "components": {"minecraft:bundle_contents": []}
+  },
   "result": {
     "id": "totem:remnant/backpack_standard"
   }

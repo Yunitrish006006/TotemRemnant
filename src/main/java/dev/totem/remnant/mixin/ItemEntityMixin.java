@@ -1,10 +1,14 @@
 package dev.totem.remnant.mixin;
 
 import dev.totem.remnant.item.BackpackItemHelper;
+import dev.totem.remnant.death.DeathBackpackOwnerBinding;
+import dev.totem.remnant.registry.RemnantGameRules;
+import dev.totem.remnant.registry.RemnantItemRegistration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
@@ -15,6 +19,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ItemEntity.class)
 public abstract class ItemEntityMixin {
+    @Inject(method = "playerTouch", at = @At("HEAD"), cancellable = true)
+    private void totemremnant$restrictDeathBackpackPickup(Player player, CallbackInfo ci) {
+        ItemEntity self = (ItemEntity) (Object) this;
+        if (!(self.level() instanceof ServerLevel level)
+                || !self.getItem().is(RemnantItemRegistration.DEATH_BACKPACK)
+                || !RemnantGameRules.deathBackpackOwnerPickupOnly(level)) return;
+        java.util.UUID ownerId = DeathBackpackOwnerBinding.read(self.getItem());
+        if (ownerId != null && !ownerId.equals(player.getUUID())) ci.cancel();
+    }
+
     @Inject(method = "hurtServer", at = @At("HEAD"), cancellable = true)
     private void totemremnant$protectDroppedBackpack(ServerLevel level, DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
         ItemEntity self = (ItemEntity) (Object) this;
@@ -29,9 +43,9 @@ public abstract class ItemEntityMixin {
     private void totemremnant$maintainDroppedBackpack(CallbackInfo ci) {
         ItemEntity self = (ItemEntity) (Object) this;
         if (BackpackItemHelper.shouldPreventDroppedBackpackDespawn(self.getItem())) self.setUnlimitedLifetime();
-        if (BackpackItemHelper.shouldApplyDeathBackpackVoidMomentum(self)) BackpackItemHelper.applyDeathBackpackVoidMomentum(self);
-        else if (BackpackItemHelper.shouldApplyDeathBackpackSlowFalling(self)) BackpackItemHelper.applyDeathBackpackSlowFalling(self);
-        else if (BackpackItemHelper.shouldStopDeathBackpackVoidMomentum(self)) BackpackItemHelper.stopDeathBackpackVoidMomentum(self);
+        if (BackpackItemHelper.shouldApplyBackpackVoidMomentum(self)) BackpackItemHelper.applyBackpackVoidMomentum(self);
+        else if (BackpackItemHelper.shouldApplyBackpackSlowFalling(self)) BackpackItemHelper.applyBackpackSlowFalling(self);
+        else if (BackpackItemHelper.shouldStopBackpackVoidMomentum(self)) BackpackItemHelper.stopBackpackVoidMomentum(self);
     }
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/item/ItemEntity;discard()V", ordinal = 1))
     private void totemremnant$ejectDespawnedContents(CallbackInfo ci) {

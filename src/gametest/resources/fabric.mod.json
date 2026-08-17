@@ -10,15 +10,19 @@
     ],
     "fabric-gametest": [
       "dev.totem.remnant.death.DeathBackpackLifecycleGameTest",
+      "dev.totem.remnant.death.BackpackUpgradeGameTest",
       "dev.totem.remnant.gametest.BackpackDyeingGameTest",
-      "dev.totem.remnant.gametest.BackpackItemIdMigrationGameTest",
       "dev.totem.remnant.gametest.BackpackMenuNestingInteractionGameTest",
       "dev.totem.remnant.gametest.ContainerNestingDiagnosticsGameTest",
       "dev.totem.remnant.gametest.PortableContainerDropperGameTest",
-      "dev.totem.remnant.gametest.PortableContainerNestingGameTest"
+      "dev.totem.remnant.gametest.PortableContainerNestingGameTest",
+      "dev.totem.remnant.manual.RemnantManualGameTest"
     ],
     "fabric-client-gametest": [
-      "dev.totem.remnant.client.BackpackDyeingVisualGameTest"
+      "dev.totem.remnant.client.TotemManualVisualGameTest",
+      "dev.totem.remnant.client.BackpackDyeingVisualGameTest",
+      "dev.totem.remnant.client.BackpackInventoryPanelVisualGameTest",
+      "dev.totem.remnant.client.BackpackUpgradeRecipeVisualGameTest"
     ]
   },
   "depends": {

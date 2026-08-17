@@ -5,6 +5,7 @@ import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryProvider;
 import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryRegistry;
 import com.adaptor.deadrecall.api.death.DeathBackpackAddonSlot;
 import dev.totem.remnant.inventory.PortableContainerPolicy;
+import dev.totem.remnant.registry.RemnantGameRules;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -51,14 +52,21 @@ public final class DeathBackpackCaptureService {
         }
 
         Inventory inventory = player.getInventory();
+        SoulboundDeathItemRetention.stageChargedBackpacksForDeath(player);
+        SoulboundDeathItemRetention.stageForDeath(player);
+        if (!RemnantGameRules.generateDeathBackpacks(level)) {
+            // Retained items use their own mechanic. Everything else stays in the
+            // inventory so the remainder of vanilla death processing drops it.
+            return false;
+        }
         List<TransientStack> transientStacks = collectTransientStacks(player);
         processUncapturedTransientStacks(player, inventory, transientStacks);
 
-        List<CapturedSlot> capturedSlots = collectCapturableSlots(inventory);
+        List<CapturedSlot> capturedSlots = collectCapturableSlots(level, inventory);
         List<TransientStack> capturedTransientStacks = transientStacks.stream()
-                .filter(transientStack -> isTransientCapturable(transientStack.stack()))
+                .filter(transientStack -> isTransientCapturable(level, transientStack.stack()))
                 .toList();
-        List<AddonCapturedSlot> capturedAddonSlots = collectCapturableAddonSlots(player);
+        List<AddonCapturedSlot> capturedAddonSlots = collectCapturableAddonSlots(level, player);
         if (capturedSlots.isEmpty() && capturedTransientStacks.isEmpty() && capturedAddonSlots.isEmpty()) {
             return false;
         }
@@ -99,6 +107,10 @@ public final class DeathBackpackCaptureService {
         return !stack.isEmpty() && PortableContainerPolicy.mayInsertIntoBackpack(stack);
     }
 
+    static boolean isCapturable(ServerLevel level, ItemStack stack) {
+        return !stack.isEmpty() && PortableContainerPolicy.mayInsertIntoBackpack(level, stack);
+    }
+
     static void forceFailureForTesting(UUID playerId, CaptureFailurePoint failurePoint) {
         FORCED_TEST_FAILURES.put(playerId, failurePoint);
     }
@@ -115,18 +127,18 @@ public final class DeathBackpackCaptureService {
         throw new IllegalStateException("Forced death-backpack capture failure at " + failurePoint);
     }
 
-    private static List<CapturedSlot> collectCapturableSlots(Inventory inventory) {
+    private static List<CapturedSlot> collectCapturableSlots(ServerLevel level, Inventory inventory) {
         List<CapturedSlot> captured = new ArrayList<>();
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
             ItemStack stack = inventory.getItem(slot);
-            if (isCapturable(stack) && !isPreventedFromDeathDrop(stack)) {
+            if (isCapturable(level, stack) && !isPreventedFromDeathDrop(stack)) {
                 captured.add(new CapturedSlot(slot, stack.copy()));
             }
         }
         return List.copyOf(captured);
     }
 
-    private static List<AddonCapturedSlot> collectCapturableAddonSlots(ServerPlayer player) {
+    private static List<AddonCapturedSlot> collectCapturableAddonSlots(ServerLevel level, ServerPlayer player) {
         List<AddonCapturedSlot> captured = new ArrayList<>();
         Set<String> sourceKeys = new HashSet<>();
         for (DeathBackpackAddonInventoryProvider provider : DeathBackpackAddonInventoryRegistry.providers()) {
@@ -144,7 +156,7 @@ public final class DeathBackpackCaptureService {
                         throw new IllegalStateException("Provider returned duplicate source " + sourceKey);
                     }
                     ItemStack snapshot = slot.snapshot();
-                    if (isCapturable(snapshot)) {
+                    if (isCapturable(level, snapshot)) {
                         captured.add(new AddonCapturedSlot(provider.id().toString(), slot, snapshot.copy()));
                     }
                 }
@@ -192,6 +204,9 @@ public final class DeathBackpackCaptureService {
     }
 
     private static List<Slot> workstationInputSlots(AbstractContainerMenu menu) {
+        if (menu instanceof dev.totem.remnant.inventory.BackpackMenu backpackMenu) {
+            return backpackMenu.craftingInputSlots();
+        }
         if (menu instanceof CraftingMenu craftingMenu) {
             return List.copyOf(craftingMenu.getInputGridSlots());
         }
@@ -227,8 +242,8 @@ public final class DeathBackpackCaptureService {
         return List.copyOf(menu.slots.subList(startInclusive, endExclusive));
     }
 
-    private static boolean isTransientCapturable(ItemStack stack) {
-        return isCapturable(stack) && !isPreventedFromDeathDrop(stack);
+    private static boolean isTransientCapturable(ServerLevel level, ItemStack stack) {
+        return isCapturable(level, stack) && !isPreventedFromDeathDrop(stack);
     }
 
     private static boolean isPreventedFromDeathDrop(ItemStack stack) {
@@ -246,7 +261,8 @@ public final class DeathBackpackCaptureService {
                 transientStack.clear();
                 continue;
             }
-            if (!PortableContainerPolicy.isRestrictedPortableContainer(stack)) {
+            if (!RemnantGameRules.preventPortableContainerNesting((ServerLevel) player.level())
+                    || !PortableContainerPolicy.isRestrictedPortableContainer(stack)) {
                 continue;
             }
 

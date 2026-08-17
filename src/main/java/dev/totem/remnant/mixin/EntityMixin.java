@@ -13,8 +13,8 @@ public abstract class EntityMixin {
     @Inject(method = "checkBelowWorld", at = @At("HEAD"), cancellable = true)
     private void totemremnant$protectDeathBackpackFromVoidDiscard(CallbackInfo ci) {
         Entity self = (Entity) (Object) this;
-        if (self instanceof ItemEntity item && BackpackItemHelper.shouldApplyDeathBackpackVoidMomentum(item)) {
-            BackpackItemHelper.applyDeathBackpackVoidMomentum(item);
+        if (self instanceof ItemEntity item && BackpackItemHelper.shouldApplyBackpackVoidMomentum(item)) {
+            BackpackItemHelper.applyBackpackVoidMomentum(item);
             ci.cancel();
         }
     }

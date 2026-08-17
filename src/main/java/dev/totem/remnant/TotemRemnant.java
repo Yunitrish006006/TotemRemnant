@@ -3,6 +3,7 @@ package dev.totem.remnant;
 import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryProvider;
 import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryRegistry;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,9 +11,15 @@ import org.slf4j.LoggerFactory;
 import dev.totem.remnant.death.DeathBackpackCaptureLifecycle;
 import dev.totem.remnant.death.DeathBackpackFactory;
 import dev.totem.remnant.death.DeathBackpackRecoveryService;
+import dev.totem.remnant.death.SoulboundDeathItemRetention;
 import dev.totem.remnant.inventory.ContainerSafetyAdmin;
+import dev.totem.remnant.manual.RemnantManual;
+import dev.totem.remnant.manual.RemnantManualRecipeSync;
+import dev.totem.remnant.network.BackpackPanelPayloadRegistration;
 import dev.totem.remnant.registry.RemnantItemGroups;
 import dev.totem.remnant.registry.RemnantItemRegistration;
+import dev.totem.remnant.registry.BackpackMenuRegistration;
+import dev.totem.remnant.registry.RemnantGameRules;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
@@ -27,8 +34,13 @@ public final class TotemRemnant implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        RemnantGameRules.register();
         RemnantItemRegistration.register();
+        BackpackMenuRegistration.register();
+        BackpackPanelPayloadRegistration.register();
         RemnantItemGroups.register();
+        RemnantManualRecipeSync.register();
+        RemnantManual.register();
         ContainerSafetyAdmin.register();
         installTrinketsIntegration();
         DeathBackpackFactory.register(contents -> {
@@ -37,6 +49,12 @@ public final class TotemRemnant implements ModInitializer {
             return backpack;
         });
         installDeadRecallTransports();
+        ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
+            if (!alive) {
+                SoulboundDeathItemRetention.restoreAfterRespawn(newPlayer);
+            }
+        });
+        ServerPlayerEvents.JOIN.register(SoulboundDeathItemRetention::restoreAfterRespawn);
         LOGGER.info("TotemRemnant initialized without Nexus dependency");
     }
 

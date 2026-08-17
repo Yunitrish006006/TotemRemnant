@@ -4,9 +4,21 @@
     "totem:remnant/backpack_standard",
     "totem:remnant/backpack_advanced",
     "totem:remnant/backpack_netherite",
-    "deadrecall:backpack_basic",
-    "deadrecall:backpack_standard",
-    "deadrecall:backpack_advanced",
-    "deadrecall:backpack_netherite"
+    {
+      "id": "deadrecall:backpack_basic",
+      "required": false
+    },
+    {
+      "id": "deadrecall:backpack_standard",
+      "required": false
+    },
+    {
+      "id": "deadrecall:backpack_advanced",
+      "required": false
+    },
+    {
+      "id": "deadrecall:backpack_netherite",
+      "required": false
+    }
   ]
 }

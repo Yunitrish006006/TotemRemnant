@@ -1,8 +1,11 @@
 {
   "parent": "deadrecall:root",
   "criteria": {
-    "ready": {
-      "trigger": "minecraft:tick"
+    "crafted_smithing_table": {
+      "conditions": {
+        "recipe_id": "minecraft:smithing_table"
+      },
+      "trigger": "minecraft:recipe_crafted"
     }
   },
   "display": {
@@ -12,16 +15,16 @@
       "translate": "advancements.deadrecall.remnant_root.description"
     },
     "icon": {
-      "id": "totem:remnant/backpack_basic"
+      "id": "minecraft:smithing_table"
     },
-    "show_toast": false,
+    "show_toast": true,
     "title": {
       "translate": "advancements.deadrecall.remnant_root.title"
     }
   },
   "requirements": [
     [
-      "ready"
+      "crafted_smithing_table"
     ]
   ]
 }

@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {"B": "minecraft:blaze_powder", "F": "minecraft:fire_charge", "M": "minecraft:magma_cream", "N": "minecraft:nether_brick"},
+  "pattern": ["NBN", "MFM", "NBN"],
+  "result": {"id": "totem:remnant/upgrade_fire_protection", "count": 1}
+}

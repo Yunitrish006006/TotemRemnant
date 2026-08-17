@@ -20,8 +20,11 @@ public abstract class ShulkerBoxBlockEntityMixin {
             Direction direction,
             CallbackInfoReturnable<Boolean> callback
     ) {
-        if (!PortableContainerPolicy.mayInsertIntoPortableContainer(stack)) {
-            ShulkerBoxBlockEntity shulker = (ShulkerBoxBlockEntity) (Object) this;
+        ShulkerBoxBlockEntity shulker = (ShulkerBoxBlockEntity) (Object) this;
+        boolean allowed = shulker.getLevel() instanceof net.minecraft.server.level.ServerLevel serverLevel
+                ? PortableContainerPolicy.mayInsertIntoPortableContainer(serverLevel, stack)
+                : PortableContainerPolicy.mayInsertIntoPortableContainer(stack);
+        if (!allowed) {
             PortableContainerDiagnostics.logRejectedAutomation(
                     shulker.getLevel(),
                     shulker.getBlockPos(),

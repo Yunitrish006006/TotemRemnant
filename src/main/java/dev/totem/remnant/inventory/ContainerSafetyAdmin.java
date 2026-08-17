@@ -25,8 +25,8 @@ public final class ContainerSafetyAdmin {
     public static void register() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
                 dispatcher.register(Commands.literal("deadrecall")
-                        .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
                         .then(Commands.literal("containers")
+                                .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
                                 .then(Commands.literal("scan")
                                         .executes(context -> scanAll(context.getSource()))
                                         .then(Commands.argument("player", StringArgumentType.word())

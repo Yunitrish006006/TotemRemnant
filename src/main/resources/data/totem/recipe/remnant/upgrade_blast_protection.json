@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {"C": "minecraft:cactus", "I": "minecraft:iron_ingot", "O": "minecraft:obsidian", "T": "minecraft:tnt"},
+  "pattern": ["ICI", "OTO", "ICI"],
+  "result": {"id": "totem:remnant/upgrade_blast_protection", "count": 1}
+}
