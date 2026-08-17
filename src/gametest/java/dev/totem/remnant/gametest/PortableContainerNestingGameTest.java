@@ -2,6 +2,7 @@ package dev.totem.remnant.gametest;
 
 import dev.totem.remnant.inventory.PortableContainerPolicy;
 import dev.totem.remnant.registry.RemnantItemRegistration;
+import dev.totem.remnant.registry.RemnantGameRules;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -40,6 +41,48 @@ public final class PortableContainerNestingGameTest {
         require(helper, !PortableContainerPolicy.mayInsertIntoBackpack(new ItemStack(Items.SHULKER_BOX)),
                 "Backpack policy accepted a Shulker Box");
         helper.succeed();
+    }
+
+    @GameTest(maxTicks = 20)
+    public void disabledWorldRuleReleasesEveryRemnantNestingGuard(GameTestHelper helper) {
+        net.minecraft.server.level.ServerLevel level = helper.getLevel();
+        boolean previous = level.getGameRules().get(
+                RemnantGameRules.PREVENT_PORTABLE_CONTAINER_NESTING);
+        try {
+            level.getGameRules().set(
+                    RemnantGameRules.PREVENT_PORTABLE_CONTAINER_NESTING,
+                    false,
+                    level.getServer()
+            );
+            ItemStack backpack = new ItemStack(RemnantItemRegistration.BACKPACK_BASIC);
+
+            require(helper, !RemnantGameRules.preventPortableContainerNesting(level),
+                    "Nesting prevention rule did not switch off");
+            require(helper, backpack.getItem().canFitInsideContainerItems(),
+                    "Disabled rule did not release vanilla container-item admission");
+            require(helper, PortableContainerPolicy.mayInsertIntoBackpack(
+                            level, new ItemStack(Items.SHULKER_BOX)),
+                    "Disabled rule did not allow a Shulker Box into a backpack");
+            require(helper, PortableContainerPolicy.mayInsertIntoPortableContainer(level, backpack),
+                    "Disabled rule did not allow a backpack into a portable container");
+
+            helper.setBlock(SHULKER_POS, Blocks.SHULKER_BOX);
+            ShulkerBoxBlockEntity shulker = shulker(helper);
+            ShulkerBoxSlot slot = new ShulkerBoxSlot(shulker, 0, 0, 0);
+            require(helper, slot.mayPlace(backpack),
+                    "Disabled rule left the Shulker menu guard enabled");
+            for (Direction direction : Direction.values()) {
+                require(helper, shulker.canPlaceItemThroughFace(0, backpack, direction),
+                        "Disabled rule left sided automation blocked from " + direction);
+            }
+            helper.succeed();
+        } finally {
+            level.getGameRules().set(
+                    RemnantGameRules.PREVENT_PORTABLE_CONTAINER_NESTING,
+                    previous,
+                    level.getServer()
+            );
+        }
     }
 
     @GameTest(maxTicks = 20)

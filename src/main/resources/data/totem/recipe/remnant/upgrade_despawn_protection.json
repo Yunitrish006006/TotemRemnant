@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {"C": "minecraft:clock", "E": "minecraft:ender_pearl", "G": "minecraft:gold_ingot", "S": "minecraft:echo_shard"},
+  "pattern": ["GEG", "SCS", "GEG"],
+  "result": {"id": "totem:remnant/upgrade_despawn_protection", "count": 1}
+}

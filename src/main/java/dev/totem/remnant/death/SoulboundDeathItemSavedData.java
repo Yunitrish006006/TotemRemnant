@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Persists one staged soulbound item until it can be restored after respawn. */
+/** Persists staged soulbound items until they can be restored after respawn. */
 final class SoulboundDeathItemSavedData extends SavedData {
     private static final int DATA_VERSION = 1;
 
@@ -41,7 +41,7 @@ final class SoulboundDeathItemSavedData extends SavedData {
     );
 
     private final int dataVersion;
-    private final Map<UUID, PendingItem> pendingByPlayer = new HashMap<>();
+    private final Map<UUID, List<PendingItem>> pendingByPlayer = new HashMap<>();
 
     SoulboundDeathItemSavedData() {
         this(DATA_VERSION, List.of());
@@ -51,7 +51,7 @@ final class SoulboundDeathItemSavedData extends SavedData {
         this.dataVersion = Math.max(dataVersion, DATA_VERSION);
         for (PendingItem item : pending) {
             if (!item.stack().isEmpty()) {
-                this.pendingByPlayer.put(item.player(), item.copy());
+                this.pendingByPlayer.computeIfAbsent(item.player(), ignored -> new ArrayList<>()).add(item.copy());
             }
         }
     }
@@ -60,14 +60,28 @@ final class SoulboundDeathItemSavedData extends SavedData {
         if (this.pendingByPlayer.containsKey(playerId) || stack.isEmpty()) {
             return false;
         }
-        this.pendingByPlayer.put(playerId, new PendingItem(playerId, stack.copy(), preferredSlot));
+        this.pendingByPlayer.put(playerId, new ArrayList<>(List.of(
+                new PendingItem(playerId, stack.copy(), preferredSlot))));
+        setDirty();
+        return true;
+    }
+
+    boolean add(UUID playerId, ItemStack stack, int preferredSlot) {
+        if (stack.isEmpty()) return false;
+        this.pendingByPlayer.computeIfAbsent(playerId, ignored -> new ArrayList<>())
+                .add(new PendingItem(playerId, stack.copy(), preferredSlot));
         setDirty();
         return true;
     }
 
     Optional<PendingItem> pending(UUID playerId) {
-        PendingItem item = this.pendingByPlayer.get(playerId);
-        return item == null ? Optional.empty() : Optional.of(item.copy());
+        List<PendingItem> items = this.pendingByPlayer.get(playerId);
+        return items == null || items.isEmpty() ? Optional.empty() : Optional.of(items.getFirst().copy());
+    }
+
+    List<PendingItem> pendingAll(UUID playerId) {
+        List<PendingItem> items = this.pendingByPlayer.get(playerId);
+        return items == null ? List.of() : items.stream().map(PendingItem::copy).toList();
     }
 
     void remove(UUID playerId) {
@@ -81,10 +95,9 @@ final class SoulboundDeathItemSavedData extends SavedData {
     }
 
     private List<PendingItem> pendingList() {
-        List<PendingItem> pending = new ArrayList<>(this.pendingByPlayer.size());
-        this.pendingByPlayer.values().stream()
-                .map(PendingItem::copy)
-                .forEach(pending::add);
+        List<PendingItem> pending = new ArrayList<>();
+        this.pendingByPlayer.values().forEach(items -> items.stream()
+                .map(PendingItem::copy).forEach(pending::add));
         return pending;
     }
 

@@ -2,9 +2,12 @@ package dev.totem.remnant.death;
 
 import dev.totem.core.api.v1.death.DeathBackpackNodeLifecycle;
 import dev.totem.core.api.v1.death.DeathRetainedItemPolicy;
+import dev.totem.remnant.inventory.BackpackMenu;
 import dev.totem.remnant.registry.RemnantItemRegistration;
+import dev.totem.remnant.registry.RemnantGameRules;
 import dev.totem.remnant.inventory.DeathBackpackInventory;
 import dev.totem.remnant.inventory.PortableContainerPolicy;
+import dev.totem.remnant.upgrade.BackpackUpgradeData;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -30,6 +33,129 @@ import java.util.UUID;
 /** Verifies Remnant's real capture and recovery lifecycle without the compatibility bundle. */
 public final class DeathBackpackLifecycleGameTest {
     private static final BlockPos DEATH_POS = new BlockPos(2, 2, 2);
+
+    @SuppressWarnings("removal")
+    @GameTest(maxTicks = 20)
+    public void deathBackpackPickupRuleRestrictsNonOwnerAndCanBeDisabled(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        ServerPlayer stranger = helper.makeMockServerPlayerInLevel();
+        boolean previous = level.getGameRules().get(
+                RemnantGameRules.DEATH_BACKPACK_OWNER_PICKUP_ONLY);
+        ItemEntity restrictedEntity = null;
+        ItemEntity unrestrictedEntity = null;
+        try {
+            level.getGameRules().set(
+                    RemnantGameRules.DEATH_BACKPACK_OWNER_PICKUP_ONLY, true, level.getServer());
+            ItemStack restricted = new ItemStack(RemnantItemRegistration.DEATH_BACKPACK);
+            DeathBackpackOwnerBinding.write(restricted, owner.getUUID());
+            restrictedEntity = new ItemEntity(level, 0.5D, 1.0D, 0.5D, restricted);
+            restrictedEntity.setNoPickUpDelay();
+            require(helper, level.addFreshEntity(restrictedEntity),
+                    "Could not spawn the owner-restricted death backpack fixture");
+
+            restrictedEntity.playerTouch(stranger);
+            require(helper, restrictedEntity.isAlive()
+                            && !stranger.getInventory().contains(stack ->
+                            stack.is(RemnantItemRegistration.DEATH_BACKPACK)),
+                    "Non-owner picked up an owner-restricted death backpack");
+
+            restrictedEntity.playerTouch(owner);
+            require(helper, !restrictedEntity.isAlive()
+                            && owner.getInventory().contains(stack ->
+                            stack.is(RemnantItemRegistration.DEATH_BACKPACK)),
+                    "Death backpack owner could not pick up their own backpack");
+
+            level.getGameRules().set(
+                    RemnantGameRules.DEATH_BACKPACK_OWNER_PICKUP_ONLY, false, level.getServer());
+            ItemStack unrestricted = new ItemStack(RemnantItemRegistration.DEATH_BACKPACK);
+            DeathBackpackOwnerBinding.write(unrestricted, owner.getUUID());
+            unrestrictedEntity = new ItemEntity(level, 0.5D, 1.0D, 0.5D, unrestricted);
+            unrestrictedEntity.setNoPickUpDelay();
+            require(helper, level.addFreshEntity(unrestrictedEntity),
+                    "Could not spawn the unrestricted death backpack fixture");
+
+            unrestrictedEntity.playerTouch(stranger);
+            require(helper, !unrestrictedEntity.isAlive()
+                            && stranger.getInventory().contains(stack ->
+                            stack.is(RemnantItemRegistration.DEATH_BACKPACK)),
+                    "Disabling the pickup rule did not allow another player to pick up the backpack");
+            helper.succeed();
+        } finally {
+            level.getGameRules().set(
+                    RemnantGameRules.DEATH_BACKPACK_OWNER_PICKUP_ONLY, previous, level.getServer());
+            if (restrictedEntity != null && restrictedEntity.isAlive()) restrictedEntity.discard();
+            if (unrestrictedEntity != null && unrestrictedEntity.isAlive()) unrestrictedEntity.discard();
+            owner.discard();
+            stranger.discard();
+        }
+    }
+
+    @SuppressWarnings("removal")
+    @GameTest(maxTicks = 20)
+    public void disabledDeathBackpackGameRuleLeavesInventoryForVanillaDrops(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        BlockPos position = helper.absolutePos(DEATH_POS);
+        boolean previous = level.getGameRules().get(RemnantGameRules.GENERATE_DEATH_BACKPACKS);
+        try {
+            level.getGameRules().set(
+                    RemnantGameRules.GENERATE_DEATH_BACKPACKS, false, level.getServer());
+            player.getInventory().setItem(0, new ItemStack(Items.DIAMOND, 7));
+
+            require(helper, !DeathBackpackCaptureService.captureBeforeVanillaDrop(player, level),
+                    "Disabled game rule unexpectedly captured the player inventory");
+            require(helper, player.getInventory().getItem(0).is(Items.DIAMOND)
+                            && player.getInventory().getItem(0).getCount() == 7,
+                    "Disabled game rule removed items before vanilla could drop them");
+            require(helper, !DeathBackpackCaptureLifecycle.commit(
+                            player, level, position, List.of(new ItemStack(Items.EMERALD))),
+                    "Direct capture transport bypassed the disabled game rule");
+            require(helper, level.getEntitiesOfClass(
+                            ItemEntity.class,
+                            new AABB(position).inflate(3.0D),
+                            entity -> entity.isAlive()
+                                    && entity.getItem().is(RemnantItemRegistration.DEATH_BACKPACK)
+                    ).isEmpty(),
+                    "Disabled game rule still spawned a death backpack entity");
+            helper.succeed();
+        } finally {
+            level.getGameRules().set(
+                    RemnantGameRules.GENERATE_DEATH_BACKPACKS, previous, level.getServer());
+            player.discard();
+        }
+    }
+
+    @SuppressWarnings("removal")
+    @GameTest(maxTicks = 40)
+    public void captureBeyondSixRowsDropsOverflowWithoutHidingIt(GameTestHelper helper) {
+        BlockPos position = helper.absolutePos(DEATH_POS);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        List<ItemStack> contents = new java.util.ArrayList<>();
+        for (int index = 0; index < 54; index++) contents.add(new ItemStack(Items.COBBLESTONE));
+        contents.add(new ItemStack(Items.DIAMOND, 2));
+        contents.add(new ItemStack(Items.EMERALD, 3));
+        require(helper, DeathBackpackCaptureLifecycle.commit(player, helper.getLevel(), position, contents),
+                "Overflow capture transaction failed");
+
+        List<ItemEntity> drops = helper.getLevel().getEntitiesOfClass(
+                ItemEntity.class, new AABB(position).inflate(3.0D), ItemEntity::isAlive);
+        ItemEntity backpack = drops.stream()
+                .filter(entity -> entity.getItem().is(RemnantItemRegistration.DEATH_BACKPACK))
+                .findFirst().orElseThrow(() -> helper.assertionException("Overflow capture made no backpack"));
+        int packed = (int) backpack.getItem().getOrDefault(
+                DataComponents.CONTAINER, ItemContainerContents.EMPTY).nonEmptyItemCopyStream().count();
+        require(helper, packed == DeathBackpackCaptureLifecycle.MAX_BACKPACK_STACKS,
+                "Death backpack stored more than its visible six-row capacity");
+        require(helper, drops.stream().anyMatch(entity -> entity.getItem().is(Items.DIAMOND)
+                        && entity.getItem().getCount() == 2)
+                        && drops.stream().anyMatch(entity -> entity.getItem().is(Items.EMERALD)
+                        && entity.getItem().getCount() == 3),
+                "Death backpack overflow was not emitted as recoverable loose drops");
+        drops.forEach(ItemEntity::discard);
+        player.discard();
+        helper.succeed();
+    }
 
     @SuppressWarnings("removal")
     @GameTest(maxTicks = 60)
@@ -339,19 +465,33 @@ public final class DeathBackpackLifecycleGameTest {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         BlockPos position = helper.absolutePos(DEATH_POS);
         player.snapTo(position.getX() + .5D, position.getY(), position.getZ() + .5D, 0, 0);
-        player.getInventory().setItem(0, new ItemStack(Items.DIAMOND, 9));
+        ItemStack backpack = new ItemStack(RemnantItemRegistration.BACKPACK_BASIC);
+        BackpackUpgradeData.write(backpack,
+                List.of(new ItemStack(RemnantItemRegistration.UPGRADE_CRAFTING)), 1);
+        player.setItemInHand(InteractionHand.MAIN_HAND, backpack);
+        player.getInventory().setItem(1, new ItemStack(Items.DIAMOND, 9));
+        backpack.getItem().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+        require(helper, player.containerMenu instanceof BackpackMenu,
+                "Crafting backpack did not open before death capture");
+        BackpackMenu openMenu = (BackpackMenu) player.containerMenu;
+        openMenu.craftingInputSlots().getFirst().set(new ItemStack(Items.OAK_PLANKS, 3));
         ItemEntity[] entity = {null};
         try {
             require(helper, DeathBackpackCaptureService.captureBeforeVanillaDrop(player, helper.getLevel()),
                     "Remnant did not capture the player inventory");
-            require(helper, player.getInventory().getItem(0).isEmpty(), "Captured inventory slot was not cleared");
+            require(helper, player.getInventory().getItem(1).isEmpty(),
+                    "Captured inventory slot was not cleared");
+            require(helper, openMenu.craftingInputSlots().getFirst().getItem().isEmpty(),
+                    "Captured embedded crafting input was not cleared");
             entity[0] = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(position).inflate(3),
                     candidate -> candidate.isAlive() && candidate.getItem().is(RemnantItemRegistration.DEATH_BACKPACK))
                     .stream().findFirst().orElseThrow(() -> helper.assertionException("Remnant did not create the captured backpack"));
             List<ItemStack> stored = entity[0].getItem().getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY)
                     .nonEmptyItemCopyStream().toList();
-            require(helper, stored.size() == 1 && stored.getFirst().is(Items.DIAMOND) && stored.getFirst().getCount() == 9,
+            require(helper, stored.stream().anyMatch(stack -> stack.is(Items.DIAMOND) && stack.getCount() == 9),
                     "Captured player inventory was not preserved in the Remnant backpack");
+            require(helper, stored.stream().anyMatch(stack -> stack.is(Items.OAK_PLANKS) && stack.getCount() == 3),
+                    "Embedded crafting input was not preserved in the Remnant backpack");
             helper.succeed();
         } finally {
             if (entity[0] != null) entity[0].discard();

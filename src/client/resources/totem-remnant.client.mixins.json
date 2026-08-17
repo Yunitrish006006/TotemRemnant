@@ -4,6 +4,7 @@
   "package": "dev.totem.remnant.mixin.client",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "InventoryScreenBackpackPanelMixin",
     "ItemEntityRenderStateMixin",
     "ItemEntityRendererMixin"
   ],

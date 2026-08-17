@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {"I": "minecraft:iron_ingot", "R": "minecraft:redstone", "C": "minecraft:crafter", "P": "minecraft:piston"},
+  "pattern": ["IPI", "RCR", "IPI"],
+  "result": {"id": "totem:remnant/upgrade_compaction", "count": 1}
+}

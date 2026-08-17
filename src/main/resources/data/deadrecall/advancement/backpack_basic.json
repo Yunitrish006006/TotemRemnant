@@ -1,5 +1,5 @@
 {
-  "parent": "deadrecall:remnant_root",
+  "parent": "deadrecall:remnant_manual",
   "criteria": {
     "has_backpack_basic": {
       "conditions": {

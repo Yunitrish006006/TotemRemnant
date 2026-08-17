@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {"I": "minecraft:iron_ingot", "R": "minecraft:redstone", "C": "minecraft:chest", "H": "minecraft:hopper"},
+  "pattern": ["IHI", "RCR", "IHI"],
+  "result": {"id": "totem:remnant/upgrade_matching_pickup", "count": 1}
+}

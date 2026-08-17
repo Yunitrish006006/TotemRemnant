@@ -51,6 +51,15 @@ public final class RemnantItemGroups {
         output.accept(RemnantItemRegistration.BACKPACK_STANDARD);
         output.accept(RemnantItemRegistration.BACKPACK_ADVANCED);
         output.accept(RemnantItemRegistration.BACKPACK_NETHERITE);
+        output.accept(RemnantItemRegistration.UPGRADE_CRAFTING);
+        output.accept(RemnantItemRegistration.UPGRADE_COMPACTION);
+        output.accept(RemnantItemRegistration.UPGRADE_MATCHING_PICKUP);
+        output.accept(RemnantItemRegistration.UPGRADE_CAPACITY);
+        output.accept(RemnantItemRegistration.UPGRADE_SOULBOUND_CHARGE);
+        output.accept(RemnantItemRegistration.UPGRADE_BLAST_PROTECTION);
+        output.accept(RemnantItemRegistration.UPGRADE_FIRE_PROTECTION);
+        output.accept(RemnantItemRegistration.UPGRADE_DESPAWN_PROTECTION);
+        output.accept(RemnantItemRegistration.UPGRADE_VOID_PROTECTION);
         output.accept(RemnantItemRegistration.DEATH_BACKPACK);
     }
 }

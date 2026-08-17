@@ -27,7 +27,8 @@ public final class DeathBackpackItem extends AbstractBackpackItem {
             if (migrated != held) {
                 player.setItemInHand(hand, migrated);
             }
-            int rows = Math.max(1, Math.min(6, (int) Math.ceil(BackpackItemHelper.countStoredStacks(migrated) / 9.0D)));
+            int rows = Math.max(1, Math.min(6,
+                    (BackpackItemHelper.storedSlotFootprint(migrated) + 8) / 9));
             DeathBackpackInventory inventory = new DeathBackpackInventory(serverPlayer, hand, rows * 9);
             serverPlayer.openMenu(new SimpleMenuProvider((syncId, playerInventory, ignored) -> switch (rows) {
                 case 1 -> new BackpackMenu(MenuType.GENERIC_9x1, syncId, playerInventory, inventory, 1);

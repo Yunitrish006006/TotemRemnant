@@ -11,6 +11,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
 import dev.totem.remnant.item.BackpackItemHelper;
+import dev.totem.remnant.registry.RemnantGameRules;
+import net.minecraft.server.level.ServerLevel;
 
 /**
  * Remnant-owned policy for portable-container nesting.
@@ -51,11 +53,23 @@ public final class PortableContainerPolicy {
     }
 
     public static boolean mayInsertIntoBackpack(ItemStack incoming) {
-        return !isRestrictedPortableContainer(incoming);
+        return !RemnantGameRules.preventPortableContainerNesting()
+                || !isRestrictedPortableContainer(incoming);
+    }
+
+    public static boolean mayInsertIntoBackpack(ServerLevel level, ItemStack incoming) {
+        return !RemnantGameRules.preventPortableContainerNesting(level)
+                || !isRestrictedPortableContainer(incoming);
     }
 
     public static boolean mayInsertIntoPortableContainer(ItemStack incoming) {
-        return !isBackpack(incoming);
+        return !RemnantGameRules.preventPortableContainerNesting()
+                || !isBackpack(incoming);
+    }
+
+    public static boolean mayInsertIntoPortableContainer(ServerLevel level, ItemStack incoming) {
+        return !RemnantGameRules.preventPortableContainerNesting(level)
+                || !isBackpack(incoming);
     }
 
     public static boolean mayInsertIntoContainer(Container target, ItemStack incoming) {

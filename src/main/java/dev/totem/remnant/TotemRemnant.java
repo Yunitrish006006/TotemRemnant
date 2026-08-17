@@ -13,8 +13,13 @@ import dev.totem.remnant.death.DeathBackpackFactory;
 import dev.totem.remnant.death.DeathBackpackRecoveryService;
 import dev.totem.remnant.death.SoulboundDeathItemRetention;
 import dev.totem.remnant.inventory.ContainerSafetyAdmin;
+import dev.totem.remnant.manual.RemnantManual;
+import dev.totem.remnant.manual.RemnantManualRecipeSync;
+import dev.totem.remnant.network.BackpackPanelPayloadRegistration;
 import dev.totem.remnant.registry.RemnantItemGroups;
 import dev.totem.remnant.registry.RemnantItemRegistration;
+import dev.totem.remnant.registry.BackpackMenuRegistration;
+import dev.totem.remnant.registry.RemnantGameRules;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
@@ -29,8 +34,13 @@ public final class TotemRemnant implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        RemnantGameRules.register();
         RemnantItemRegistration.register();
+        BackpackMenuRegistration.register();
+        BackpackPanelPayloadRegistration.register();
         RemnantItemGroups.register();
+        RemnantManualRecipeSync.register();
+        RemnantManual.register();
         ContainerSafetyAdmin.register();
         installTrinketsIntegration();
         DeathBackpackFactory.register(contents -> {

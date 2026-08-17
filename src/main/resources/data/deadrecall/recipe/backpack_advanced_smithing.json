@@ -2,7 +2,11 @@
   "type": "minecraft:smithing_transform",
   "addition": "minecraft:diamond",
   "base": "#totem:remnant/backpacks/standard",
-  "template": "minecraft:bundle",
+  "template": {
+    "fabric:type": "fabric:components",
+    "base": "minecraft:bundle",
+    "components": {"minecraft:bundle_contents": []}
+  },
   "result": {
     "id": "totem:remnant/backpack_advanced"
   }

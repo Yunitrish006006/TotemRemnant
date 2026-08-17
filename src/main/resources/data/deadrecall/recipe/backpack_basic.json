@@ -1,8 +1,16 @@
 {
   "type": "minecraft:smithing_transform",
   "addition": "minecraft:leather",
-  "base": "minecraft:bundle",
-  "template": "minecraft:bundle",
+  "base": {
+    "fabric:type": "fabric:components",
+    "base": "minecraft:bundle",
+    "components": {"minecraft:bundle_contents": []}
+  },
+  "template": {
+    "fabric:type": "fabric:components",
+    "base": "minecraft:bundle",
+    "components": {"minecraft:bundle_contents": []}
+  },
   "result": {
     "id": "totem:remnant/backpack_basic"
   }
