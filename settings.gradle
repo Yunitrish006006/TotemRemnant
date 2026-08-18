@@ -6,3 +6,13 @@ pluginManagement {
 }
 
 rootProject.name = 'TotemRemnant'
+
+// Minecraft 26.2 development runs use the named namespace while some Fabric
+// API artifacts still publish official-namespace classTweakers/access wideners.
+// Apply the shared runtime normalizer before the root build script configures
+// Loom so every server/client/GameTest/restart run receives the same fix.
+gradle.beforeProject { project ->
+    if (project == project.rootProject) {
+        project.apply from: new File(settingsDir, 'gradle/named-runtime-normalization.gradle')
+    }
+}
