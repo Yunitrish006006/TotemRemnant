@@ -8,7 +8,7 @@ group = project.maven_group
 base { archivesName = project.archives_base_name }
 
 // A Loom run is launched from Gradle's JVM, whose environment may have been
-// captured before a shell-scoped variable was added.  Accept Gradle properties
+// captured before a shell-scoped variable was added. Accept Gradle properties
 // as the deterministic CI transport while retaining the documented env-var
 // interface for direct invocations.
 def remnantRestartProbePhase = providers.gradleProperty("totemRemnantRestartProbePhase")
@@ -18,7 +18,7 @@ def remnantRestartProbeMarkerDirectory = providers.gradleProperty("totemRemnantR
         .orElse(providers.environmentVariable("TOTEM_REMNANT_RESTART_PROBE_MARKER_DIR"))
         .orNull
 def totemCoreJar = file(providers.gradleProperty("totemCoreJar")
-        .getOrElse("../TotemCore/build/libs/totem-core-0.6.1.jar"))
+        .getOrElse("../TotemCore/build/libs/totem-core-0.7.0.jar"))
 
 loom {
     splitEnvironmentSourceSets()
@@ -68,7 +68,7 @@ tasks.named("runRemnantRestartProbe").configure {
     }
 }
 
-// Loom serializes run environments into the DLI configuration.  Make the
+// Loom serializes run environments into the DLI configuration. Make the
 // phase/marker inputs explicit so separate seed and verify invocations cannot
 // reuse the previous JVM's generated launch environment.
 tasks.named("generateDLIConfig").configure {
@@ -91,7 +91,7 @@ dependencies {
     compileOnly "eu.pb4:trinkets:4.1.0-beta.2+26.2"
     compileOnly "dev.yumi.mc.core:yumi-mc-foundation:1.1.1+26.2"
 
-    // Keep Core as a real external Fabric module.  Embedding its sources made
+    // Keep Core as a real external Fabric module. Embedding its sources made
     // standalone verification accidentally test a second in-project mod instead
     // of the artifact Remnant will consume in a compatibility bundle.
     modImplementation files(totemCoreJar)
