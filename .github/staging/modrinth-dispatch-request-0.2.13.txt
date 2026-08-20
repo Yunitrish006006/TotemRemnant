@@ -1,1 +1,2 @@
 Request live Modrinth publication for TotemRemnant 0.2.13.
+Retry after repository-scoped dispatch fix.
