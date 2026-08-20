@@ -8,13 +8,51 @@ on:
 
 permissions:
   actions: write
-  contents: read
+  contents: write
 
 jobs:
   dispatch:
     runs-on: ubuntu-latest
     steps:
-      - name: Dispatch live Modrinth publish
+      - name: Dispatch or follow live Modrinth publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run publish-modrinth.yml --ref "${GITHUB_REF_NAME}" -f dry_run=false
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="${GITHUB_REF_NAME}"
+          latest="$(gh run list --workflow publish-modrinth.yml --branch "$branch" --event workflow_dispatch --limit 1 --json databaseId,status --jq '.[0] // {}')"
+          run_id="$(jq -r '.databaseId // empty' <<<"$latest")"
+          run_status="$(jq -r '.status // empty' <<<"$latest")"
+
+          if [[ -z "$run_id" || ( "$run_status" != "queued" && "$run_status" != "in_progress" ) ]]; then
+            before="$run_id"
+            gh workflow run publish-modrinth.yml --ref "$branch" -f dry_run=false
+            run_id=""
+            for _ in {1..30}; do
+              candidate="$(gh run list --workflow publish-modrinth.yml --branch "$branch" --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+              if [[ -n "$candidate" && "$candidate" != "$before" ]]; then
+                run_id="$candidate"
+                break
+              fi
+              sleep 2
+            done
+          fi
+
+          test -n "$run_id"
+          set +e
+          gh run watch "$run_id" --exit-status
+          watch_status=$?
+          set -e
+
+          conclusion="$(gh run view "$run_id" --json conclusion --jq '.conclusion // "unknown"')"
+          version="$(sed -n 's/^mod_version=//p' gradle.properties)"
+          marker=".github/staging/modrinth-dispatch-${version}.json"
+          body="$(jq -n --arg v "$version" --arg run "$run_id" --arg c "$conclusion" '{version:$v,run_id:($run|tonumber),conclusion:$c}')"
+          encoded="$(printf '%s\n' "$body" | base64 -w0)"
+          gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${marker}" \
+            -f message="ci: record Modrinth dispatch ${version}" \
+            -f content="$encoded" \
+            -f branch="$branch" >/dev/null
+
+          exit "$watch_status"
