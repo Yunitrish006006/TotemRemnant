@@ -20,12 +20,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          before="$(gh run list --workflow publish-modrinth.yml --branch "$TARGET_BRANCH" --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
-          gh workflow run publish-modrinth.yml --ref "$TARGET_BRANCH" -f dry_run=false
+          repo="$GITHUB_REPOSITORY"
+          before="$(gh run list -R "$repo" --workflow publish-modrinth.yml --branch "$TARGET_BRANCH" --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+          gh workflow run -R "$repo" publish-modrinth.yml --ref "$TARGET_BRANCH" -f dry_run=false
 
           run_id=""
           for _ in {1..30}; do
-            candidate="$(gh run list --workflow publish-modrinth.yml --branch "$TARGET_BRANCH" --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+            candidate="$(gh run list -R "$repo" --workflow publish-modrinth.yml --branch "$TARGET_BRANCH" --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
             if [[ -n "$candidate" && "$candidate" != "$before" ]]; then
               run_id="$candidate"
               break
@@ -35,20 +36,20 @@ jobs:
           test -n "$run_id"
 
           set +e
-          gh run watch "$run_id" --exit-status
+          gh run watch -R "$repo" "$run_id" --exit-status
           watch_status=$?
           set -e
 
-          conclusion="$(gh run view "$run_id" --json conclusion --jq '.conclusion // "unknown"')"
-          version="$(gh api "repos/${GITHUB_REPOSITORY}/contents/gradle.properties?ref=${TARGET_BRANCH}" --jq '.content' | base64 -d | sed -n 's/^mod_version=//p')"
+          conclusion="$(gh run view -R "$repo" "$run_id" --json conclusion --jq '.conclusion // "unknown"')"
+          version="$(gh api "repos/${repo}/contents/gradle.properties?ref=${TARGET_BRANCH}" --jq '.content' | base64 -d | sed -n 's/^mod_version=//p')"
           marker=".github/staging/modrinth-dispatch-${version}.json"
           body="$(jq -n --arg v "$version" --arg run "$run_id" --arg c "$conclusion" '{version:$v,run_id:($run|tonumber),conclusion:$c}')"
           encoded="$(printf '%s\n' "$body" | base64 -w0)"
-          old="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${marker}?ref=${TARGET_BRANCH}" --jq '.sha' 2>/dev/null || true)"
+          old="$(gh api "repos/${repo}/contents/${marker}?ref=${TARGET_BRANCH}" --jq '.sha' 2>/dev/null || true)"
           if [[ -n "$old" ]]; then
-            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${marker}" -f message="ci: record Modrinth dispatch ${version}" -f content="$encoded" -f branch="$TARGET_BRANCH" -f sha="$old" >/dev/null
+            gh api --method PUT "repos/${repo}/contents/${marker}" -f message="ci: record Modrinth dispatch ${version}" -f content="$encoded" -f branch="$TARGET_BRANCH" -f sha="$old" >/dev/null
           else
-            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${marker}" -f message="ci: record Modrinth dispatch ${version}" -f content="$encoded" -f branch="$TARGET_BRANCH" >/dev/null
+            gh api --method PUT "repos/${repo}/contents/${marker}" -f message="ci: record Modrinth dispatch ${version}" -f content="$encoded" -f branch="$TARGET_BRANCH" >/dev/null
           fi
 
           exit "$watch_status"
