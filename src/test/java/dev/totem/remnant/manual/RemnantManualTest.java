@@ -15,12 +15,12 @@ class RemnantManualTest {
                 RemnantManual.sections().getFirst().id().toString()
         );
         List<String> pages = RemnantManual.sections().getFirst().pageKeys();
-        assertEquals(27, pages.size());
+        assertEquals(29, pages.size());
         assertEquals("book.deadrecall.remnant.basics.page.1", pages.getFirst());
         assertEquals("book.deadrecall.remnant.container_safety.page.1", pages.getLast());
         int overviewIndex = pages.indexOf("book.deadrecall.remnant.module_recipes.overview");
         assertEquals(4, overviewIndex);
-        for (int module = 1; module <= 9; module++) {
+        for (int module = 1; module <= 10; module++) {
             int descriptionIndex = overviewIndex + module * 2 - 1;
             assertEquals(
                     "book.deadrecall.remnant.module_recipes.description." + module,

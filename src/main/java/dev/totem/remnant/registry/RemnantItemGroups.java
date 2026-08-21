@@ -56,6 +56,7 @@ public final class RemnantItemGroups {
         output.accept(RemnantItemRegistration.UPGRADE_MATCHING_PICKUP);
         output.accept(RemnantItemRegistration.UPGRADE_CAPACITY);
         output.accept(RemnantItemRegistration.UPGRADE_SOULBOUND_CHARGE);
+        output.accept(RemnantItemRegistration.UPGRADE_ENDER_ACCESS);
         output.accept(RemnantItemRegistration.UPGRADE_BLAST_PROTECTION);
         output.accept(RemnantItemRegistration.UPGRADE_FIRE_PROTECTION);
         output.accept(RemnantItemRegistration.UPGRADE_DESPAWN_PROTECTION);

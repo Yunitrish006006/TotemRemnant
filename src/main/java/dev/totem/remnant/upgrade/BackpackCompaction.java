@@ -13,12 +13,19 @@ import net.minecraft.world.item.crafting.RecipeType;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Event-driven, recipe-authoritative lossless compression for vanilla raw metals. */
+/** Event-driven, recipe-authoritative lossless compression for vanilla metals. */
 public final class BackpackCompaction {
     private static final List<Compression> COMPRESSIONS = List.of(
             new Compression(Items.RAW_IRON, Items.RAW_IRON_BLOCK),
             new Compression(Items.RAW_COPPER, Items.RAW_COPPER_BLOCK),
-            new Compression(Items.RAW_GOLD, Items.RAW_GOLD_BLOCK)
+            new Compression(Items.RAW_GOLD, Items.RAW_GOLD_BLOCK),
+            // Nugget routes precede ingot routes so 81 nuggets can safely chain to one block.
+            new Compression(Items.IRON_NUGGET, Items.IRON_INGOT),
+            new Compression(Items.GOLD_NUGGET, Items.GOLD_INGOT),
+            new Compression(Items.IRON_INGOT, Items.IRON_BLOCK),
+            new Compression(Items.COPPER_INGOT, Items.COPPER_BLOCK.weathering().unaffected()),
+            new Compression(Items.GOLD_INGOT, Items.GOLD_BLOCK),
+            new Compression(Items.NETHERITE_INGOT, Items.NETHERITE_BLOCK)
     );
 
     private BackpackCompaction() {

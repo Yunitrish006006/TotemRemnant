@@ -38,7 +38,8 @@ public final class RemnantManualRecipeSync {
             recipeId("upgrade_blast_protection"),
             recipeId("upgrade_fire_protection"),
             recipeId("upgrade_despawn_protection"),
-            recipeId("upgrade_void_protection")
+            recipeId("upgrade_void_protection"),
+            recipeId("upgrade_ender_access")
     );
     public static final List<Identifier> RECIPE_IDS = java.util.stream.Stream.concat(
             SMITHING_RECIPE_IDS.stream(),

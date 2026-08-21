@@ -82,7 +82,7 @@ public final class RemnantManual {
         pageKeys.add("book.deadrecall.remnant.basics.page.3");
         pageKeys.add("book.deadrecall.remnant.dyeing.page.1");
         pageKeys.add("book.deadrecall.remnant.module_recipes.overview");
-        IntStream.rangeClosed(1, 9).forEach(page -> {
+        IntStream.rangeClosed(1, 10).forEach(page -> {
             pageKeys.add("book.deadrecall.remnant.module_recipes.description." + page);
             pageKeys.add("book.deadrecall.remnant.module_recipes.page." + page);
         });
@@ -164,7 +164,8 @@ public final class RemnantManual {
                 "item.totem.remnant.upgrade_blast_protection",
                 "item.totem.remnant.upgrade_fire_protection",
                 "item.totem.remnant.upgrade_despawn_protection",
-                "item.totem.remnant.upgrade_void_protection"
+                "item.totem.remnant.upgrade_void_protection",
+                "item.totem.remnant.upgrade_ender_access"
         };
         Map<String, List<Component>> arguments = new LinkedHashMap<>();
         for (int index = 0; index < itemKeys.length; index++) {
