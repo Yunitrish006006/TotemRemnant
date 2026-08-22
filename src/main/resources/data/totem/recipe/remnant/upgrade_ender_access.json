@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "P": "minecraft:ender_pearl",
+    "E": "minecraft:ender_chest"
+  },
+  "pattern": ["IPI", "PEP", "IPI"],
+  "result": {"id": "totem:remnant/upgrade_ender_access", "count": 1}
+}

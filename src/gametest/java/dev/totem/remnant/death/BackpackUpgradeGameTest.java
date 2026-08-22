@@ -23,6 +23,7 @@ import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.SmithingRecipeInput;
+import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -189,6 +190,63 @@ public final class BackpackUpgradeGameTest {
         require(helper, BackpackUpgradeData.has(backpack, BackpackUpgradeType.SOULBOUND_CHARGE),
                 "Soulbound charge did not persist");
         helper.succeed();
+    }
+
+    @SuppressWarnings("removal")
+    @GameTest(maxTicks = 20)
+    public void enderAccessIsUniqueAndOpensOnlyThePlayersVanillaInventory(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        try {
+            ItemStack backpack = new ItemStack(RemnantItemRegistration.BACKPACK_STANDARD);
+            install(backpack,
+                    RemnantItemRegistration.UPGRADE_CRAFTING,
+                    RemnantItemRegistration.UPGRADE_ENDER_ACCESS);
+            player.setItemInHand(InteractionHand.MAIN_HAND, backpack);
+            player.getEnderChestInventory().setItem(0, new ItemStack(Items.DIAMOND, 3));
+            backpack.getItem().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+
+            require(helper, player.containerMenu instanceof dev.totem.remnant.inventory.BackpackMenu,
+                    "Ender-enabled backpack did not open its backpack menu first");
+            dev.totem.remnant.inventory.BackpackMenu menu =
+                    (dev.totem.remnant.inventory.BackpackMenu) player.containerMenu;
+            menu.craftingInputSlots().getFirst().set(new ItemStack(Items.OAK_PLANKS, 3));
+            require(helper, menu.clickMenuButton(
+                            player, dev.totem.remnant.inventory.BackpackMenu.ENDER_ACCESS_BUTTON_ID),
+                    "Installed Ender Access module rejected its server menu action");
+            require(helper, player.containerMenu instanceof net.minecraft.world.inventory.ChestMenu enderMenu
+                            && enderMenu.getRowCount() == 3
+                            && enderMenu.getSlot(0).container == player.getEnderChestInventory()
+                            && enderMenu.getSlot(0).getItem().is(Items.DIAMOND)
+                            && enderMenu.getSlot(0).getItem().getCount() == 3,
+                    "Ender Access did not open the requesting player's own three-row Ender Chest");
+            require(helper, countPlayerInventory(player, Items.OAK_PLANKS) == 3,
+                    "Opening Ender storage did not return transient crafting items exactly once");
+
+            player.closeContainer();
+            ItemStack withoutModule = new ItemStack(RemnantItemRegistration.BACKPACK_BASIC);
+            player.setItemInHand(InteractionHand.MAIN_HAND, withoutModule);
+            withoutModule.getItem().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+            dev.totem.remnant.inventory.BackpackMenu forged =
+                    (dev.totem.remnant.inventory.BackpackMenu) player.containerMenu;
+            require(helper, !forged.clickMenuButton(
+                            player, dev.totem.remnant.inventory.BackpackMenu.ENDER_ACCESS_BUTTON_ID)
+                            && player.containerMenu == forged,
+                    "Forged Ender Access action opened storage without the module");
+
+            player.closeContainer();
+            ItemStack uniqueBackpack = new ItemStack(RemnantItemRegistration.BACKPACK_STANDARD);
+            player.setItemInHand(InteractionHand.MAIN_HAND, uniqueBackpack);
+            dev.totem.remnant.inventory.BackpackUpgradeInventory upgrades =
+                    new dev.totem.remnant.inventory.BackpackUpgradeInventory(
+                            player, InteractionHand.MAIN_HAND, 2);
+            upgrades.setItem(0, new ItemStack(RemnantItemRegistration.UPGRADE_ENDER_ACCESS));
+            require(helper, !upgrades.canPlaceItem(
+                            1, new ItemStack(RemnantItemRegistration.UPGRADE_ENDER_ACCESS)),
+                    "A second unique Ender Access module was accepted");
+            helper.succeed();
+        } finally {
+            player.discard();
+        }
     }
 
     @SuppressWarnings("removal")
@@ -360,6 +418,40 @@ public final class BackpackUpgradeGameTest {
         }
     }
 
+    @GameTest(maxTicks = 20)
+    public void metalCompactionChainsNuggetsAndIngotsUsingLiveRecipes(GameTestHelper helper) {
+        ItemStack backpack = new ItemStack(RemnantItemRegistration.BACKPACK_ADVANCED);
+        install(backpack, RemnantItemRegistration.UPGRADE_COMPACTION);
+        backpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(
+                new ItemStack(Items.IRON_NUGGET, 64),
+                new ItemStack(Items.IRON_NUGGET, 18),
+                new ItemStack(Items.GOLD_NUGGET, 64),
+                new ItemStack(Items.GOLD_NUGGET, 17),
+                new ItemStack(Items.COPPER_INGOT, 9),
+                new ItemStack(Items.NETHERITE_INGOT, 9)
+        )));
+
+        require(helper, BackpackCompaction.compactIfEnabled(helper.getLevel(), backpack),
+                "Metal compaction did not use the live nugget and ingot recipes");
+        List<ItemStack> compacted = backpack.getOrDefault(
+                DataComponents.CONTAINER, ItemContainerContents.EMPTY).nonEmptyItemCopyStream().toList();
+        require(helper, count(compacted, Items.IRON_BLOCK) == 1
+                        && count(compacted, Items.IRON_NUGGET) == 1
+                        && count(compacted, Items.IRON_INGOT) == 0,
+                "Iron nuggets did not safely chain through ingots to one block plus the remainder");
+        require(helper, count(compacted, Items.GOLD_BLOCK) == 1
+                        && count(compacted, Items.GOLD_NUGGET) == 0
+                        && count(compacted, Items.GOLD_INGOT) == 0,
+                "Exactly 81 gold nuggets did not chain to one gold block");
+        require(helper, count(compacted, Items.COPPER_BLOCK.weathering().unaffected()) == 1
+                        && count(compacted, Items.COPPER_INGOT) == 0,
+                "Copper ingots did not compact through the current 3x3 recipe");
+        require(helper, count(compacted, Items.NETHERITE_BLOCK) == 1
+                        && count(compacted, Items.NETHERITE_INGOT) == 0,
+                "Netherite ingots did not compact through the current 3x3 recipe");
+        helper.succeed();
+    }
+
     @SuppressWarnings("removal")
     @GameTest(maxTicks = 20)
     public void installedCraftingModuleEmbedsPortableThreeByThreeGrid(GameTestHelper helper) {
@@ -391,9 +483,58 @@ public final class BackpackUpgradeGameTest {
                     "Taking the embedded crafting result did not consume its ingredients");
 
             menu.craftingInputSlots().getFirst().set(new ItemStack(Items.OAK_PLANKS, 3));
-            menu.removed(player);
+            require(helper, !menu.getSlot(menu.upgradeSlotStart()).mayPickup(player),
+                    "Crafting module could be removed while its soon-hidden grid held ingredients");
+            require(helper, menu.quickMoveStack(player, menu.craftingInputSlotStart())
+                            .is(Items.OAK_PLANKS),
+                    "Could not safely return unfinished ingredients before module removal");
+            require(helper, menu.getSlot(menu.upgradeSlotStart()).mayPickup(player),
+                    "Emptying the crafting grid did not permit module removal");
+            menu.getSlot(menu.upgradeSlotStart()).set(ItemStack.EMPTY);
+            menu.broadcastChanges();
+            require(helper, !menu.isCraftingEnabled()
+                            && !menu.craftingResultSlot().isActive()
+                            && menu.craftingInputSlots().stream().noneMatch(slot -> slot.isActive()),
+                    "Removing the crafting module left its hidden slots interactive");
             require(helper, countPlayerInventory(player, Items.OAK_PLANKS) == 3,
-                    "Closing the backpack did not return unfinished crafting ingredients");
+                    "Moving unfinished ingredients out before removal changed their count");
+            helper.succeed();
+        } finally {
+            player.discard();
+        }
+    }
+
+    @SuppressWarnings("removal")
+    @GameTest(maxTicks = 20)
+    public void craftingResultClicksAndQuickMovesNeverDropItems(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        try {
+            ItemStack backpack = new ItemStack(RemnantItemRegistration.BACKPACK_BASIC);
+            install(backpack, RemnantItemRegistration.UPGRADE_CRAFTING);
+            player.setItemInHand(InteractionHand.MAIN_HAND, backpack);
+            backpack.getItem().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+            dev.totem.remnant.inventory.BackpackMenu menu =
+                    (dev.totem.remnant.inventory.BackpackMenu) player.containerMenu;
+
+            fillCraftingTableRecipe(menu);
+            menu.clicked(menu.craftingResultSlotIndex(), 0, ContainerInput.PICKUP, player);
+            require(helper, menu.getCarried().is(Items.CRAFTING_TABLE),
+                    "A normal result click did not put the crafted item on the cursor");
+            require(helper, menu.craftingInputSlots().stream().noneMatch(slot -> slot.hasItem()),
+                    "A normal result click did not consume exactly one recipe");
+            require(helper, nearbyDrops(player) == 0,
+                    "A normal result click spawned an ItemEntity");
+
+            menu.setCarried(ItemStack.EMPTY);
+            fillCraftingTableRecipe(menu);
+            ItemStack moved = menu.quickMoveStack(player, menu.craftingResultSlotIndex());
+            require(helper, moved.is(Items.CRAFTING_TABLE)
+                            && countPlayerInventory(player, Items.CRAFTING_TABLE) == 1,
+                    "Shift-click did not safely move the result into the player inventory");
+            require(helper, menu.craftingInputSlots().stream().noneMatch(slot -> slot.hasItem()),
+                    "Shift-click did not consume exactly one recipe");
+            require(helper, nearbyDrops(player) == 0,
+                    "Shift-click spawned an ItemEntity despite available inventory space");
             helper.succeed();
         } finally {
             player.discard();
@@ -466,6 +607,21 @@ public final class BackpackUpgradeGameTest {
         for (net.minecraft.world.item.Item module : modules) installed.add(new ItemStack(module));
         while (installed.size() < capacity) installed.add(ItemStack.EMPTY);
         BackpackUpgradeData.write(backpack, installed, capacity);
+    }
+
+    private static void fillCraftingTableRecipe(dev.totem.remnant.inventory.BackpackMenu menu) {
+        menu.craftingInputSlots().get(0).set(new ItemStack(Items.OAK_PLANKS));
+        menu.craftingInputSlots().get(1).set(new ItemStack(Items.OAK_PLANKS));
+        menu.craftingInputSlots().get(3).set(new ItemStack(Items.OAK_PLANKS));
+        menu.craftingInputSlots().get(4).set(new ItemStack(Items.OAK_PLANKS));
+    }
+
+    private static int nearbyDrops(ServerPlayer player) {
+        return player.level().getEntitiesOfClass(
+                ItemEntity.class,
+                new AABB(player.blockPosition()).inflate(4.0D),
+                ItemEntity::isAlive
+        ).size();
     }
 
     private static int count(List<ItemStack> stacks, net.minecraft.world.item.Item item) {

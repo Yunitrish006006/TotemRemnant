@@ -33,6 +33,8 @@ public final class RemnantItemRegistration {
             "remnant/upgrade_capacity", BackpackUpgradeType.CAPACITY);
     public static final Item UPGRADE_SOULBOUND_CHARGE = registerUpgrade(
             "remnant/upgrade_soulbound_charge", BackpackUpgradeType.SOULBOUND_CHARGE);
+    public static final Item UPGRADE_ENDER_ACCESS = registerUpgrade(
+            "remnant/upgrade_ender_access", BackpackUpgradeType.ENDER_ACCESS);
     /** Legacy hidden ID; existing stacks gain the combined impact-protection behavior. */
     public static final Item UPGRADE_CACTUS_PROTECTION = registerUpgrade(
             "remnant/upgrade_cactus_protection", BackpackUpgradeType.BLAST_PROTECTION);

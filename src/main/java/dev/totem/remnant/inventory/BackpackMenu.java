@@ -10,6 +10,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ChestMenu;
@@ -30,6 +31,7 @@ import java.util.List;
 
 /** Backpack storage plus dedicated removable upgrade slots and an embedded 3x3 crafting grid. */
 public final class BackpackMenu extends ChestMenu {
+    public static final int ENDER_ACCESS_BUTTON_ID = 1;
     public static final int UPGRADE_PANEL_X = 177;
     public static final int UPGRADE_PANEL_WIDTH = 102;
     public static final int CRAFTING_PANEL_X = 177;
@@ -138,6 +140,29 @@ public final class BackpackMenu extends ChestMenu {
         return false;
     }
 
+    public boolean isCraftingEnabled() {
+        return craftingResultSlotIndex >= 0 && hasUpgrade(BackpackUpgradeType.CRAFTING);
+    }
+
+    @Override
+    public boolean clickMenuButton(Player player, int buttonId) {
+        if (buttonId != ENDER_ACCESS_BUTTON_ID
+                || !(player instanceof ServerPlayer serverPlayer)
+                || player != owner
+                || player.containerMenu != this
+                || trackedBackpackStack.isEmpty()
+                || !upgrades.stillValid(player)
+                || !hasUpgrade(BackpackUpgradeType.ENDER_ACCESS)) {
+            return false;
+        }
+        serverPlayer.openMenu(new SimpleMenuProvider(
+                (containerId, inventory, ignored) -> ChestMenu.threeRows(
+                        containerId, inventory, serverPlayer.getEnderChestInventory()),
+                Component.translatable("container.enderchest")
+        ));
+        return true;
+    }
+
     public Slot craftingResultSlot() {
         if (craftingResultSlotIndex < 0) {
             throw new IllegalStateException("This backpack menu has no crafting expansion");
@@ -216,7 +241,7 @@ public final class BackpackMenu extends ChestMenu {
 
     @Override
     public void broadcastChanges() {
-        boolean enabled = hasUpgrade(BackpackUpgradeType.CRAFTING);
+        boolean enabled = isCraftingEnabled();
         if (craftingResultSlotIndex >= 0 && enabled != craftingEnabled) {
             craftingEnabled = enabled;
             updateCraftingResult();
@@ -229,7 +254,7 @@ public final class BackpackMenu extends ChestMenu {
                 || !(owner.level() instanceof ServerLevel serverLevel)) return;
 
         ItemStack output = ItemStack.EMPTY;
-        if (hasUpgrade(BackpackUpgradeType.CRAFTING)) {
+        if (isCraftingEnabled()) {
             CraftingInput input = craftingSlots.asCraftInput();
             RecipeHolder<CraftingRecipe> recipe = serverLevel.getServer().getRecipeManager()
                     .getRecipeFor(RecipeType.CRAFTING, input, serverLevel)
@@ -256,10 +281,12 @@ public final class BackpackMenu extends ChestMenu {
 
         boolean moved;
         if (slotIndex == craftingResultSlotIndex) {
+            if (!isCraftingEnabled()) return ItemStack.EMPTY;
             sourceStack.getItem().onCraftedBy(sourceStack, player);
             moved = moveItemStackTo(sourceStack, playerSlotStart, upgradeSlotStart, true);
             if (moved) source.onQuickCraft(sourceStack, original);
         } else if (slotIndex >= craftingInputSlotStart && slotIndex < craftingInputSlotEnd) {
+            if (!isCraftingEnabled()) return ItemStack.EMPTY;
             moved = moveItemStackTo(sourceStack, playerSlotStart, upgradeSlotStart, true);
         } else if (slotIndex >= upgradeSlotStart && slotIndex < craftingResultSlotIndex) {
             if (!mayRemoveUpgrade(sourceStack)) return ItemStack.EMPTY;
@@ -289,6 +316,10 @@ public final class BackpackMenu extends ChestMenu {
 
     @Override
     public void clicked(int slotIndex, int buttonNum, ContainerInput input, Player player) {
+        if (!isCraftingEnabled() && (slotIndex == craftingResultSlotIndex
+                || slotIndex >= craftingInputSlotStart && slotIndex < craftingInputSlotEnd)) {
+            return;
+        }
         if (targetsTrackedBackpack(slotIndex)
                 || swapsTrackedBackpackFromInventory(player.getInventory(), input, buttonNum)) return;
         if (insertsIntoInactiveCapacitySlot(slotIndex, input, player.getInventory(), buttonNum)) return;
@@ -345,9 +376,19 @@ public final class BackpackMenu extends ChestMenu {
     }
 
     private boolean mayRemoveUpgrade(ItemStack upgrade) {
-        return !(upgrade.getItem() instanceof BackpackUpgradeItem module)
-                || module.type() != BackpackUpgradeType.CAPACITY
-                || capacityRowIsEmpty();
+        if (!(upgrade.getItem() instanceof BackpackUpgradeItem module)) return true;
+        return switch (module.type()) {
+            case CAPACITY -> capacityRowIsEmpty();
+            case CRAFTING -> craftingGridIsEmpty();
+            default -> true;
+        };
+    }
+
+    private boolean craftingGridIsEmpty() {
+        for (int index = 0; index < craftingSlots.getContainerSize(); index++) {
+            if (!craftingSlots.getItem(index).isEmpty()) return false;
+        }
+        return true;
     }
 
     private boolean capacityRowIsEmpty() {
@@ -416,7 +457,15 @@ public final class BackpackMenu extends ChestMenu {
         }
 
         @Override public boolean mayPlace(ItemStack stack) {
-            return hasUpgrade(BackpackUpgradeType.CRAFTING);
+            return isCraftingEnabled();
+        }
+
+        @Override public boolean mayPickup(Player player) {
+            return isCraftingEnabled();
+        }
+
+        @Override public boolean isActive() {
+            return isCraftingEnabled();
         }
     }
 
@@ -427,7 +476,11 @@ public final class BackpackMenu extends ChestMenu {
         }
 
         @Override public boolean mayPickup(Player player) {
-            return hasUpgrade(BackpackUpgradeType.CRAFTING) && super.mayPickup(player);
+            return isCraftingEnabled() && super.mayPickup(player);
+        }
+
+        @Override public boolean isActive() {
+            return isCraftingEnabled();
         }
     }
 }

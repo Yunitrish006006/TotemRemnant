@@ -95,7 +95,11 @@ public final class BackpackUpgradeRecipeVisualGameTest implements FabricClientGa
                 recipe("虛空防護模組", RemnantItemRegistration.UPGRADE_VOID_PROTECTION,
                         Items.CRYING_OBSIDIAN, Items.ENDER_PEARL, Items.CRYING_OBSIDIAN,
                         Items.CHORUS_FRUIT, Items.RECOVERY_COMPASS, Items.CHORUS_FRUIT,
-                        Items.CRYING_OBSIDIAN, Items.ENDER_PEARL, Items.CRYING_OBSIDIAN)
+                        Items.CRYING_OBSIDIAN, Items.ENDER_PEARL, Items.CRYING_OBSIDIAN),
+                recipe("終界箱存取模組", RemnantItemRegistration.UPGRADE_ENDER_ACCESS,
+                        Items.IRON_INGOT, Items.ENDER_PEARL, Items.IRON_INGOT,
+                        Items.ENDER_PEARL, Items.ENDER_CHEST, Items.ENDER_PEARL,
+                        Items.IRON_INGOT, Items.ENDER_PEARL, Items.IRON_INGOT)
         );
 
         private UpgradeRecipeScreen() {

@@ -126,7 +126,10 @@ tasks.matching { task -> task.name == "runClientGameTest" }.configureEach {
         }
         copy {
             from(file("${buildDir}/run/clientGameTest/screenshots"))
-            include("*_backpack-upgrade-bay.png")
+            include("*_backpack-upgrade-bay.png", "*_backpack-upgrade-bay-no-crafting.png")
+            include("*_backpack-ender-access-zh-tw.png", "*_backpack-ender-access-en-us.png")
+            include("*_backpack-crafting-result-before-click.png",
+                    "*_backpack-crafting-result-after-click.png")
             rename { name -> name.replaceFirst(/^\d+_/, "") }
             into(file("test-artifacts/screenshots/backpack-inventory"))
         }
