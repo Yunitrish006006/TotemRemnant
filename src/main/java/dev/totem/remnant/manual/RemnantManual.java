@@ -1,5 +1,6 @@
 package dev.totem.remnant.manual;
 
+import dev.totem.core.api.v1.manual.TotemManualChapterRecorder;
 import dev.totem.core.api.v1.manual.TotemManualLifecycle;
 import dev.totem.core.api.v1.manual.TotemManualPlayerHelper;
 import dev.totem.core.api.v1.manual.TotemManualRegistry;
@@ -62,7 +63,7 @@ public final class RemnantManual {
         if (player == null || hand == null) {
             return false;
         }
-        return TotemManualPlayerHelper.acquireSections(
+        return TotemManualChapterRecorder.acquireSections(
                 player,
                 hand,
                 SECTIONS,
