@@ -49,7 +49,12 @@ public final class BackpackUpgradeData {
     }
 
     public static boolean has(ItemStack backpack, BackpackUpgradeType type) {
-        return count(backpack, type) > 0;
+        if (count(backpack, type) > 0) {
+            return true;
+        }
+        return type != null
+                && type.isPreservationProtection()
+                && count(backpack, BackpackUpgradeType.PERFECT_PRESERVATION) > 0;
     }
 
     public static int count(ItemStack backpack, BackpackUpgradeType type) {

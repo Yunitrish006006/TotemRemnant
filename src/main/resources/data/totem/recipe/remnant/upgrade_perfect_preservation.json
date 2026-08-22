@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "B": "totem:remnant/upgrade_blast_protection",
+    "F": "totem:remnant/upgrade_fire_protection",
+    "D": "totem:remnant/upgrade_despawn_protection",
+    "V": "totem:remnant/upgrade_void_protection"
+  },
+  "pattern": ["BF", "DV"],
+  "result": {"id": "totem:remnant/upgrade_perfect_preservation", "count": 1}
+}

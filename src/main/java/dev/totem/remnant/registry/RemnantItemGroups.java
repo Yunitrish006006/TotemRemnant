@@ -61,6 +61,7 @@ public final class RemnantItemGroups {
         output.accept(RemnantItemRegistration.UPGRADE_FIRE_PROTECTION);
         output.accept(RemnantItemRegistration.UPGRADE_DESPAWN_PROTECTION);
         output.accept(RemnantItemRegistration.UPGRADE_VOID_PROTECTION);
+        output.accept(RemnantItemRegistration.UPGRADE_PERFECT_PRESERVATION);
         output.accept(RemnantItemRegistration.DEATH_BACKPACK);
     }
 }

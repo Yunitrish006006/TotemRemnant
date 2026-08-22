@@ -46,6 +46,8 @@ public final class RemnantItemRegistration {
             "remnant/upgrade_despawn_protection", BackpackUpgradeType.DESPAWN_PROTECTION);
     public static final Item UPGRADE_VOID_PROTECTION = registerUpgrade(
             "remnant/upgrade_void_protection", BackpackUpgradeType.VOID_PROTECTION);
+    public static final Item UPGRADE_PERFECT_PRESERVATION = registerUpgrade(
+            "remnant/upgrade_perfect_preservation", BackpackUpgradeType.PERFECT_PRESERVATION);
     public static final Item DEATH_BACKPACK = registerDeathBackpack("totem", "remnant/death_backpack");
 
     private RemnantItemRegistration() { }

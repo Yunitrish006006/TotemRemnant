@@ -46,20 +46,14 @@ abstract class InventoryMenuBackpackPanelMixin implements BackpackPanelMenuAcces
             CallbackInfoReturnable<ItemStack> callback
     ) {
         InventoryMenu menu = (InventoryMenu) (Object) this;
-        int activeEnd = totem$backpackPanelSlotStart + totem$backpackPanel.activeSlotCount();
         if (slotIndex >= totem$backpackPanelSlotStart
                 && slotIndex < totem$backpackPanelSlotStart + BackpackPanelContainer.MAX_PANEL_SLOTS) {
             callback.setReturnValue(totem$moveFromPanel(player, menu, slotIndex));
-            return;
         }
-        if (slotIndex >= InventoryMenu.INV_SLOT_START
-                && slotIndex < InventoryMenu.USE_ROW_SLOT_END
-                && activeEnd > totem$backpackPanelSlotStart) {
-            ItemStack moved = totem$moveIntoPanel(player, menu, slotIndex, activeEnd);
-            if (moved != null) {
-                callback.setReturnValue(moved);
-            }
-        }
+        // Deliberately do not intercept ordinary InventoryMenu slots here. Shift-clicking the
+        // player's inventory/hotbar must retain vanilla quick-move behavior even while the E-screen
+        // backpack panel is visible. The panel remains interactive, and Shift-clicking a panel slot
+        // still moves that stack back into the normal player inventory.
     }
 
     @Override
@@ -129,34 +123,6 @@ abstract class InventoryMenuBackpackPanelMixin implements BackpackPanelMenuAcces
                 true
         )) {
             return ItemStack.EMPTY;
-        }
-        totem$finishQuickMove(player, source, stack, original);
-        return original;
-    }
-
-    @Unique
-    private ItemStack totem$moveIntoPanel(
-            Player player,
-            InventoryMenu menu,
-            int slotIndex,
-            int activeEnd
-    ) {
-        if (slotIndex < 0 || slotIndex >= menu.slots.size()) {
-            return null;
-        }
-        Slot source = menu.slots.get(slotIndex);
-        if (!source.hasItem()) {
-            return null;
-        }
-        ItemStack stack = source.getItem();
-        ItemStack original = stack.copy();
-        if (!((AbstractContainerMenuInvoker) this).totem$moveItemStackTo(
-                stack,
-                totem$backpackPanelSlotStart,
-                activeEnd,
-                false
-        )) {
-            return null;
         }
         totem$finishQuickMove(player, source, stack, original);
         return original;

@@ -11,5 +11,14 @@ public enum BackpackUpgradeType {
     BLAST_PROTECTION,
     FIRE_PROTECTION,
     DESPAWN_PROTECTION,
-    VOID_PROTECTION
+    VOID_PROTECTION,
+    PERFECT_PRESERVATION;
+
+    /** Capabilities folded into the one-slot Perfect Preservation module. */
+    public boolean isPreservationProtection() {
+        return this == BLAST_PROTECTION
+                || this == FIRE_PROTECTION
+                || this == DESPAWN_PROTECTION
+                || this == VOID_PROTECTION;
+    }
 }
