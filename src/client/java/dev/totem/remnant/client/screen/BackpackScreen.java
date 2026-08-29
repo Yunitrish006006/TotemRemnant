@@ -1,10 +1,15 @@
 package dev.totem.remnant.client.screen;
 
 import dev.totem.remnant.inventory.BackpackMenu;
+import dev.totem.core.api.v1.client.observer.ObserverReadOnlyScreen;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.PreeditEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -12,7 +17,8 @@ import net.minecraft.world.entity.player.Inventory;
 import dev.totem.remnant.upgrade.BackpackUpgradeType;
 
 /** Vanilla-styled backpack with adjacent upgrade and embedded crafting panels. */
-public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu> {
+public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu>
+        implements ObserverReadOnlyScreen {
     private static final Identifier CONTAINER_BACKGROUND =
             Identifier.withDefaultNamespace("textures/gui/container/generic_54.png");
     private static final Identifier SLOT_SPRITE = Identifier.withDefaultNamespace("container/slot");
@@ -34,11 +40,20 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu> 
     private final int visibleRows;
     private int firstVisibleRow;
     private Button enderAccessButton;
+    private final boolean observerReadOnly;
+    private final Runnable observerStop;
 
     public BackpackScreen(BackpackMenu menu, Inventory inventory, Component title) {
+        this(menu, inventory, title, false, () -> { });
+    }
+
+    public BackpackScreen(BackpackMenu menu, Inventory inventory, Component title,
+                          boolean observerReadOnly, Runnable observerStop) {
         super(menu, inventory, title, 176, 114 + Math.min(menu.getRowCount(), MAX_VISIBLE_ROWS) * 18);
         this.backpackMenu = menu;
         this.visibleRows = Math.min(menu.getRowCount(), MAX_VISIBLE_ROWS);
+        this.observerReadOnly = observerReadOnly;
+        this.observerStop = observerStop;
         this.inventoryLabelY = this.imageHeight - 94;
         applyScrollLayout();
     }
@@ -60,6 +75,7 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu> 
                         "container.deadrecall.backpack.ender_access")))
                 .build();
         enderAccessButton.visible = backpackMenu.hasUpgrade(BackpackUpgradeType.ENDER_ACCESS);
+        enderAccessButton.active = !observerReadOnly;
         addRenderableWidget(enderAccessButton);
     }
 
@@ -95,6 +111,7 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu> 
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (observerReadOnly) return true;
         if (verticalAmount != 0.0D && maxScrollRows() > 0
                 && isHovering(7, 17, 164, visibleRows * 18 + 2, mouseX, mouseY)) {
             int direction = verticalAmount > 0.0D ? -1 : 1;
@@ -109,6 +126,39 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu> 
         }
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
+
+    @Override public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
+        return observerReadOnly || super.mouseClicked(event, doubled);
+    }
+
+    @Override public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        return observerReadOnly || super.mouseDragged(event, dragX, dragY);
+    }
+
+    @Override public boolean mouseReleased(MouseButtonEvent event) {
+        return observerReadOnly || super.mouseReleased(event);
+    }
+
+    @Override public boolean keyPressed(KeyEvent event) {
+        if (!observerReadOnly) return super.keyPressed(event);
+        if (event.key() == 256) onClose();
+        return true;
+    }
+
+    @Override public boolean charTyped(CharacterEvent event) {
+        return observerReadOnly || super.charTyped(event);
+    }
+
+    @Override public boolean preeditUpdated(PreeditEvent event) {
+        return observerReadOnly || super.preeditUpdated(event);
+    }
+
+    @Override public void onClose() {
+        if (observerReadOnly) observerStop.run();
+        else super.onClose();
+    }
+
+    @Override public boolean totem$isObserverReadOnly() { return observerReadOnly; }
 
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
