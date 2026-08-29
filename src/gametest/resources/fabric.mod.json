@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "name": "TotemRemnant GameTests",
   "environment": "*",
+  "mixins": [
+    "totem-remnant-gametest.client.mixins.json"
+  ],
   "entrypoints": {
     "main": [
       "dev.totem.remnant.gametest.RemnantRestartProbe"
@@ -19,6 +22,7 @@
       "dev.totem.remnant.manual.RemnantManualGameTest"
     ],
     "fabric-client-gametest": [
+      "dev.totem.remnant.client.RemnantObserverProviderClientGameTest",
       "dev.totem.remnant.client.TotemManualVisualGameTest",
       "dev.totem.remnant.client.BackpackDyeingVisualGameTest",
       "dev.totem.remnant.client.BackpackInventoryPanelVisualGameTest",
