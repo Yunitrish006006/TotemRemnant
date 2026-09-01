@@ -2,6 +2,7 @@ package dev.totem.remnant.death;
 
 import dev.totem.core.api.v1.death.DeathBackpackNodeLifecycle;
 import dev.totem.core.api.v1.death.DeathRetainedItemPolicy;
+import dev.totem.core.api.v1.gamerule.TotemGameRuleCategories;
 import dev.totem.remnant.inventory.BackpackMenu;
 import dev.totem.remnant.registry.RemnantItemRegistration;
 import dev.totem.remnant.registry.RemnantGameRules;
@@ -14,6 +15,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -23,6 +25,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.gamerules.GameRule;
+import net.minecraft.world.level.gamerules.GameRuleType;
 import net.minecraft.world.phys.AABB;
 
 import java.util.List;
@@ -33,6 +37,17 @@ import java.util.UUID;
 /** Verifies Remnant's real capture and recovery lifecycle without the compatibility bundle. */
 public final class DeathBackpackLifecycleGameTest {
     private static final BlockPos DEATH_POS = new BlockPos(2, 2, 2);
+
+    @GameTest(maxTicks = 20)
+    public void remnantRulesUseSharedCategoryAndStableContracts(GameTestHelper helper) {
+        verifyBooleanRule(helper, RemnantGameRules.GENERATE_DEATH_BACKPACKS,
+                "remnant_generate_death_backpacks");
+        verifyBooleanRule(helper, RemnantGameRules.DEATH_BACKPACK_OWNER_PICKUP_ONLY,
+                "remnant_death_backpack_owner_pickup_only");
+        verifyBooleanRule(helper, RemnantGameRules.PREVENT_PORTABLE_CONTAINER_NESTING,
+                "remnant_prevent_portable_container_nesting");
+        helper.succeed();
+    }
 
     @SuppressWarnings("removal")
     @GameTest(maxTicks = 20)
@@ -89,6 +104,16 @@ public final class DeathBackpackLifecycleGameTest {
             owner.discard();
             stranger.discard();
         }
+    }
+
+    private static void verifyBooleanRule(GameTestHelper helper, GameRule<Boolean> rule, String path) {
+        require(helper, rule.category() == TotemGameRuleCategories.TOTEM,
+                path + " is not in the shared Totem category");
+        require(helper, rule.getIdentifier().equals(Identifier.fromNamespaceAndPath("totem", path)),
+                path + " identifier changed");
+        require(helper, rule.defaultValue(), path + " default changed");
+        require(helper, rule.valueClass() == Boolean.class && rule.gameRuleType() == GameRuleType.BOOL,
+                path + " value type changed");
     }
 
     @SuppressWarnings("removal")

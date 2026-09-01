@@ -1,5 +1,6 @@
 package dev.totem.remnant.registry;
 
+import dev.totem.core.api.v1.gamerule.TotemGameRuleCategories;
 import net.fabricmc.fabric.api.gamerule.v1.GameRuleBuilder;
 import net.fabricmc.fabric.api.gamerule.v1.GameRuleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -11,25 +12,24 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.gamerules.GameRule;
-import net.minecraft.world.level.gamerules.GameRuleCategory;
 
 /** Persistent per-world switches for Remnant gameplay. */
 public final class RemnantGameRules {
     public static final GameRule<Boolean> GENERATE_DEATH_BACKPACKS =
             GameRuleBuilder.forBoolean(true)
-                    .category(GameRuleCategory.DROPS)
+                    .category(TotemGameRuleCategories.TOTEM)
                     .buildAndRegister(Identifier.fromNamespaceAndPath(
                             "totem", "remnant_generate_death_backpacks"));
 
     public static final GameRule<Boolean> DEATH_BACKPACK_OWNER_PICKUP_ONLY =
             GameRuleBuilder.forBoolean(true)
-                    .category(GameRuleCategory.DROPS)
+                    .category(TotemGameRuleCategories.TOTEM)
                     .buildAndRegister(Identifier.fromNamespaceAndPath(
                             "totem", "remnant_death_backpack_owner_pickup_only"));
 
     public static final GameRule<Boolean> PREVENT_PORTABLE_CONTAINER_NESTING =
             GameRuleBuilder.forBoolean(true)
-                    .category(GameRuleCategory.MISC)
+                    .category(TotemGameRuleCategories.TOTEM)
                     .buildAndRegister(Identifier.fromNamespaceAndPath(
                             "totem", "remnant_prevent_portable_container_nesting"));
 
