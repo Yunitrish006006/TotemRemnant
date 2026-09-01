@@ -19,6 +19,7 @@
       "dev.totem.remnant.gametest.ContainerNestingDiagnosticsGameTest",
       "dev.totem.remnant.gametest.PortableContainerDropperGameTest",
       "dev.totem.remnant.gametest.PortableContainerNestingGameTest",
+      "dev.totem.remnant.echo.EchoShardCrystallizationGameTest",
       "dev.totem.remnant.manual.RemnantManualGameTest"
     ],
     "fabric-client-gametest": [

@@ -12,6 +12,7 @@ import dev.totem.remnant.death.DeathBackpackCaptureLifecycle;
 import dev.totem.remnant.death.DeathBackpackFactory;
 import dev.totem.remnant.death.DeathBackpackRecoveryService;
 import dev.totem.remnant.death.SoulboundDeathItemRetention;
+import dev.totem.remnant.echo.EchoShardCrystallization;
 import dev.totem.remnant.inventory.ContainerSafetyAdmin;
 import dev.totem.remnant.manual.RemnantManual;
 import dev.totem.remnant.manual.RemnantManualRecipeSync;
@@ -41,6 +42,7 @@ public final class TotemRemnant implements ModInitializer {
         RemnantItemGroups.register();
         RemnantManualRecipeSync.register();
         RemnantManual.register();
+        EchoShardCrystallization.register();
         ContainerSafetyAdmin.register();
         installTrinketsIntegration();
         DeathBackpackFactory.register(contents -> {

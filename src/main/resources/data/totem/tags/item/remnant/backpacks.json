@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "#totem:remnant/backpacks/basic",
+    "#totem:remnant/backpacks/standard",
+    "#totem:remnant/backpacks/advanced",
+    "#totem:remnant/backpacks/netherite"
+  ]
+}

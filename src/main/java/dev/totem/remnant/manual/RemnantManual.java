@@ -81,6 +81,7 @@ public final class RemnantManual {
         pageKeys.add("book.deadrecall.remnant.basics.page.2");
         pageKeys.add("book.deadrecall.remnant.basics.page.3");
         pageKeys.add("book.deadrecall.remnant.dyeing.page.1");
+        pageKeys.add("book.deadrecall.remnant.echo_crystallization.page.1");
         pageKeys.add("book.deadrecall.remnant.module_recipes.overview");
         IntStream.rangeClosed(1, 11).forEach(page -> {
             pageKeys.add("book.deadrecall.remnant.module_recipes.description." + page);
@@ -94,6 +95,7 @@ public final class RemnantManual {
         Map<String, List<Component>> arguments = new LinkedHashMap<>();
         arguments.putAll(pageArguments("basics"));
         arguments.putAll(pageArguments("dyeing"));
+        arguments.putAll(pageArguments("echo_crystallization"));
         arguments.putAll(pageArguments("module_recipes"));
         arguments.putAll(pageArguments("death_backpack"));
         arguments.putAll(pageArguments("container_safety"));
@@ -137,6 +139,14 @@ public final class RemnantManual {
             );
             case "dyeing" -> Map.of(
                     prefix + "1", itemNames("item.totem.remnant.death_backpack")
+            );
+            case "echo_crystallization" -> Map.of(
+                    prefix + "1", itemNames(
+                            "item.minecraft.amethyst_shard",
+                            "block.minecraft.sculk",
+                            "item.minecraft.echo_shard",
+                            "block.minecraft.deepslate"
+                    )
             );
             case "module_recipes" -> moduleRecipePageArguments();
             case "death_backpack" -> Map.of(

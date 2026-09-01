@@ -1,0 +1,18 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_materials": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": { "items": [
+        { "items": "#totem:remnant/backpacks/advanced" },
+        { "items": "#minecraft:dyes" }
+      ] }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": { "recipe": "totem:remnant/backpack_advanced_dyed" }
+    }
+  },
+  "requirements": [["has_materials", "has_the_recipe"]],
+  "rewards": { "recipes": ["totem:remnant/backpack_advanced_dyed"] }
+}
