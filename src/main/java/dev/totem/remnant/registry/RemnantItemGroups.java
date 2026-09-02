@@ -12,11 +12,11 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 
-/** Exposes every Remnant backpack in the preserved Creative-mode tab. */
+/** Exposes every Remnant backpack in the module-owned Creative-mode tab. */
 public final class RemnantItemGroups {
     private static final ResourceKey<CreativeModeTab> TAB_KEY = ResourceKey.create(
             Registries.CREATIVE_MODE_TAB,
-            Identifier.fromNamespaceAndPath("deadrecall", "main")
+            Identifier.fromNamespaceAndPath("totem-remnant", "main")
     );
 
     private static boolean registered;
@@ -29,19 +29,19 @@ public final class RemnantItemGroups {
             return;
         }
 
-        registerStandaloneTab();
+        registerCreativeTab();
         CreativeModeTabEvents.modifyOutputEvent(TAB_KEY).register(RemnantItemGroups::addItems);
         registered = true;
     }
 
-    private static void registerStandaloneTab() {
+    private static void registerCreativeTab() {
         if (BuiltInRegistries.CREATIVE_MODE_TAB.getOptional(TAB_KEY).isPresent()) {
             return;
         }
 
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, TAB_KEY,
                 FabricCreativeModeTab.builder()
-                        .title(Component.translatable("itemGroup.deadrecall.main"))
+                        .title(Component.translatable("itemGroup.totem_remnant.main"))
                         .icon(() -> new ItemStack(RemnantItemRegistration.BACKPACK_BASIC))
                         .build());
     }

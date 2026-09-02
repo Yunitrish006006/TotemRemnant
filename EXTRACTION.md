@@ -34,6 +34,7 @@ the read-only `/deadrecall containers scan [player]` administrator report.
 Existing invalid nesting remains readable and removable; the module never
 rewrites legacy item components during load or diagnostics.
 
-The `0.1.4` candidate completes the remaining Remnant surface: client-side
-death-backpack beam rendering, the optional Trinkets Updated capture adapter,
-and registration of the shared `deadrecall:main` creative tab.
+The standalone Remnant module provides the remaining Remnant surface: client-side
+death-backpack beam rendering and the optional Trinkets Updated capture adapter.
+The module now registers its items in the module-owned `totem-remnant:main`
+creative tab.

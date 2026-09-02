@@ -23,6 +23,7 @@
       "dev.totem.remnant.manual.RemnantManualGameTest"
     ],
     "fabric-client-gametest": [
+      "dev.totem.remnant.client.RemnantCreativeTabVisualGameTest",
       "dev.totem.remnant.client.RemnantObserverProviderClientGameTest",
       "dev.totem.remnant.client.TotemManualVisualGameTest",
       "dev.totem.remnant.client.BackpackDyeingVisualGameTest",

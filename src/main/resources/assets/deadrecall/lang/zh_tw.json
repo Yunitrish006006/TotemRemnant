@@ -7,7 +7,7 @@
   "gamerule.totem.remnant_death_backpack_owner_pickup_only.description": "禁止主人以外的玩家撿起死亡背包物品。",
   "gamerule.totem.remnant_prevent_portable_container_nesting": "防止可攜式容器互相巢狀",
   "gamerule.totem.remnant_prevent_portable_container_nesting.description": "禁止將 Remnant 背包與標記為可攜式容器的物品互相放入。",
-  "itemGroup.deadrecall.main": "DeadRecall",
+  "itemGroup.totem_remnant.main": "圖靈騰殘響",
   "item.deadrecall.backpack_basic": "基礎背包",
   "item.totem.remnant.backpack_basic": "基礎背包",
   "item.deadrecall.backpack_standard": "標準背包",

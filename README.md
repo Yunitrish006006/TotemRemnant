@@ -1,7 +1,9 @@
 # TotemRemnant
 
 TotemRemnant 是 Totem 系列的背包、死亡物品保護與可攜式容器安全模組。
-目前版本為 **0.2.17**，需要 TotemCore **0.7.15 以上、0.8.0 以下**。
+目前版本為 **0.2.19**，需要 TotemCore **0.7.15 以上、0.8.0 以下**。
+0.2.19 將 16 個 Remnant 背包與升級物品完整移到 `Totem Remnant` 自有的
+創造模式頁籤，不再建立 DeadRecall 頁籤。
 
 ## 安裝
 
@@ -9,7 +11,7 @@ TotemRemnant 是 Totem 系列的背包、死亡物品保護與可攜式容器安
 
 1. Fabric API `0.154.2+26.2`
 2. TotemCore `>=0.7.15 <0.8.0`
-3. TotemRemnant `0.2.17`
+3. TotemRemnant `0.2.19`
 
 | 項目 | 需求 |
 | --- | --- |
