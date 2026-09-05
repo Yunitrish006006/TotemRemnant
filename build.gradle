@@ -18,7 +18,7 @@ def remnantRestartProbeMarkerDirectory = providers.gradleProperty("totemRemnantR
         .orElse(providers.environmentVariable("TOTEM_REMNANT_RESTART_PROBE_MARKER_DIR"))
         .orNull
 def totemCoreJar = file(providers.gradleProperty("totemCoreJar")
-        .getOrElse("../TotemCore/build/libs/totem-core-0.7.16.jar"))
+        .getOrElse("../TotemCore/build/libs/totem-core-0.7.17.jar"))
 
 loom {
     splitEnvironmentSourceSets()
