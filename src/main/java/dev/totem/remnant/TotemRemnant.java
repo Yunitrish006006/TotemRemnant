@@ -1,16 +1,14 @@
 package dev.totem.remnant;
 
-import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryProvider;
-import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryRegistry;
+import com.adaptor.totem.api.death.DeathBackpackAddonInventoryProvider;
+import com.adaptor.totem.api.death.DeathBackpackAddonInventoryRegistry;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import dev.totem.remnant.death.DeathBackpackCaptureLifecycle;
 import dev.totem.remnant.death.DeathBackpackFactory;
-import dev.totem.remnant.death.DeathBackpackRecoveryService;
 import dev.totem.remnant.death.SoulboundDeathItemRetention;
 import dev.totem.remnant.echo.EchoShardCrystallization;
 import dev.totem.remnant.inventory.ContainerSafetyAdmin;
@@ -24,8 +22,6 @@ import dev.totem.remnant.registry.RemnantGameRules;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
-
-import java.lang.reflect.Proxy;
 
 /** Entry point for the standalone death-backpack module. */
 public final class TotemRemnant implements ModInitializer {
@@ -50,7 +46,6 @@ public final class TotemRemnant implements ModInitializer {
             backpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(contents));
             return backpack;
         });
-        installDeadRecallTransports();
         ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
             if (!alive) {
                 SoulboundDeathItemRetention.restoreAfterRespawn(newPlayer);
@@ -76,47 +71,6 @@ public final class TotemRemnant implements ModInitializer {
                     "Could not initialize Trinkets Updated death-backpack integration",
                     exception
             );
-        }
-    }
-
-    private static void installDeadRecallTransports() {
-        installDeadRecallCaptureTransport();
-        installDeadRecallRecoveryTransport();
-    }
-
-    private static void installDeadRecallCaptureTransport() {
-        try {
-            Class<?> transport = Class.forName("com.adaptor.deadrecall.core.api.DeathBackpackCaptureTransport");
-            Object adapter = Proxy.newProxyInstance(TotemRemnant.class.getClassLoader(), new Class<?>[] {transport},
-                    (proxy, method, arguments) -> method.getName().equals("commit") && arguments != null && arguments.length == 4
-                            ? DeathBackpackCaptureLifecycle.commit(
-                                    (net.minecraft.server.level.ServerPlayer) arguments[0],
-                                    (net.minecraft.server.level.ServerLevel) arguments[1],
-                                    (net.minecraft.core.BlockPos) arguments[2],
-                                    (java.util.List<net.minecraft.world.item.ItemStack>) arguments[3])
-                            : null);
-            transport.getMethod("register", transport).invoke(null, adapter);
-        } catch (ClassNotFoundException ignored) {
-            // Standalone Remnant has no DeadRecall compatibility facade.
-        } catch (ReflectiveOperationException exception) {
-            LOGGER.warn("Unable to install DeadRecall capture transport", exception);
-        }
-    }
-
-    private static void installDeadRecallRecoveryTransport() {
-        try {
-            Class<?> transport = Class.forName("com.adaptor.deadrecall.core.api.DeathBackpackRecoveryTransport");
-            Object adapter = Proxy.newProxyInstance(TotemRemnant.class.getClassLoader(), new Class<?>[] {transport},
-                    (proxy, method, arguments) -> method.getName().equals("recover") && arguments != null && arguments.length == 2
-                            ? DeathBackpackRecoveryService.recoverBoundNode(
-                                    (net.minecraft.server.level.ServerPlayer) arguments[0],
-                                    (net.minecraft.world.item.ItemStack) arguments[1])
-                            : null);
-            transport.getMethod("register", transport).invoke(null, adapter);
-        } catch (ClassNotFoundException ignored) {
-            // Standalone Remnant has no DeadRecall compatibility facade.
-        } catch (ReflectiveOperationException exception) {
-            LOGGER.warn("Unable to install DeadRecall recovery transport", exception);
         }
     }
 }

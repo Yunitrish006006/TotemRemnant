@@ -112,7 +112,7 @@ public final class SoulboundDeathItemRetention {
             int targetSlot = availableSlot(inventory, retained.preferredSlot());
             inventory.setItem(targetSlot, retained.stack().copy());
             player.sendSystemMessage(Component.translatable(
-                    "message.deadrecall.remnant.soulbound_restored",
+                    "message.totem.remnant.soulbound_restored",
                     retained.stack().getHoverName()
             ));
         }

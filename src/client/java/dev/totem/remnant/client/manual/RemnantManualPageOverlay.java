@@ -12,9 +12,9 @@ import net.minecraft.world.item.ItemStack;
 
 /** Adds Remnant's synchronized crafting and smithing diagrams to Core-owned manual pages. */
 public final class RemnantManualPageOverlay {
-    private static final String RECIPE_PAGE_PREFIX = "book.deadrecall.remnant.module_recipes.page.";
-    private static final String SMITHING_PAGE_KEY = "book.deadrecall.remnant.basics.page.3";
-    private static final String GAME_RULES_PAGE_KEY = "book.deadrecall.remnant.death_backpack.page.3";
+    private static final String RECIPE_PAGE_PREFIX = "book.totem.remnant.module_recipes.page.";
+    private static final String SMITHING_PAGE_KEY = "book.totem.remnant.basics.page.3";
+    private static final String GAME_RULES_PAGE_KEY = "book.totem.remnant.death_backpack.page.3";
     private static final Identifier SLOT_SPRITE = Identifier.withDefaultNamespace("container/slot");
     private static final Identifier CRAFTING_BACKGROUND =
             Identifier.withDefaultNamespace("textures/gui/container/crafting_table.png");
@@ -42,20 +42,20 @@ public final class RemnantManualPageOverlay {
     private static void renderGameRules(TotemManualPageRenderContext context) {
         if (!RemnantGameRules.clientRulesSynchronized()) {
             context.graphics().centeredText(context.font(),
-                    Component.translatable("book.deadrecall.remnant.rules.syncing"),
+                    Component.translatable("book.totem.remnant.rules.syncing"),
                     context.pageLeft() + 93, context.pageTop() + 77, 0xFF9B2C20);
             return;
         }
 
-        ruleRow(context, "book.deadrecall.remnant.rules.generate_death_backpacks",
+        ruleRow(context, "book.totem.remnant.rules.generate_death_backpacks",
                 RemnantGameRules.clientGeneratesDeathBackpacks(), context.pageTop() + 53);
-        ruleRow(context, "book.deadrecall.remnant.rules.owner_pickup_only",
+        ruleRow(context, "book.totem.remnant.rules.owner_pickup_only",
                 RemnantGameRules.clientDeathBackpackOwnerPickupOnly(), context.pageTop() + 79);
-        ruleRow(context, "book.deadrecall.remnant.rules.prevent_nesting",
+        ruleRow(context, "book.totem.remnant.rules.prevent_nesting",
                 RemnantGameRules.clientPreventsPortableContainerNesting(), context.pageTop() + 105);
 
         context.graphics().centeredText(context.font(),
-                Component.translatable("book.deadrecall.remnant.rules.change_hint"),
+                Component.translatable("book.totem.remnant.rules.change_hint"),
                 context.pageLeft() + 93, context.pageTop() + 137, 0xFF6F5637);
     }
 
@@ -67,8 +67,8 @@ public final class RemnantManualPageOverlay {
     ) {
         Component label = Component.translatable(labelKey);
         Component state = Component.translatable(enabled
-                ? "book.deadrecall.remnant.rules.enabled"
-                : "book.deadrecall.remnant.rules.disabled");
+                ? "book.totem.remnant.rules.enabled"
+                : "book.totem.remnant.rules.disabled");
         int left = context.pageLeft() + 37;
         int stateWidth = context.font().width(state);
         context.graphics().text(context.font(), label, left, y, 0xFF4B3826, false);
@@ -93,8 +93,8 @@ public final class RemnantManualPageOverlay {
         if (recipe == null) {
             Component status = Component.translatable(
                     RemnantManualRecipeCache.isSynchronizedFromServer()
-                            ? "book.deadrecall.remnant.recipe.unavailable"
-                            : "book.deadrecall.remnant.recipe.loading"
+                            ? "book.totem.remnant.recipe.unavailable"
+                            : "book.totem.remnant.recipe.loading"
             );
             context.graphics().centeredText(context.font(), status,
                     context.pageLeft() + 93, context.pageTop() + 82, 0xFF9B2C20);
@@ -102,13 +102,13 @@ public final class RemnantManualPageOverlay {
         }
         if (!recipe.available()) {
             context.graphics().centeredText(context.font(),
-                    Component.translatable("book.deadrecall.remnant.recipe.unavailable"),
+                    Component.translatable("book.totem.remnant.recipe.unavailable"),
                     context.pageLeft() + 93, context.pageTop() + 82, 0xFF9B2C20);
             return;
         }
 
         context.graphics().centeredText(context.font(),
-                Component.translatable("book.deadrecall.remnant.recipe.shaped"),
+                Component.translatable("book.totem.remnant.recipe.shaped"),
                 context.pageLeft() + 93, context.pageTop() + 45, 0xFF5B432A);
 
         int gridLeft = context.pageLeft() + 43;
@@ -134,14 +134,14 @@ public final class RemnantManualPageOverlay {
         context.graphics().itemDecorations(context.font(), recipe.result(), resultX + 1, resultY + 1);
 
         context.graphics().centeredText(context.font(),
-                Component.translatable("book.deadrecall.remnant.recipe.live"),
+                Component.translatable("book.totem.remnant.recipe.live"),
                 context.pageLeft() + 93, context.pageTop() + 127, 0xFF6F5637);
     }
 
     private static void renderSmithingRecipes(TotemManualPageRenderContext context) {
         if (!RemnantManualRecipeCache.isSynchronizedFromServer()) {
             context.graphics().centeredText(context.font(),
-                    Component.translatable("book.deadrecall.remnant.recipe.loading"),
+                    Component.translatable("book.totem.remnant.recipe.loading"),
                     context.pageLeft() + 93, context.pageTop() + 86, 0xFF9B2C20);
             return;
         }
@@ -178,7 +178,7 @@ public final class RemnantManualPageOverlay {
         }
 
         context.graphics().centeredText(context.font(),
-                Component.translatable("book.deadrecall.remnant.recipe.live"),
+                Component.translatable("book.totem.remnant.recipe.live"),
                 context.pageLeft() + 93, context.pageTop() + 158, 0xFF6F5637);
     }
 

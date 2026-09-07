@@ -206,7 +206,7 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
                 client.setScreenAndShow(new BackpackScreen(
                         menu,
                         client.player.getInventory(),
-                        Component.translatable("container.deadrecall.backpack.netherite")
+                        Component.translatable("container.totem.backpack.netherite")
                 ));
             });
             context.waitForScreen(BackpackScreen.class);
@@ -446,7 +446,7 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
         client.setScreenAndShow(new BackpackScreen(
                 menu,
                 client.player.getInventory(),
-                Component.translatable("container.deadrecall.backpack.netherite")
+                Component.translatable("container.totem.backpack.netherite")
         ));
     }
 

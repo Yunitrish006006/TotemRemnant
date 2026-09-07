@@ -34,13 +34,13 @@ public class ItemEntityRendererMixin {
             method = "extractRenderState(Lnet/minecraft/world/entity/item/ItemEntity;Lnet/minecraft/client/renderer/entity/state/ItemEntityRenderState;F)V",
             at = @At("TAIL")
     )
-    private void deadrecall$markDeathBackpackBeam(
+    private void totem$markDeathBackpackBeam(
             ItemEntity entity,
             ItemEntityRenderState state,
             float tickDelta,
             CallbackInfo ci
     ) {
-        ((DeathBackpackBeamState) state).deadrecall$setDeathBackpackBeam(
+        ((DeathBackpackBeamState) state).totem$setDeathBackpackBeam(
                 BackpackItemHelper.isDeathBackpackItem(entity.getItem())
         );
     }
@@ -49,14 +49,14 @@ public class ItemEntityRendererMixin {
             method = "submit(Lnet/minecraft/client/renderer/entity/state/ItemEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
             at = @At("TAIL")
     )
-    private void deadrecall$submitDeathBackpackBeam(
+    private void totem$submitDeathBackpackBeam(
             ItemEntityRenderState state,
             PoseStack poseStack,
             SubmitNodeCollector submitNodeCollector,
             CameraRenderState cameraRenderState,
             CallbackInfo ci
     ) {
-        if (!((DeathBackpackBeamState) state).deadrecall$hasDeathBackpackBeam()) {
+        if (!((DeathBackpackBeamState) state).totem$hasDeathBackpackBeam()) {
             return;
         }
 
@@ -65,14 +65,14 @@ public class ItemEntityRendererMixin {
                 poseStack,
                 RenderTypes.lightning(),
                 (pose, vertexConsumer) -> {
-                    deadrecall$renderBeamCross(
+                    totem$renderBeamCross(
                             pose,
                             vertexConsumer,
                             DEATH_BACKPACK_GLOW_BEAM_RADIUS,
                             DEATH_BACKPACK_BEAM_HEIGHT,
                             DEATH_BACKPACK_BEAM_GLOW_COLOR
                     );
-                    deadrecall$renderBeamCross(
+                    totem$renderBeamCross(
                             pose,
                             vertexConsumer,
                             DEATH_BACKPACK_SOLID_BEAM_RADIUS,
@@ -85,23 +85,23 @@ public class ItemEntityRendererMixin {
     }
 
     @Unique
-    private static void deadrecall$renderBeamCross(
+    private static void totem$renderBeamCross(
             PoseStack.Pose pose,
             VertexConsumer vertexConsumer,
             float radius,
             int height,
             int color
     ) {
-        deadrecall$renderQuad(pose, vertexConsumer, -radius, 0.0F, 0.0F, radius, height, 0.0F, color);
-        deadrecall$renderQuad(pose, vertexConsumer, 0.0F, 0.0F, -radius, 0.0F, height, radius, color);
-        deadrecall$renderQuad(pose, vertexConsumer, -radius * 0.7F, 0.0F, -radius * 0.7F,
+        totem$renderQuad(pose, vertexConsumer, -radius, 0.0F, 0.0F, radius, height, 0.0F, color);
+        totem$renderQuad(pose, vertexConsumer, 0.0F, 0.0F, -radius, 0.0F, height, radius, color);
+        totem$renderQuad(pose, vertexConsumer, -radius * 0.7F, 0.0F, -radius * 0.7F,
                 radius * 0.7F, height, radius * 0.7F, color);
-        deadrecall$renderQuad(pose, vertexConsumer, -radius * 0.7F, 0.0F, radius * 0.7F,
+        totem$renderQuad(pose, vertexConsumer, -radius * 0.7F, 0.0F, radius * 0.7F,
                 radius * 0.7F, height, -radius * 0.7F, color);
     }
 
     @Unique
-    private static void deadrecall$renderQuad(
+    private static void totem$renderQuad(
             PoseStack.Pose pose,
             VertexConsumer vertexConsumer,
             float x1,

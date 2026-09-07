@@ -27,7 +27,7 @@ public final class TotemManualVisualGameTest implements FabricClientGameTest {
         });
         context.waitFor(client -> reload.get() != null && reload.get().isDone());
         context.runOnClient(client -> {
-            if (!I18n.get("book.deadrecall.remnant.basics.title").equals("背包與升級")) {
+            if (!I18n.get("book.totem.remnant.basics.title").equals("背包與升級")) {
                 throw new AssertionError("Traditional Chinese manual resources were not loaded");
             }
             client.options.guiScale().set(3);

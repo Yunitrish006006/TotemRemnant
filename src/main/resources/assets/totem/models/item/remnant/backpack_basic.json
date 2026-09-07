@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "deadrecall:item/backpack/backpack"
+    "layer0": "totem:item/remnant/backpack/backpack"
   }
 }

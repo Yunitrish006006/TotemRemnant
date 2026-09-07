@@ -2,27 +2,12 @@
   "parent": "minecraft:recipes/root",
   "criteria": {
     "has_bundle": {
-      "conditions": {
-        "items": [
-          {
-            "items": "minecraft:bundle"
-          }
-        ]
-      },
-      "trigger": "minecraft:inventory_changed"
+      "trigger": "minecraft:impossible"
     }
   },
   "requirements": [
     [
       "has_bundle"
     ]
-  ],
-  "rewards": {
-    "recipes": [
-      "deadrecall:backpack_basic",
-      "deadrecall:backpack_standard_smithing",
-      "deadrecall:backpack_advanced_smithing",
-      "deadrecall:backpack_netherite_smithing"
-    ]
-  }
+  ]
 }

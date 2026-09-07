@@ -1,10 +1,6 @@
 {
   "replace": false,
   "values": [
-    "totem:remnant/backpack_advanced",
-    {
-      "id": "deadrecall:backpack_advanced",
-      "required": false
-    }
+    "totem:remnant/backpack_advanced"
   ]
 }

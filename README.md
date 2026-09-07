@@ -3,7 +3,7 @@
 TotemRemnant 是 Totem 系列的背包、死亡物品保護與可攜式容器安全模組。
 目前版本為 **0.2.19**，需要 TotemCore **0.7.15 以上、0.8.0 以下**。
 0.2.19 將 16 個 Remnant 背包與升級物品完整移到 `Totem Remnant` 自有的
-創造模式頁籤，不再建立 DeadRecall 頁籤。
+創造模式頁籤，不再建立舊整合包頁籤。
 
 ## 安裝
 
@@ -21,8 +21,7 @@ TotemRemnant 是 Totem 系列的背包、死亡物品保護與可攜式容器安
 | 必要 Totem 模組 | `totem-core >=0.7.15 <0.8.0` |
 | 選配 | Trinkets Updated 4.1.0-beta.2+ |
 
-使用 DeadRecall 2.4.11 整合 JAR 時不要再安裝獨立 TotemRemnant；整合包已
-內含相同模組。
+舊整合 JAR 不應再與獨立 TotemRemnant 並用。
 
 ## 世界規則
 
@@ -103,11 +102,10 @@ Shift-click。只要玩家物品欄內帶著一般分級背包，按 `E` 開啟�
 `backpack_netherite` 與 `death_backpack`（後四者同樣位於
 `totem:remnant/` 路徑）。
 
-Remnant standalone 只註冊上述 canonical ID。安裝 DeadRecall 2.4.11
-整合包時，外層相容主機才會解碼 `deadrecall:backpack_*` 與
-`deadrecall:death_backpack`；右鍵使用舊背包時會就地換成 canonical
-物品，保留內容、名稱、染色與其他 Data Components。系統不會在啟動時
-掃描離線玩家或未載入區塊。
+Remnant standalone 只註冊上述 canonical ID。TotemCore 的遷移層會解碼
+`deadrecall:backpack_*` 與 `deadrecall:death_backpack`；舊堆疊首次使用時
+會就地換成 canonical 物品，保留內容、名稱、染色與其他 Data Components。
+系統不會在啟動時掃描離線玩家或未載入區塊。
 
 ## 掉落保護模組
 
@@ -143,7 +141,7 @@ Remnant standalone 只註冊上述 canonical ID。安裝 DeadRecall 2.4.11
   散落物形式掉出，不會被塞進看不見、無法取回的格位。
 - 死亡背包不會自然消失，免疫一般傷害，並在虛空下方被向上救回。
 - 地面上的背包會顯示紅色定位光柱。
-- 巢狀禁止規則開啟時，DeadRecall 背包與其他可攜式容器維持獨立掉落；
+- 巢狀禁止規則開啟時，Remnant 背包與其他可攜式容器維持獨立掉落；
   關閉規則後則可一併收進死亡背包。
 - 背包完全清空並關閉後會移除；任何協助回收的玩家都可完成此流程。
 - 若 Nexus 已安裝，Remnant 會在死亡交易前自動掃描有效傳送介面，不要求
@@ -157,15 +155,15 @@ Nexus 時死亡背包仍可獨立使用。
 
 死亡背包成功建立或回收時，Remnant 會發布 TotemCore 的型別事件。安裝
 TotemDiscordBridge 時由 Bridge 自行訂閱並送出通知；Remnant 不直接依賴
-Discord，也不需要 DeadRecall 額外安裝 listener。
+Discord，也不需要額外安裝 listener。
 
-> `/back` 是 DeadRecall 相容整合包的額外功能，不是 TotemRemnant
+> `/back` 是舊整合包的額外功能，不是 TotemRemnant
 > standalone API 的一部分。
 
 ## 可攜式容器安全
 
-Remnant 預設禁止 Bundle、Shulker Box、DeadRecall 背包與
-`deadrecall:portable_containers` tag 物品互相非法巢狀。限制涵蓋 GUI、
+Remnant 預設禁止 Bundle、Shulker Box、Remnant 背包與
+`totem:remnant/portable_containers` tag 物品互相非法巢狀。限制涵蓋 GUI、
 Shift-click、漏斗、漏斗礦車、投擲器／發射器與相容自動化。
 
 管理員可關閉 Remnant 的額外巢狀限制：
@@ -183,8 +181,8 @@ Minecraft 原版本身禁止的容器組合仍維持原樣。死亡背包也會�
 管理員可執行唯讀診斷：
 
 ```text
-/deadrecall containers scan
-/deadrecall containers scan <player>
+/totem containers scan
+/totem containers scan <player>
 ```
 
 掃描不移動物品、不自動修復資料，也不載入未載入區塊。

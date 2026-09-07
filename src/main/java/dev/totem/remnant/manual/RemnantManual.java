@@ -24,7 +24,7 @@ public final class RemnantManual {
     private static final AtomicBoolean REGISTERED = new AtomicBoolean();
     private static final List<TotemManualSection> SECTIONS = List.of(manualSection());
     private static final Identifier MANUAL_ADVANCEMENT =
-            Identifier.fromNamespaceAndPath("deadrecall", "remnant_manual");
+            Identifier.fromNamespaceAndPath("totem", "remnant_manual");
 
     private RemnantManual() {
     }
@@ -77,20 +77,20 @@ public final class RemnantManual {
 
     private static TotemManualSection manualSection() {
         List<String> pageKeys = new java.util.ArrayList<>();
-        pageKeys.add("book.deadrecall.remnant.basics.page.1");
-        pageKeys.add("book.deadrecall.remnant.basics.page.2");
-        pageKeys.add("book.deadrecall.remnant.basics.page.3");
-        pageKeys.add("book.deadrecall.remnant.dyeing.page.1");
-        pageKeys.add("book.deadrecall.remnant.echo_crystallization.page.1");
-        pageKeys.add("book.deadrecall.remnant.module_recipes.overview");
+        pageKeys.add("book.totem.remnant.basics.page.1");
+        pageKeys.add("book.totem.remnant.basics.page.2");
+        pageKeys.add("book.totem.remnant.basics.page.3");
+        pageKeys.add("book.totem.remnant.dyeing.page.1");
+        pageKeys.add("book.totem.remnant.echo_crystallization.page.1");
+        pageKeys.add("book.totem.remnant.module_recipes.overview");
         IntStream.rangeClosed(1, 11).forEach(page -> {
-            pageKeys.add("book.deadrecall.remnant.module_recipes.description." + page);
-            pageKeys.add("book.deadrecall.remnant.module_recipes.page." + page);
+            pageKeys.add("book.totem.remnant.module_recipes.description." + page);
+            pageKeys.add("book.totem.remnant.module_recipes.page." + page);
         });
-        pageKeys.add("book.deadrecall.remnant.death_backpack.page.1");
-        pageKeys.add("book.deadrecall.remnant.death_backpack.page.2");
-        pageKeys.add("book.deadrecall.remnant.death_backpack.page.3");
-        pageKeys.add("book.deadrecall.remnant.container_safety.page.1");
+        pageKeys.add("book.totem.remnant.death_backpack.page.1");
+        pageKeys.add("book.totem.remnant.death_backpack.page.2");
+        pageKeys.add("book.totem.remnant.death_backpack.page.3");
+        pageKeys.add("book.totem.remnant.container_safety.page.1");
 
         Map<String, List<Component>> arguments = new LinkedHashMap<>();
         arguments.putAll(pageArguments("basics"));
@@ -102,14 +102,14 @@ public final class RemnantManual {
         return new TotemManualSection(
                 Identifier.fromNamespaceAndPath("totem", "remnant/manual"),
                 100,
-                "book.deadrecall.remnant.manual.title",
+                "book.totem.remnant.manual.title",
                 pageKeys,
                 Map.copyOf(arguments)
         );
     }
 
     private static Map<String, List<Component>> pageArguments(String path) {
-        String prefix = "book.deadrecall.remnant." + path + ".page.";
+        String prefix = "book.totem.remnant." + path + ".page.";
         return switch (path) {
             case "basics" -> Map.of(
                     prefix + "1", itemNames(
@@ -164,7 +164,7 @@ public final class RemnantManual {
     }
 
     private static Map<String, List<Component>> moduleRecipePageArguments() {
-        String prefix = "book.deadrecall.remnant.module_recipes.";
+        String prefix = "book.totem.remnant.module_recipes.";
         String[] itemKeys = {
                 "item.totem.remnant.upgrade_crafting",
                 "item.totem.remnant.upgrade_compaction",

@@ -1,8 +1,15 @@
 {
-  "parent": "deadrecall:backpack_basic",
+  "parent": "totem:backpack_basic",
   "criteria": {
     "has_backpack_standard": {
-      "trigger": "minecraft:impossible"
+      "conditions": {
+        "items": [
+          {
+            "items": "#totem:remnant/backpacks/standard"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
     }
   },
   "display": {

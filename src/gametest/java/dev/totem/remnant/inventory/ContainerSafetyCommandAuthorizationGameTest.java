@@ -10,7 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 public final class ContainerSafetyCommandAuthorizationGameTest {
     @SuppressWarnings("removal")
     @GameTest(maxTicks = 20)
-    public void sharedRootIsPublicButContainerScanRemainsAdministratorOnly(GameTestHelper helper) {
+    public void totemRootIsPublicButContainerScanRemainsAdministratorOnly(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         try {
             CommandSourceStack source = player.createCommandSourceStack();
@@ -18,12 +18,12 @@ public final class ContainerSafetyCommandAuthorizationGameTest {
                     .getCommands()
                     .getDispatcher()
                     .getRoot()
-                    .getChild("deadrecall");
-            require(helper, root != null, "Missing shared /deadrecall command root");
-            require(helper, root.canUse(source), "Normal player cannot use the shared /deadrecall root");
+                    .getChild("totem");
+            require(helper, root != null, "Missing shared /totem command root");
+            require(helper, root.canUse(source), "Normal player cannot use the shared /totem root");
 
             CommandNode<CommandSourceStack> containers = root.getChild("containers");
-            require(helper, containers != null, "Missing /deadrecall containers command child");
+            require(helper, containers != null, "Missing /totem containers command child");
             require(helper, !containers.canUse(source),
                     "Normal player unexpectedly has access to container diagnostics");
             helper.succeed();
@@ -38,4 +38,3 @@ public final class ContainerSafetyCommandAuthorizationGameTest {
         }
     }
 }
-

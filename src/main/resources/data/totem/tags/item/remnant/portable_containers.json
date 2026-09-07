@@ -1,8 +1,10 @@
 {
+  "replace": false,
   "values": [
     "totem:remnant/backpack_basic",
     "totem:remnant/backpack_standard",
     "totem:remnant/backpack_advanced",
-    "totem:remnant/backpack_netherite"
+    "totem:remnant/backpack_netherite",
+    "totem:remnant/death_backpack"
   ]
 }

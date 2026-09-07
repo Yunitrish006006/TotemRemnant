@@ -81,7 +81,7 @@ public final class DeathBackpackCaptureLifecycle {
             int stackCount
     ) {
         try {
-            player.sendSystemMessage(Component.translatable("message.deadrecall.death_backpack.collected")
+            player.sendSystemMessage(Component.translatable("message.totem.death_backpack.collected")
                     .withStyle(ChatFormatting.YELLOW));
         } catch (RuntimeException exception) {
             LOGGER.warn(

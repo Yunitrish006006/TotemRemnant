@@ -1,0 +1,28 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_bundle": {
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:bundle"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "requirements": [
+    [
+      "has_bundle"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "totem:remnant/backpack_basic",
+      "totem:remnant/backpack_standard_smithing",
+      "totem:remnant/backpack_advanced_smithing",
+      "totem:remnant/backpack_netherite_smithing"
+    ]
+  }
+}

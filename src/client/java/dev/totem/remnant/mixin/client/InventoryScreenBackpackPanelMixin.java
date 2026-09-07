@@ -27,21 +27,21 @@ import java.util.List;
 /** Places the InventoryMenu's real selected-backpack slots beside vanilla inventory. */
 @Mixin(InventoryScreen.class)
 abstract class InventoryScreenBackpackPanelMixin extends AbstractRecipeBookScreen<InventoryMenu> {
-    @Unique private static final int deadrecall$PREFERRED_COLUMNS = 9;
-    @Unique private static final int deadrecall$MIN_COLUMNS = 3;
-    @Unique private static final int deadrecall$SLOT_SIZE = 18;
-    @Unique private static final int deadrecall$PANEL_HORIZONTAL_PADDING = 14;
-    @Unique private static final int deadrecall$HEADER_HEIGHT = 17;
-    @Unique private static final int deadrecall$PANEL_PADDING_BOTTOM = 7;
-    @Unique private static final int deadrecall$PANEL_GAP = 6;
-    @Unique private static final int deadrecall$BACKGROUND = 0xFFC6C6C6;
-    @Unique private static final int deadrecall$BORDER_OUTER = 0xFF000000;
-    @Unique private static final int deadrecall$BORDER_LIGHT = 0xFFFFFFFF;
-    @Unique private static final int deadrecall$BORDER_DARK = 0xFF555555;
-    @Unique private static final Identifier deadrecall$SLOT_SPRITE =
+    @Unique private static final int totem$PREFERRED_COLUMNS = 9;
+    @Unique private static final int totem$MIN_COLUMNS = 3;
+    @Unique private static final int totem$SLOT_SIZE = 18;
+    @Unique private static final int totem$PANEL_HORIZONTAL_PADDING = 14;
+    @Unique private static final int totem$HEADER_HEIGHT = 17;
+    @Unique private static final int totem$PANEL_PADDING_BOTTOM = 7;
+    @Unique private static final int totem$PANEL_GAP = 6;
+    @Unique private static final int totem$BACKGROUND = 0xFFC6C6C6;
+    @Unique private static final int totem$BORDER_OUTER = 0xFF000000;
+    @Unique private static final int totem$BORDER_LIGHT = 0xFFFFFFFF;
+    @Unique private static final int totem$BORDER_DARK = 0xFF555555;
+    @Unique private static final Identifier totem$SLOT_SPRITE =
             Identifier.withDefaultNamespace("container/slot");
 
-    @Unique private int deadrecall$selectedInventorySlot = -1;
+    @Unique private int totem$selectedInventorySlot = -1;
 
     protected InventoryScreenBackpackPanelMixin(
             InventoryMenu menu,
@@ -72,7 +72,7 @@ abstract class InventoryScreenBackpackPanelMixin extends AbstractRecipeBookScree
     }
 
     @Inject(method = "extractRenderState", at = @At("HEAD"))
-    private void deadrecall$prepareInteractiveBackpackPanel(
+    private void totem$prepareInteractiveBackpackPanel(
             GuiGraphicsExtractor graphics,
             int mouseX,
             int mouseY,
@@ -84,38 +84,38 @@ abstract class InventoryScreenBackpackPanelMixin extends AbstractRecipeBookScree
             return;
         }
         Inventory inventory = minecraft.player.getInventory();
-        List<Integer> backpacks = deadrecall$ordinaryBackpackSlots(inventory);
+        List<Integer> backpacks = totem$ordinaryBackpackSlots(inventory);
         if (backpacks.isEmpty()) {
-            deadrecall$selectBackpack(access, -1);
+            totem$selectBackpack(access, -1);
             if (access.totem$layoutBackpackSlots(-10_000, -10_000, 1)) {
-                deadrecall$clearTransientSlotState();
+                totem$clearTransientSlotState();
             }
             return;
         }
 
         if (hoveredSlot != null && hoveredSlot.container == inventory
                 && hoveredSlot.getItem().getItem() instanceof TieredBackpackItem) {
-            deadrecall$selectBackpack(access, hoveredSlot.getContainerSlot());
+            totem$selectBackpack(access, hoveredSlot.getContainerSlot());
         }
-        if (!backpacks.contains(deadrecall$selectedInventorySlot)) {
+        if (!backpacks.contains(totem$selectedInventorySlot)) {
             int menuSelection = access.totem$getBackpackPanel().selectedInventorySlot();
-            deadrecall$selectBackpack(
+            totem$selectBackpack(
                     access,
                     backpacks.contains(menuSelection) ? menuSelection : backpacks.getFirst()
             );
         }
 
-        ItemStack backpack = inventory.getItem(deadrecall$selectedInventorySlot);
+        ItemStack backpack = inventory.getItem(totem$selectedInventorySlot);
         if (!(backpack.getItem() instanceof TieredBackpackItem)) {
             return;
         }
-        int columns = deadrecall$panelColumns(graphics.guiWidth());
-        int panelWidth = deadrecall$PANEL_HORIZONTAL_PADDING + columns * deadrecall$SLOT_SIZE;
+        int columns = totem$panelColumns(graphics.guiWidth());
+        int panelWidth = totem$PANEL_HORIZONTAL_PADDING + columns * totem$SLOT_SIZE;
         int storageSlots = BackpackCapacity.configuredSlots(backpack);
         int rows = (storageSlots + columns - 1) / columns;
-        int panelHeight = deadrecall$HEADER_HEIGHT + rows * deadrecall$SLOT_SIZE
-                + deadrecall$PANEL_PADDING_BOTTOM;
-        int panelLeft = deadrecall$panelLeft(graphics.guiWidth(), panelWidth);
+        int panelHeight = totem$HEADER_HEIGHT + rows * totem$SLOT_SIZE
+                + totem$PANEL_PADDING_BOTTOM;
+        int panelLeft = totem$panelLeft(graphics.guiWidth(), panelWidth);
         int panelTop = Math.max(4, Math.min(
                 topPos + (imageHeight - panelHeight) / 2,
                 graphics.guiHeight() - panelHeight - 4
@@ -123,31 +123,31 @@ abstract class InventoryScreenBackpackPanelMixin extends AbstractRecipeBookScree
 
         if (access.totem$layoutBackpackSlots(
                 panelLeft + 7 - leftPos,
-                panelTop + deadrecall$HEADER_HEIGHT - topPos,
+                panelTop + totem$HEADER_HEIGHT - topPos,
                 columns
         )) {
-            deadrecall$clearTransientSlotState();
+            totem$clearTransientSlotState();
         }
 
-        deadrecall$renderPanelBackground(graphics, panelLeft, panelTop, panelWidth, panelHeight);
+        totem$renderPanelBackground(graphics, panelLeft, panelTop, panelWidth, panelHeight);
         for (int slot = 0; slot < storageSlots; slot++) {
-            int slotLeft = panelLeft + 7 + slot % columns * deadrecall$SLOT_SIZE;
-            int slotTop = panelTop + deadrecall$HEADER_HEIGHT
-                    + slot / columns * deadrecall$SLOT_SIZE;
+            int slotLeft = panelLeft + 7 + slot % columns * totem$SLOT_SIZE;
+            int slotTop = panelTop + totem$HEADER_HEIGHT
+                    + slot / columns * totem$SLOT_SIZE;
             graphics.blitSprite(
                     RenderPipelines.GUI_TEXTURED,
-                    deadrecall$SLOT_SPRITE,
+                    totem$SLOT_SPRITE,
                     slotLeft,
                     slotTop,
-                    deadrecall$SLOT_SIZE,
-                    deadrecall$SLOT_SIZE
+                    totem$SLOT_SIZE,
+                    totem$SLOT_SIZE
             );
         }
 
-        String counter = (backpacks.indexOf(deadrecall$selectedInventorySlot) + 1)
+        String counter = (backpacks.indexOf(totem$selectedInventorySlot) + 1)
                 + "/" + backpacks.size();
         int counterLeft = panelLeft + panelWidth - 8 - font.width(counter);
-        String title = deadrecall$fitTitle(
+        String title = totem$fitTitle(
                 backpack.getHoverName().getString(),
                 Math.max(0, counterLeft - (panelLeft + 8) - 3)
         );
@@ -156,26 +156,26 @@ abstract class InventoryScreenBackpackPanelMixin extends AbstractRecipeBookScree
     }
 
     @Unique
-    private void deadrecall$selectBackpack(BackpackPanelMenuAccess access, int inventorySlot) {
-        if (inventorySlot == deadrecall$selectedInventorySlot) {
+    private void totem$selectBackpack(BackpackPanelMenuAccess access, int inventorySlot) {
+        if (inventorySlot == totem$selectedInventorySlot) {
             return;
         }
-        deadrecall$selectedInventorySlot = inventorySlot;
+        totem$selectedInventorySlot = inventorySlot;
         access.totem$selectBackpackSlot(inventorySlot);
         if (ClientPlayNetworking.canSend(SelectBackpackPanelPayload.TYPE)) {
             ClientPlayNetworking.send(new SelectBackpackPanelPayload(inventorySlot));
         }
-        deadrecall$clearTransientSlotState();
+        totem$clearTransientSlotState();
     }
 
     @Unique
-    private void deadrecall$clearTransientSlotState() {
+    private void totem$clearTransientSlotState() {
         hoveredSlot = null;
         quickCraftSlots.clear();
     }
 
     @Unique
-    private List<Integer> deadrecall$ordinaryBackpackSlots(Inventory inventory) {
+    private List<Integer> totem$ordinaryBackpackSlots(Inventory inventory) {
         List<Integer> result = new ArrayList<>();
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
             if (inventory.getItem(slot).getItem() instanceof TieredBackpackItem) {
@@ -186,21 +186,21 @@ abstract class InventoryScreenBackpackPanelMixin extends AbstractRecipeBookScree
     }
 
     @Unique
-    private int deadrecall$panelColumns(int screenWidth) {
-        int rightSpace = screenWidth - (leftPos + imageWidth) - deadrecall$PANEL_GAP - 4;
-        int leftSpace = leftPos - deadrecall$PANEL_GAP - 4;
+    private int totem$panelColumns(int screenWidth) {
+        int rightSpace = screenWidth - (leftPos + imageWidth) - totem$PANEL_GAP - 4;
+        int leftSpace = leftPos - totem$PANEL_GAP - 4;
         int available = Math.max(rightSpace, leftSpace);
-        return Math.max(deadrecall$MIN_COLUMNS, Math.min(deadrecall$PREFERRED_COLUMNS,
-                (available - deadrecall$PANEL_HORIZONTAL_PADDING) / deadrecall$SLOT_SIZE));
+        return Math.max(totem$MIN_COLUMNS, Math.min(totem$PREFERRED_COLUMNS,
+                (available - totem$PANEL_HORIZONTAL_PADDING) / totem$SLOT_SIZE));
     }
 
     @Unique
-    private int deadrecall$panelLeft(int screenWidth, int panelWidth) {
-        int right = leftPos + imageWidth + deadrecall$PANEL_GAP;
+    private int totem$panelLeft(int screenWidth, int panelWidth) {
+        int right = leftPos + imageWidth + totem$PANEL_GAP;
         if (right + panelWidth <= screenWidth - 4) {
             return right;
         }
-        int left = leftPos - panelWidth - deadrecall$PANEL_GAP;
+        int left = leftPos - panelWidth - totem$PANEL_GAP;
         if (left >= 4) {
             return left;
         }
@@ -208,7 +208,7 @@ abstract class InventoryScreenBackpackPanelMixin extends AbstractRecipeBookScree
     }
 
     @Unique
-    private String deadrecall$fitTitle(String title, int maxWidth) {
+    private String totem$fitTitle(String title, int maxWidth) {
         if (font.width(title) <= maxWidth) {
             return title;
         }
@@ -225,22 +225,22 @@ abstract class InventoryScreenBackpackPanelMixin extends AbstractRecipeBookScree
     }
 
     @Unique
-    private void deadrecall$renderPanelBackground(
+    private void totem$renderPanelBackground(
             GuiGraphicsExtractor graphics,
             int left,
             int top,
             int width,
             int height
     ) {
-        graphics.fill(left, top, left + width, top + height, deadrecall$BACKGROUND);
-        graphics.outline(left, top, width, height, deadrecall$BORDER_OUTER);
-        graphics.horizontalLine(left + 1, left + width - 2, top + 1, deadrecall$BORDER_LIGHT);
-        graphics.horizontalLine(left + 2, left + width - 3, top + 2, deadrecall$BORDER_LIGHT);
-        graphics.verticalLine(left + 1, top + 1, top + height - 2, deadrecall$BORDER_LIGHT);
-        graphics.verticalLine(left + 2, top + 2, top + height - 3, deadrecall$BORDER_LIGHT);
-        graphics.horizontalLine(left + 2, left + width - 2, top + height - 2, deadrecall$BORDER_DARK);
-        graphics.horizontalLine(left + 3, left + width - 3, top + height - 3, deadrecall$BORDER_DARK);
-        graphics.verticalLine(left + width - 2, top + 2, top + height - 2, deadrecall$BORDER_DARK);
-        graphics.verticalLine(left + width - 3, top + 3, top + height - 3, deadrecall$BORDER_DARK);
+        graphics.fill(left, top, left + width, top + height, totem$BACKGROUND);
+        graphics.outline(left, top, width, height, totem$BORDER_OUTER);
+        graphics.horizontalLine(left + 1, left + width - 2, top + 1, totem$BORDER_LIGHT);
+        graphics.horizontalLine(left + 2, left + width - 3, top + 2, totem$BORDER_LIGHT);
+        graphics.verticalLine(left + 1, top + 1, top + height - 2, totem$BORDER_LIGHT);
+        graphics.verticalLine(left + 2, top + 2, top + height - 3, totem$BORDER_LIGHT);
+        graphics.horizontalLine(left + 2, left + width - 2, top + height - 2, totem$BORDER_DARK);
+        graphics.horizontalLine(left + 3, left + width - 3, top + height - 3, totem$BORDER_DARK);
+        graphics.verticalLine(left + width - 2, top + 2, top + height - 2, totem$BORDER_DARK);
+        graphics.verticalLine(left + width - 3, top + 3, top + height - 3, totem$BORDER_DARK);
     }
 }

@@ -372,7 +372,7 @@ public final class BackpackMenu extends ChestMenu {
         long gameTime = player.level().getGameTime();
         if (gameTime < nextRejectionMessageGameTime) return;
         nextRejectionMessageGameTime = gameTime + REJECTION_MESSAGE_COOLDOWN_TICKS;
-        player.sendSystemMessage(Component.translatable("item.deadrecall.backpack.tooltip.no_nesting"));
+        player.sendSystemMessage(Component.translatable("item.totem.backpack.tooltip.no_nesting"));
     }
 
     private boolean mayRemoveUpgrade(ItemStack upgrade) {

@@ -37,7 +37,7 @@ public final class DeathBackpackItem extends AbstractBackpackItem {
                 case 4 -> new BackpackMenu(MenuType.GENERIC_9x4, syncId, playerInventory, inventory, 4);
                 case 5 -> new BackpackMenu(MenuType.GENERIC_9x5, syncId, playerInventory, inventory, 5);
                 default -> new BackpackMenu(MenuType.GENERIC_9x6, syncId, playerInventory, inventory, 6);
-            }, Component.translatable("container.deadrecall.death_backpack")));
+            }, Component.translatable("container.totem.death_backpack")));
         }
         return InteractionResult.SUCCESS;
     }

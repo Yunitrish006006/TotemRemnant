@@ -1,5 +1,5 @@
 {
-  "parent": "deadrecall:remnant_root",
+  "parent": "totem:remnant_root",
   "criteria": {
     "has_manual": {
       "trigger": "minecraft:impossible"

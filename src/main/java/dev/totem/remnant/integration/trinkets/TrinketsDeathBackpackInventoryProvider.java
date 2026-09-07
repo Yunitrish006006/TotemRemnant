@@ -1,7 +1,7 @@
 package dev.totem.remnant.integration.trinkets;
 
-import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryProvider;
-import com.adaptor.deadrecall.api.death.DeathBackpackAddonSlot;
+import com.adaptor.totem.api.death.DeathBackpackAddonInventoryProvider;
+import com.adaptor.totem.api.death.DeathBackpackAddonSlot;
 import eu.pb4.trinkets.api.TrinketSlotAccess;
 import eu.pb4.trinkets.api.TrinketsApi;
 import net.minecraft.resources.Identifier;
@@ -13,7 +13,7 @@ import java.util.List;
 
 /** Optional adapter for Trinkets Updated 4.x on Minecraft 26.2. */
 public final class TrinketsDeathBackpackInventoryProvider implements DeathBackpackAddonInventoryProvider {
-    public static final Identifier ID = Identifier.fromNamespaceAndPath("deadrecall", "trinkets_updated");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath("totem", "remnant/trinkets_updated");
 
     @Override
     public Identifier id() {

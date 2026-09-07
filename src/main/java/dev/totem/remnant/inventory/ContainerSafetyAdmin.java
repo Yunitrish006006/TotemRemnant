@@ -24,7 +24,7 @@ public final class ContainerSafetyAdmin {
 
     public static void register() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-                dispatcher.register(Commands.literal("deadrecall")
+                dispatcher.register(Commands.literal("totem")
                         .then(Commands.literal("containers")
                                 .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_ADMIN))
                                 .then(Commands.literal("scan")
@@ -42,7 +42,7 @@ public final class ContainerSafetyAdmin {
             playerReports.add(ContainerNestingDiagnostics.scanPlayer(player));
         }
         ScanReport report = ContainerNestingDiagnostics.merge(playerReports);
-        sendReport(source, Component.translatable("message.deadrecall.container_scan.scope_all"), report);
+        sendReport(source, Component.translatable("message.totem.container_scan.scope_all"), report);
         audit(source, report);
         return commandResult(report);
     }
@@ -51,7 +51,7 @@ public final class ContainerSafetyAdmin {
         ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(playerName);
         if (player == null) {
             source.sendFailure(Component.translatable(
-                    "message.deadrecall.container_scan.player_missing",
+                    "message.totem.container_scan.player_missing",
                     playerName
             ));
             return 0;
@@ -70,14 +70,14 @@ public final class ContainerSafetyAdmin {
     private static void sendReport(CommandSourceStack source, Component scope, ScanReport report) {
         if (report.clean()) {
             source.sendSuccess(() -> Component.translatable(
-                    "message.deadrecall.container_scan.clean",
+                    "message.totem.container_scan.clean",
                     scope,
                     report.scannedRoots(),
                     report.scannedStacks()
             ).withStyle(ChatFormatting.GREEN), false);
         } else {
             source.sendSuccess(() -> Component.translatable(
-                    "message.deadrecall.container_scan.summary",
+                    "message.totem.container_scan.summary",
                     scope,
                     report.totalFindings(),
                     report.scannedRoots(),
@@ -89,7 +89,7 @@ public final class ContainerSafetyAdmin {
         for (int index = 0; index < displayed; index++) {
             Finding finding = report.findings().get(index);
             source.sendSuccess(() -> Component.translatable(
-                    "message.deadrecall.container_scan.finding",
+                    "message.totem.container_scan.finding",
                     finding.owner(),
                     finding.path(),
                     finding.parentItemId(),
@@ -102,13 +102,13 @@ public final class ContainerSafetyAdmin {
         int hidden = report.totalFindings() - displayed;
         if (hidden > 0) {
             source.sendSuccess(() -> Component.translatable(
-                    "message.deadrecall.container_scan.more",
+                    "message.totem.container_scan.more",
                     hidden
             ).withStyle(ChatFormatting.GRAY), false);
         }
         if (report.truncated()) {
             source.sendSuccess(() -> Component.translatable(
-                    "message.deadrecall.container_scan.truncated"
+                    "message.totem.container_scan.truncated"
             ).withStyle(ChatFormatting.RED), false);
         }
     }
@@ -118,7 +118,7 @@ public final class ContainerSafetyAdmin {
             case RESTRICTED_CONTAINER_INSIDE_BACKPACK -> "inside_backpack";
             case BACKPACK_INSIDE_PORTABLE_CONTAINER -> "backpack_inside_container";
         };
-        return Component.translatable("message.deadrecall.container_scan.direction." + suffix);
+        return Component.translatable("message.totem.container_scan.direction." + suffix);
     }
 
     private static void audit(CommandSourceStack source, ScanReport report) {

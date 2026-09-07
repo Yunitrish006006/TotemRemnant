@@ -11,7 +11,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 
-/** Remnant item owner exposing canonical IDs. Legacy aliases are owned by DeadRecall. */
+/** Remnant item owner exposing canonical IDs. TotemCore owns legacy aliases. */
 public final class RemnantItemRegistration {
     private static final Identifier BACKPACK_BASIC_ID =
             Identifier.fromNamespaceAndPath("totem", "remnant/backpack_basic");

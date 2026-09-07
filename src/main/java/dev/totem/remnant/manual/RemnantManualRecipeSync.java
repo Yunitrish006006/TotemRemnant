@@ -24,10 +24,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /** Keeps manual recipe pictures synchronized with the server's live datapack recipes. */
 public final class RemnantManualRecipeSync {
     public static final List<Identifier> SMITHING_RECIPE_IDS = List.of(
-            Identifier.fromNamespaceAndPath("deadrecall", "backpack_basic"),
-            Identifier.fromNamespaceAndPath("deadrecall", "backpack_standard_smithing"),
-            Identifier.fromNamespaceAndPath("deadrecall", "backpack_advanced_smithing"),
-            Identifier.fromNamespaceAndPath("deadrecall", "backpack_netherite_smithing")
+            recipeId("backpack_basic"),
+            recipeId("backpack_standard_smithing"),
+            recipeId("backpack_advanced_smithing"),
+            recipeId("backpack_netherite_smithing")
     );
     public static final List<Identifier> MODULE_RECIPE_IDS = List.of(
             recipeId("upgrade_crafting"),

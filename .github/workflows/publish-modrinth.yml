@@ -11,7 +11,7 @@ permissions: {contents: write}
 concurrency: {group: 'modrinth-${{ github.workflow }}-${{ github.ref }}', cancel-in-progress: false}
 env:
   MODULE_ID: totem-remnant
-  CORE_REF: 84bbfc96f3aeabbbd9047fa8ae900b92e415f00f
+  CORE_REF: f87cd10fe8aefce77925b9e75dad237f17f38966
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -43,7 +43,7 @@ jobs:
           set -euo pipefail
           chmod +x gradlew .lockstep/TotemCore/gradlew
           ./.lockstep/TotemCore/gradlew -p .lockstep/TotemCore jar --no-daemon --stacktrace
-          core="$(sed -n 's/^mod_version=//p' .lockstep/TotemCore/gradle.properties)"; test "$core" = 0.7.15
+          core="$(sed -n 's/^mod_version=//p' .lockstep/TotemCore/gradle.properties)"; test "$core" = 0.7.18
           core_jar="$GITHUB_WORKSPACE/.lockstep/TotemCore/build/libs/totem-core-${core}.jar"; test -f "$core_jar"
           ./gradlew -PtotemCoreJar="$core_jar" jar --no-daemon --stacktrace
           v="$(sed -n 's/^mod_version=//p' gradle.properties)"; a="$(sed -n 's/^archives_base_name=//p' gradle.properties)"; artifact="build/libs/${a}-${v}.jar"
@@ -58,7 +58,7 @@ jobs:
           set -euo pipefail
           v="$(sed -n 's/^mod_version=//p' gradle.properties)"; a="$(sed -n 's/^archives_base_name=//p' gradle.properties)"; mc="$(sed -n 's/^minecraft_version=//p' gradle.properties)"; artifact="build/libs/${a}-${v}.jar"
           test -n "$MODRINTH_TOKEN"; test -n "$MODRINTH_PROJECT_ID"; test -f "$artifact"; unzip -p "$artifact" fabric.mod.json >/tmp/fabric.mod.json
-          jq -e --arg id "$MODULE_ID" --arg v "$v" --arg mc "~${mc}" --arg core '>=0.7.15 <0.8.0' '.id==$id and .version==$v and .depends.minecraft==$mc and .depends["totem-core"]==$core' /tmp/fabric.mod.json >/dev/null
+          jq -e --arg id "$MODULE_ID" --arg v "$v" --arg mc "~${mc}" --arg core '>=0.7.18 <0.8.0' '.id==$id and .version==$v and .depends.minecraft==$mc and .depends["totem-core"]==$core' /tmp/fabric.mod.json >/dev/null
           api=https://api.modrinth.com/v2
           args=(--silent --show-error --retry 3 -H "Authorization: ${MODRINTH_TOKEN}" -H "User-Agent: Yunitrish006006/${MODULE_ID}-publisher/2.0")
           modrinth_request() {

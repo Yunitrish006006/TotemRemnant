@@ -42,7 +42,7 @@ public final class DeathBackpackRecoveryService {
             if (FORCED_NOTIFICATION_FAILURES.remove(player.getUUID())) {
                 throw new IllegalStateException("Forced death-backpack recovery notification failure");
             }
-            player.sendSystemMessage(Component.translatable("message.deadrecall.space_unit.death_node_recovered"));
+            player.sendSystemMessage(Component.translatable("message.totem.space_unit.death_node_recovered"));
         } catch (RuntimeException exception) {
             LOGGER.warn("Death node was recovered, but the player notification failed for {}", player.getName().getString(), exception);
         }

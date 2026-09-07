@@ -1,9 +1,9 @@
 package dev.totem.remnant.death;
 
 import dev.totem.remnant.TotemRemnant;
-import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryProvider;
-import com.adaptor.deadrecall.api.death.DeathBackpackAddonInventoryRegistry;
-import com.adaptor.deadrecall.api.death.DeathBackpackAddonSlot;
+import com.adaptor.totem.api.death.DeathBackpackAddonInventoryProvider;
+import com.adaptor.totem.api.death.DeathBackpackAddonInventoryRegistry;
+import com.adaptor.totem.api.death.DeathBackpackAddonSlot;
 import dev.totem.remnant.inventory.PortableContainerPolicy;
 import dev.totem.remnant.registry.RemnantGameRules;
 import net.minecraft.core.BlockPos;
@@ -39,7 +39,6 @@ import java.util.UUID;
  * Vanilla, transient menu and registered addon slots participate in one transaction.
  */
 public final class DeathBackpackCaptureService {
-    private static final String TAG_DEATH_BACKPACK_ID = "deadrecall_death_backpack_id";
     private static final Map<UUID, CaptureFailurePoint> FORCED_TEST_FAILURES = new HashMap<>();
 
     private DeathBackpackCaptureService() {

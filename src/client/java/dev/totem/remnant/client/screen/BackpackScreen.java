@@ -72,7 +72,7 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu>
                 })
                 .bounds(leftPos + ENDER_BUTTON_X, topPos + ENDER_BUTTON_Y, 20, 18)
                 .tooltip(Tooltip.create(Component.translatable(
-                        "container.deadrecall.backpack.ender_access")))
+                        "container.totem.backpack.ender_access")))
                 .build();
         enderAccessButton.visible = backpackMenu.hasUpgrade(BackpackUpgradeType.ENDER_ACCESS);
         enderAccessButton.active = !observerReadOnly;
@@ -211,13 +211,13 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu>
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         super.extractLabels(graphics, mouseX, mouseY);
-        Component label = Component.translatable("container.deadrecall.backpack.upgrades");
+        Component label = Component.translatable("container.totem.backpack.upgrades");
         graphics.text(font, label,
                 BackpackMenu.UPGRADE_PANEL_X
                         + (BackpackMenu.UPGRADE_PANEL_WIDTH - font.width(label)) / 2,
                 6, 0xFF404040, false);
         if (backpackMenu.isCraftingEnabled()) {
-            Component craftingLabel = Component.translatable("container.deadrecall.backpack.crafting");
+            Component craftingLabel = Component.translatable("container.totem.backpack.crafting");
             graphics.text(font, craftingLabel,
                     BackpackMenu.CRAFTING_PANEL_X
                             + (BackpackMenu.CRAFTING_PANEL_WIDTH - font.width(craftingLabel)) / 2,

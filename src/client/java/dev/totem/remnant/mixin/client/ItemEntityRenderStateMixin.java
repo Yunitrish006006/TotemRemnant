@@ -8,15 +8,15 @@ import org.spongepowered.asm.mixin.Unique;
 @Mixin(ItemEntityRenderState.class)
 public class ItemEntityRenderStateMixin implements DeathBackpackBeamState {
     @Unique
-    private boolean deadrecall$deathBackpackBeam;
+    private boolean totem$deathBackpackBeam;
 
     @Override
-    public void deadrecall$setDeathBackpackBeam(boolean value) {
-        this.deadrecall$deathBackpackBeam = value;
+    public void totem$setDeathBackpackBeam(boolean value) {
+        this.totem$deathBackpackBeam = value;
     }
 
     @Override
-    public boolean deadrecall$hasDeathBackpackBeam() {
-        return this.deadrecall$deathBackpackBeam;
+    public boolean totem$hasDeathBackpackBeam() {
+        return this.totem$deathBackpackBeam;
     }
 }

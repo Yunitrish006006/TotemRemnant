@@ -44,7 +44,7 @@ public final class TieredBackpackItem extends AbstractBackpackItem {
 
                 @Override
                 public Component getDisplayName() {
-                    return Component.translatable("container.deadrecall.backpack." + tier.name().toLowerCase());
+                    return Component.translatable("container.totem.backpack." + tier.name().toLowerCase());
                 }
 
                 @Override

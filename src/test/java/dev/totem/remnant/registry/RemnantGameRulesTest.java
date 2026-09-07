@@ -39,7 +39,7 @@ class RemnantGameRulesTest {
     }
 
     private static JsonObject language(String locale) {
-        String path = "/assets/deadrecall/lang/" + locale + ".json";
+        String path = "/assets/totem/lang/" + locale + ".json";
         var stream = RemnantGameRulesTest.class.getResourceAsStream(path);
         assertNotNull(stream, "Missing language resource: " + path);
         try (var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {

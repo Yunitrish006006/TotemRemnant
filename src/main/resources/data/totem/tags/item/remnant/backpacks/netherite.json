@@ -1,10 +1,6 @@
 {
   "replace": false,
   "values": [
-    "totem:remnant/backpack_netherite",
-    {
-      "id": "deadrecall:backpack_netherite",
-      "required": false
-    }
+    "totem:remnant/backpack_netherite"
   ]
 }

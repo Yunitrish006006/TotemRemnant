@@ -23,7 +23,7 @@ import net.minecraft.server.level.ServerLevel;
 public final class PortableContainerPolicy {
     public static final TagKey<Item> PORTABLE_CONTAINERS = TagKey.create(
             Registries.ITEM,
-            Identifier.fromNamespaceAndPath("deadrecall", "portable_containers")
+            Identifier.fromNamespaceAndPath("totem", "remnant/portable_containers")
     );
 
     private PortableContainerPolicy() {
