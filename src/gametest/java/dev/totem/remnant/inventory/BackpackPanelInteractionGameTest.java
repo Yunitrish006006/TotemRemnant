@@ -136,6 +136,42 @@ public final class BackpackPanelInteractionGameTest {
                 helper.fail("Vanilla Shift-click was hijacked by the backpack side panel");
                 return;
             }
+
+            // The inventory's vanilla 2x2 crafting slots are menu indices 1..4.
+            // Fill them using the same right-click path a player uses in the E screen.
+            player.inventoryMenu.setCarried(ItemStack.EMPTY);
+            player.getInventory().setItem(2, new ItemStack(Items.OAK_PLANKS, 4));
+            int plankMenuSlot = findPlayerInventoryMenuSlot(player, 2);
+            player.inventoryMenu.clicked(plankMenuSlot, 0, ContainerInput.PICKUP, player);
+            for (int craftSlot = 1; craftSlot <= 4; craftSlot++) {
+                player.inventoryMenu.clicked(craftSlot, 1, ContainerInput.PICKUP, player);
+            }
+            if (!player.inventoryMenu.getCarried().isEmpty()
+                    || !player.inventoryMenu.getSlot(0).getItem().is(Items.CRAFTING_TABLE)) {
+                helper.fail("Vanilla 2x2 crafting inputs did not resolve exactly one crafting table");
+                return;
+            }
+            for (int craftSlot = 1; craftSlot <= 4; craftSlot++) {
+                if (!player.inventoryMenu.getSlot(craftSlot).getItem().is(Items.OAK_PLANKS)
+                        || player.inventoryMenu.getSlot(craftSlot).getItem().getCount() != 1) {
+                    helper.fail("Vanilla 2x2 right-click insertion changed an input count");
+                    return;
+                }
+            }
+
+            player.inventoryMenu.clicked(0, 0, ContainerInput.PICKUP, player);
+            if (!player.inventoryMenu.getCarried().is(Items.CRAFTING_TABLE)
+                    || player.inventoryMenu.getCarried().getCount() != 1
+                    || total(player, Items.CRAFTING_TABLE) != 1) {
+                helper.fail("Taking the vanilla 2x2 crafting result duplicated the output");
+                return;
+            }
+            for (int craftSlot = 1; craftSlot <= 4; craftSlot++) {
+                if (player.inventoryMenu.getSlot(craftSlot).hasItem()) {
+                    helper.fail("Taking the vanilla 2x2 result did not consume each input exactly once");
+                    return;
+                }
+            }
             helper.succeed();
         } finally {
             player.discard();
