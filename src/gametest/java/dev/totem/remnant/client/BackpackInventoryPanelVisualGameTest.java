@@ -91,11 +91,23 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
 
             context.getInput().pressMouse(0);
             context.waitTicks(3);
+            AtomicReference<String> vanillaReturnServerState = new AtomicReference<>();
+            singleplayer.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                vanillaReturnServerState.set("source=" + player.getInventory().getItem(2)
+                        + ", carried=" + player.inventoryMenu.getCarried()
+                        + ", stateId=" + player.inventoryMenu.getStateId());
+            });
             context.runOnClient(client -> {
-                if (!client.player.inventoryMenu.getCarried().isEmpty()
-                        || !client.player.getInventory().getItem(2).is(Items.OAK_LOG)
-                        || client.player.getInventory().getItem(2).getCount() != 32) {
-                    throw new AssertionError("Returning the vanilla stack changed its client count");
+                ItemStack source = client.player.getInventory().getItem(2);
+                ItemStack carried = client.player.inventoryMenu.getCarried();
+                if (!carried.isEmpty()
+                        || !source.is(Items.OAK_LOG)
+                        || source.getCount() != 32) {
+                    throw new AssertionError("Returning the vanilla stack changed its client count: "
+                            + "client source=" + source + ", carried=" + carried
+                            + ", stateId=" + client.player.inventoryMenu.getStateId()
+                            + "; server " + vanillaReturnServerState.get());
                 }
             });
 
