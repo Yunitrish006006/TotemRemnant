@@ -22,9 +22,13 @@ public final class BackpackPanelPayloadRegistration {
                             || !(player.inventoryMenu instanceof BackpackPanelMenuAccess access)) {
                         return;
                     }
-                    if (access.totem$selectBackpackSlot(payload.inventorySlot())) {
-                        player.inventoryMenu.broadcastFullState();
-                    }
+
+                    // Selection is deterministic on both sides from the backpack ItemStack already
+                    // synchronized in the player's inventory. Do not broadcast menu state here:
+                    // changing InventoryMenu state/stateId from a render-driven hover selection can
+                    // race a vanilla click packet and restore the pre-click stack, producing an
+                    // apparent (and potentially persistent) duplication.
+                    access.totem$selectBackpackSlot(payload.inventorySlot());
                 })
         );
     }

@@ -10,7 +10,8 @@
     "InventoryMenuBackpackPanelMixin",
     "PlayerDeathBackpackMixin",
     "ShulkerBoxBlockEntityMixin",
-    "ShulkerBoxSlotMixin"
+    "ShulkerBoxSlotMixin",
+    "SlotPositionMixin"
   ],
   "injectors": { "defaultRequire": 1 }
 }

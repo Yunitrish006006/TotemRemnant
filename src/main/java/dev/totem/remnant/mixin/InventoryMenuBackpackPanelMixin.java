@@ -3,6 +3,7 @@ package dev.totem.remnant.mixin;
 import dev.totem.remnant.inventory.BackpackPanelContainer;
 import dev.totem.remnant.inventory.BackpackPanelMenuAccess;
 import dev.totem.remnant.inventory.BackpackPanelSlot;
+import dev.totem.remnant.inventory.MutableSlotPosition;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.InventoryMenu;
@@ -20,6 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 abstract class InventoryMenuBackpackPanelMixin implements BackpackPanelMenuAccess {
     @Unique private BackpackPanelContainer totem$backpackPanel;
     @Unique private int totem$backpackPanelSlotStart;
+    @Unique private boolean totem$pickupAllStartedInBackpackPanel;
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void totem$addBackpackPanelSlots(
@@ -56,6 +58,25 @@ abstract class InventoryMenuBackpackPanelMixin implements BackpackPanelMenuAcces
         // still moves that stack back into the normal player inventory.
     }
 
+    @Inject(method = "canTakeItemForPickAll", at = @At("HEAD"), cancellable = true)
+    private void totem$boundPickupAllToItsOriginSurface(
+            ItemStack carried,
+            Slot target,
+            CallbackInfoReturnable<Boolean> callback
+    ) {
+        // InventoryMenu calls this once for the initially double-clicked slot with a null
+        // carried argument, then again while scanning candidate slots. Remember which
+        // surface owns the gesture so a vanilla inventory double-click cannot silently
+        // drain matching stacks out of the adjacent Remnant backpack.
+        if (carried == null) {
+            totem$pickupAllStartedInBackpackPanel = target instanceof BackpackPanelSlot;
+            return;
+        }
+        if (target instanceof BackpackPanelSlot && !totem$pickupAllStartedInBackpackPanel) {
+            callback.setReturnValue(false);
+        }
+    }
+
     @Override
     public BackpackPanelContainer totem$getBackpackPanel() {
         return totem$backpackPanel;
@@ -88,18 +109,14 @@ abstract class InventoryMenuBackpackPanelMixin implements BackpackPanelMenuAcces
                     ? relativeTop + panelSlot / columns * 18
                     : -10_000;
             Slot current = menu.slots.get(menuSlot);
-            if (current.x == x && current.y == y
-                    && current instanceof BackpackPanelSlot) {
+            if (!(current instanceof BackpackPanelSlot)
+                    || !(current instanceof MutableSlotPosition mutable)) {
+                throw new IllegalStateException("Backpack panel slot identity was replaced");
+            }
+            if (current.x == x && current.y == y) {
                 continue;
             }
-            BackpackPanelSlot replacement = new BackpackPanelSlot(
-                    totem$backpackPanel,
-                    panelSlot,
-                    x,
-                    y
-            );
-            replacement.index = menuSlot;
-            menu.slots.set(menuSlot, replacement);
+            mutable.totem$setPosition(x, y);
             changed = true;
         }
         return changed;
