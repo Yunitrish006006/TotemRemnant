@@ -30,7 +30,7 @@ jobs:
           if grep -Fxq '.github/workflows/publish-modrinth.yml' <<<"$changed" || [[ -z "$previous" || "$previous" != "$current" ]]; then echo 'should_publish=true' >> "$GITHUB_OUTPUT"; echo 'dry_run=false' >> "$GITHUB_OUTPUT"; else echo 'should_publish=false' >> "$GITHUB_OUTPUT"; echo 'dry_run=false' >> "$GITHUB_OUTPUT"; fi
       - if: steps.release.outputs.should_publish == 'true'
         uses: actions/setup-java@v5
-        with: {distribution: temurin, java-version: '25'}
+        with: {distribution: temurin, java-version: '25.0.3'}
       - if: steps.release.outputs.should_publish == 'true'
         uses: gradle/actions/setup-gradle@v4
       - if: steps.release.outputs.should_publish == 'true'
@@ -49,6 +49,13 @@ jobs:
           v="$(sed -n 's/^mod_version=//p' gradle.properties)"; a="$(sed -n 's/^archives_base_name=//p' gradle.properties)"; artifact="build/libs/${a}-${v}.jar"
           [[ -f "$artifact" ]] || ./gradlew -PtotemCoreJar="$core_jar" remapJar --no-daemon --stacktrace
           test -f "$artifact"
+      - name: Retain release candidate
+        if: steps.release.outputs.should_publish == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: remnant-release-${{ github.sha }}
+          path: build/libs/totem-remnant-*.jar
+          if-no-files-found: error
       - name: Require successful Build for this commit
         if: steps.release.outputs.should_publish == 'true' && steps.release.outputs.dry_run == 'false'
         shell: bash
