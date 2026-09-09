@@ -1,7 +1,7 @@
 # TotemRemnant
 
 TotemRemnant 是 Totem 系列的背包、死亡物品保護與可攜式容器安全模組。
-目前版本為 **0.2.22**，需要 TotemCore **0.7.18 以上、0.8.0 以下**。
+目前開發版本為 **0.2.24**，需要 TotemCore **0.7.19 以上、0.8.0 以下**。
 0.2.22 修正原版物品欄與背包側欄的物品歸屬：切換背包時維持格位身分與
 原版同步狀態，並防止原版雙擊收集誤取背包側欄物品。
 
@@ -10,7 +10,7 @@ TotemRemnant 是 Totem 系列的背包、死亡物品保護與可攜式容器安
 將下列 JAR 放入 Client 與 Server 的 `mods/`：
 
 1. Fabric API `0.154.2+26.2`
-2. TotemCore `>=0.7.18 <0.8.0`
+2. TotemCore `>=0.7.19 <0.8.0`
 3. TotemRemnant `0.2.22`
 
 | 項目 | 需求 |
@@ -18,7 +18,7 @@ TotemRemnant 是 Totem 系列的背包、死亡物品保護與可攜式容器安
 | Minecraft | 26.2 |
 | Fabric Loader | 0.19.3+ |
 | Java | 25+ |
-| 必要 Totem 模組 | `totem-core >=0.7.18 <0.8.0` |
+| 必要 Totem 模組 | `totem-core >=0.7.19 <0.8.0` |
 | 選配 | Trinkets Updated 4.1.0-beta.2+ |
 
 舊整合 JAR 不應再與獨立 TotemRemnant 並用。
@@ -143,7 +143,9 @@ Remnant standalone 只註冊上述 canonical ID。TotemCore 的遷移層會解�
 - 地面上的背包會顯示紅色定位光柱。
 - 巢狀禁止規則開啟時，Remnant 背包與其他可攜式容器維持獨立掉落；
   關閉規則後則可一併收進死亡背包。
+- 成功拾取死亡背包時立即回報 Nexus 回收；滿格或被擁有者規則拒絕時不會提早回收。後續清空不重複發布事件。
 - 背包完全清空並關閉後會移除；任何協助回收的玩家都可完成此流程。
+- 掉落背包位置變更時透過 Core 回報 Nexus，讓死亡傳送追蹤漂移位置。「虛化」效果由 Nexus 提供；Remnant 本身不註冊此效果。
 - 若 Nexus 已安裝，Remnant 會在死亡交易前自動掃描有效傳送介面，不要求
   曾經成功傳送。依主手、副手、其餘快捷列、主物品欄順序保留第一個，並於
   重生後 exactly once 還原。同堆疊其餘物品照常進死亡背包；空白地圖與

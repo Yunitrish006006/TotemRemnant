@@ -1,0 +1,14 @@
+{
+  "version": "0.2.24",
+  "java": 25,
+  "minecraft": "26.2",
+  "artifact": "totem-remnant-0.2.24.jar",
+  "sha512": "a9613eeb75efbd60055997d8aa0aae692f1f033770f15f60ac403dc89dc58daf7fd6aba9bac6cdbe54ad38a219b199480d49c354a3128ea6aa6e06f4c263b86f",
+  "unit_tests": 2,
+  "server_gametests": 59,
+  "evidence": "https://github.com/Yunitrish006006/TotemNexus/tree/master/test-artifacts/close-backpack-recovery",
+  "client_validation": "Nexus full standalone suite and official production Phasing/Observer passed; owner-present integration 10 screenshots and dedicated three-JVM E2E passed.",
+  "independent_review": "Euler: no remaining code blockers; exact pickup and 59/60-tick expiry reviewed.",
+  "core_version": "0.7.19",
+  "core_commit": "8573f7239e7faf6664a5c3ece58d79957f89a1bb"
+}

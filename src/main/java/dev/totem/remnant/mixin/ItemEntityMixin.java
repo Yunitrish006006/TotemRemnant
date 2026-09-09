@@ -19,6 +19,24 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ItemEntity.class)
 public abstract class ItemEntityMixin {
+    @org.spongepowered.asm.mixin.Unique private net.minecraft.core.GlobalPos totemremnant$lastDeathPosition;
+
+    @Inject(method = "tick", at = @At("TAIL"))
+    private void totemremnant$reportDeathBackpackPosition(CallbackInfo ci) {
+        ItemEntity self = (ItemEntity) (Object) this;
+        if (!(self.level() instanceof ServerLevel level) || self.isRemoved()
+                || !self.getItem().is(RemnantItemRegistration.DEATH_BACKPACK)) return;
+        var nodeId = dev.totem.remnant.death.DeathBackpackNodeBinding.read(self.getItem());
+        var ownerId = DeathBackpackOwnerBinding.read(self.getItem());
+        if (nodeId == null || ownerId == null) return;
+        var position = net.minecraft.core.GlobalPos.of(level.dimension(), self.blockPosition());
+        var provider = dev.totem.core.api.v1.death.DeathBackpackNodeLifecycle.current();
+        if (provider.isPresent() && !position.equals(totemremnant$lastDeathPosition)) {
+            provider.get().moved(level, nodeId, self.getUUID(), ownerId, self.blockPosition());
+            totemremnant$lastDeathPosition = position;
+        }
+    }
+
     @Inject(method = "playerTouch", at = @At("HEAD"), cancellable = true)
     private void totemremnant$restrictDeathBackpackPickup(Player player, CallbackInfo ci) {
         ItemEntity self = (ItemEntity) (Object) this;
@@ -27,6 +45,39 @@ public abstract class ItemEntityMixin {
                 || !RemnantGameRules.deathBackpackOwnerPickupOnly(level)) return;
         java.util.UUID ownerId = DeathBackpackOwnerBinding.read(self.getItem());
         if (ownerId != null && !ownerId.equals(player.getUUID())) ci.cancel();
+    }
+
+    @com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation(method = "playerTouch", at = @At(
+            value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Inventory;add(Lnet/minecraft/world/item/ItemStack;)Z"))
+    private boolean totemremnant$recoverPickedUpBackpack(net.minecraft.world.entity.player.Inventory inventory,
+            net.minecraft.world.item.ItemStack stack,
+            com.llamalad7.mixinextras.injector.wrapoperation.Operation<Boolean> original, Player player) {
+        var node = stack.is(RemnantItemRegistration.DEATH_BACKPACK)
+                ? dev.totem.remnant.death.DeathBackpackNodeBinding.read(stack) : null;
+        int before = totemremnant$boundCount(inventory, node);
+        boolean accepted = original.call(inventory, stack);
+        if (node != null && accepted && stack.isEmpty() && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer
+                && totemremnant$boundCount(inventory, node) > before) {
+            for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+                var inserted = inventory.getItem(slot);
+                if (node.equals(dev.totem.remnant.death.DeathBackpackNodeBinding.read(inserted))) {
+                    dev.totem.remnant.death.DeathBackpackRecoveryService.recoverBoundNode(serverPlayer, inserted);
+                    break;
+                }
+            }
+        }
+        return accepted;
+    }
+
+    @org.spongepowered.asm.mixin.Unique
+    private static int totemremnant$boundCount(net.minecraft.world.entity.player.Inventory inventory, java.util.UUID node) {
+        if (node == null) return 0;
+        int count = 0;
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            var stack = inventory.getItem(slot);
+            if (node.equals(dev.totem.remnant.death.DeathBackpackNodeBinding.read(stack))) count += stack.getCount();
+        }
+        return count;
     }
 
     @Inject(method = "hurtServer", at = @At("HEAD"), cancellable = true)

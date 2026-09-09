@@ -106,6 +106,77 @@ public final class DeathBackpackLifecycleGameTest {
         }
     }
 
+    @SuppressWarnings("removal")
+    @GameTest(maxTicks = 20)
+    public void realPickupRequiresCapacityAndOwnershipAndRecoveryIsNotRepeated(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var owner = helper.makeMockServerPlayerInLevel();
+        var stranger = helper.makeMockServerPlayerInLevel();
+        var previous = DeathBackpackNodeLifecycle.current().orElse(null);
+        boolean ownerOnly = level.getGameRules().get(RemnantGameRules.DEATH_BACKPACK_OWNER_PICKUP_ONLY);
+        UUID node = UUID.randomUUID();
+        int[] recovered = {0};
+        var positions = new java.util.ArrayList<BlockPos>();
+        var pos = helper.absolutePos(DEATH_POS);
+        var stack = new ItemStack(RemnantItemRegistration.DEATH_BACKPACK);
+        DeathBackpackOwnerBinding.write(stack, owner.getUUID());
+        DeathBackpackNodeBinding.write(stack, node);
+        var entity = new ItemEntity(level, pos.getX() + .5, pos.getY() + .5, pos.getZ() + .5, stack);
+        entity.setNoGravity(true);
+        entity.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        entity.setNoPickUpDelay();
+        try {
+            owner.getAbilities().instabuild = false;
+            stranger.getAbilities().instabuild = false;
+            owner.getInventory().clearContent(); stranger.getInventory().clearContent();
+            level.getGameRules().set(RemnantGameRules.DEATH_BACKPACK_OWNER_PICKUP_ONLY, true, level.getServer());
+            DeathBackpackNodeLifecycle.register(new DeathBackpackNodeLifecycle() {
+                @Override public UUID create(ServerPlayer p, ServerLevel l, BlockPos at) { return node; }
+                @Override public void rollback(ServerPlayer p, ServerLevel l, UUID id) { }
+                @Override public boolean recover(ServerPlayer p, UUID id) {
+                    require(helper, p == owner && node.equals(id), "Recovery used wrong owner/node");
+                    recovered[0]++;
+                    return true;
+                }
+                @Override public void moved(ServerLevel l, UUID id, UUID entityId, UUID ownerId, BlockPos at) {
+                    require(helper, l == level && node.equals(id) && entity.getUUID().equals(entityId)
+                            && owner.getUUID().equals(ownerId), "Movement callback lost exact binding");
+                    positions.add(at.immutable());
+                }
+            });
+            require(helper, level.addFreshEntity(entity), "Could not spawn bound pickup fixture");
+            entity.tick(); entity.tick();
+            require(helper, positions.equals(List.of(pos)), "Unchanged block repeated movement callback: " + positions);
+            var moved = pos.east(2);
+            entity.setPos(moved.getX() + .5, moved.getY() + .5, moved.getZ() + .5);
+            entity.tick(); entity.tick();
+            require(helper, positions.equals(List.of(pos, moved)), "Changed block did not report exactly once");
+            entity.playerTouch(stranger);
+            require(helper, !entity.isRemoved() && recovered[0] == 0 && stranger.getInventory().isEmpty(),
+                    "Foreign pickup bypassed owner-only rule");
+            for (int slot = 0; slot < owner.getInventory().getContainerSize(); slot++)
+                owner.getInventory().setItem(slot, new ItemStack(Items.COBBLESTONE, 64));
+            entity.playerTouch(owner);
+            require(helper, !entity.isRemoved() && recovered[0] == 0,
+                    "Full survival inventory recovered or destroyed backpack");
+            owner.getInventory().setItem(0, ItemStack.EMPTY);
+            entity.playerTouch(owner);
+            ItemStack inserted = owner.getInventory().getItem(0);
+            require(helper, entity.isRemoved() && recovered[0] == 1
+                            && inserted.is(RemnantItemRegistration.DEATH_BACKPACK)
+                            && node.equals(DeathBackpackNodeBinding.read(inserted)),
+                    "Successful pickup did not recover the actual inserted backpack once");
+            require(helper, DeathBackpackRecoveryService.recoverBoundNode(owner, inserted) && recovered[0] == 1,
+                    "Later emptying/recovery repeated lifecycle notification");
+            helper.succeed();
+        } finally {
+            if (!entity.isRemoved()) entity.discard();
+            DeathBackpackNodeLifecycle.register(previous);
+            level.getGameRules().set(RemnantGameRules.DEATH_BACKPACK_OWNER_PICKUP_ONLY, ownerOnly, level.getServer());
+            owner.discard(); stranger.discard();
+        }
+    }
+
     private static void verifyBooleanRule(GameTestHelper helper, GameRule<Boolean> rule, String path) {
         require(helper, rule.category() == TotemGameRuleCategories.TOTEM,
                 path + " is not in the shared Totem category");

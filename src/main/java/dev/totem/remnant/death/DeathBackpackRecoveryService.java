@@ -23,10 +23,16 @@ public final class DeathBackpackRecoveryService {
     public static boolean recoverBoundNode(ServerPlayer recoveringPlayer, ItemStack deathBackpack) {
         UUID nodeId = DeathBackpackNodeBinding.read(deathBackpack);
         if (nodeId == null) return false;
+        var tag = deathBackpack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
+        if (tag.getBooleanOr("totem_remnant_node_recovered", false)) return true;
         boolean disabled = DeathBackpackNodeLifecycle.current()
                 .map(adapter -> adapter.recover(recoveringPlayer, nodeId))
                 .orElse(false);
         if (!disabled) return false;
+        tag.putBoolean("totem_remnant_node_recovered", true);
+        deathBackpack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                net.minecraft.world.item.component.CustomData.of(tag));
         notifyRecoveredSafely(recoveringPlayer);
         TotemEventBus.publish(new DeathBackpackRecoveredEvent(
                 recoveringPlayer.getName().getString()
