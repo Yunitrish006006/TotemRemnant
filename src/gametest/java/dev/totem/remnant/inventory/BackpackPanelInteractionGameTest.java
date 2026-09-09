@@ -77,6 +77,72 @@ public final class BackpackPanelInteractionGameTest {
     }
 
     @GameTest(maxTicks = 20)
+    public void vanillaInventoryClicksRemainConservativeWithPanel(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        try {
+            ItemStack backpack = backpackWith(new ItemStack(Items.DIAMOND));
+            player.getInventory().setItem(0, backpack);
+            player.getInventory().setItem(1, new ItemStack(Items.OAK_LOG, 32));
+
+            BackpackPanelMenuAccess access = (BackpackPanelMenuAccess) player.inventoryMenu;
+            access.totem$selectBackpackSlot(0);
+            int panelStart = access.totem$getBackpackPanelSlotStart();
+            var originalPanelSlot = player.inventoryMenu.getSlot(panelStart);
+            access.totem$layoutBackpackSlots(180, 18, 9);
+            access.totem$layoutBackpackSlots(198, 36, 9);
+            if (player.inventoryMenu.getSlot(panelStart) != originalPanelSlot) {
+                helper.fail("Backpack panel layout replaced a registered Slot instance");
+                return;
+            }
+
+            int oakMenuSlot = findPlayerInventoryMenuSlot(player, 1);
+            player.inventoryMenu.clicked(oakMenuSlot, 0, ContainerInput.PICKUP, player);
+            if (!player.inventoryMenu.getCarried().is(Items.OAK_LOG)
+                    || player.inventoryMenu.getCarried().getCount() != 32
+                    || !player.getInventory().getItem(1).isEmpty()
+                    || total(player, Items.OAK_LOG) != 32) {
+                helper.fail("Vanilla left-click duplicated or lost a player-inventory stack");
+                return;
+            }
+
+            player.inventoryMenu.clicked(oakMenuSlot, 0, ContainerInput.PICKUP, player);
+            if (!player.inventoryMenu.getCarried().isEmpty()
+                    || player.getInventory().getItem(1).getCount() != 32
+                    || total(player, Items.OAK_LOG) != 32) {
+                helper.fail("Returning a vanilla carried stack changed its total count");
+                return;
+            }
+
+            player.inventoryMenu.clicked(oakMenuSlot, 1, ContainerInput.PICKUP, player);
+            if (player.inventoryMenu.getCarried().getCount() != 16
+                    || player.getInventory().getItem(1).getCount() != 16
+                    || total(player, Items.OAK_LOG) != 32) {
+                helper.fail("Vanilla right-click split duplicated or lost items");
+                return;
+            }
+
+            player.inventoryMenu.clicked(oakMenuSlot, 0, ContainerInput.PICKUP, player);
+            if (!player.inventoryMenu.getCarried().isEmpty()
+                    || player.getInventory().getItem(1).getCount() != 32
+                    || total(player, Items.OAK_LOG) != 32) {
+                helper.fail("Merging a split stack back changed its total count");
+                return;
+            }
+
+            ItemStack quickMoved = player.inventoryMenu.quickMoveStack(player, oakMenuSlot);
+            if (!quickMoved.is(Items.OAK_LOG)
+                    || total(player, Items.OAK_LOG) != 32
+                    || panelItem(backpack, 0).is(Items.OAK_LOG)) {
+                helper.fail("Vanilla Shift-click was hijacked by the backpack side panel");
+                return;
+            }
+            helper.succeed();
+        } finally {
+            player.discard();
+        }
+    }
+
+    @GameTest(maxTicks = 20)
     public void panelRejectsPortableContainerNesting(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         try {
@@ -190,6 +256,28 @@ public final class BackpackPanelInteractionGameTest {
         } finally {
             player.discard();
         }
+    }
+
+    private static int findPlayerInventoryMenuSlot(ServerPlayer player, int inventorySlot) {
+        for (int menuSlot = 0; menuSlot < player.inventoryMenu.slots.size(); menuSlot++) {
+            var slot = player.inventoryMenu.getSlot(menuSlot);
+            if (slot.container == player.getInventory()
+                    && slot.getContainerSlot() == inventorySlot) {
+                return menuSlot;
+            }
+        }
+        throw new IllegalStateException("Could not find player inventory slot " + inventorySlot);
+    }
+
+    private static int total(ServerPlayer player, net.minecraft.world.item.Item item) {
+        int total = 0;
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            ItemStack stack = player.getInventory().getItem(slot);
+            if (stack.is(item)) total += stack.getCount();
+        }
+        ItemStack carried = player.inventoryMenu.getCarried();
+        if (carried.is(item)) total += carried.getCount();
+        return total;
     }
 
     private static ItemStack backpackWith(ItemStack firstItem) {
