@@ -94,8 +94,13 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
             AtomicReference<String> vanillaReturnServerState = new AtomicReference<>();
             singleplayer.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
-                vanillaReturnServerState.set("source=" + player.getInventory().getItem(2)
-                        + ", carried=" + player.inventoryMenu.getCarried()
+                ItemStack source = player.getInventory().getItem(2);
+                ItemStack carried = player.inventoryMenu.getCarried();
+                int backpackOak = countContained(player.getInventory().getItem(0), Items.OAK_LOG);
+                vanillaReturnServerState.set("source=" + source
+                        + ", carried=" + carried
+                        + ", backpackOak=" + backpackOak
+                        + ", totalOak=" + (source.getCount() + carried.getCount() + backpackOak)
                         + ", stateId=" + player.inventoryMenu.getStateId());
             });
             context.runOnClient(client -> {
@@ -104,8 +109,11 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
                 if (!carried.isEmpty()
                         || !source.is(Items.OAK_LOG)
                         || source.getCount() != 32) {
+                    int backpackOak = countContained(client.player.getInventory().getItem(0), Items.OAK_LOG);
                     throw new AssertionError("Returning the vanilla stack changed its client count: "
                             + "client source=" + source + ", carried=" + carried
+                            + ", backpackOak=" + backpackOak
+                            + ", totalOak=" + (source.getCount() + carried.getCount() + backpackOak)
                             + ", stateId=" + client.player.inventoryMenu.getStateId()
                             + "; server " + vanillaReturnServerState.get());
                 }
@@ -442,6 +450,14 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
                 if (client.player != null) client.player.containerMenu = client.player.inventoryMenu;
             });
         }
+    }
+
+    private static int countContained(ItemStack containerStack, net.minecraft.world.item.Item item) {
+        return containerStack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY)
+                .nonEmptyItemCopyStream()
+                .filter(stack -> stack.is(item))
+                .mapToInt(ItemStack::getCount)
+                .sum();
     }
 
     private static ItemStack visualBackpack() {
