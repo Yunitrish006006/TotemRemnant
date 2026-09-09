@@ -23,7 +23,10 @@ public final class BackpackPanelPayloadRegistration {
                         return;
                     }
                     if (access.totem$selectBackpackSlot(payload.inventorySlot())) {
-                        player.inventoryMenu.broadcastFullState();
+                        // Do not reset the entire InventoryMenu state while vanilla cursor/click
+                        // prediction may be in flight. The panel slots are ordinary tracked slots,
+                        // so the next incremental broadcast is sufficient to synchronize changes.
+                        player.inventoryMenu.broadcastChanges();
                     }
                 })
         );
