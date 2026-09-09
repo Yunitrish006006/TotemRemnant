@@ -80,7 +80,7 @@ public final class BackpackPanelInteractionGameTest {
     public void vanillaInventoryClicksRemainConservativeWithPanel(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         try {
-            ItemStack backpack = backpackWith(new ItemStack(Items.DIAMOND));
+            ItemStack backpack = backpackWith(new ItemStack(Items.OAK_LOG, 32));
             player.getInventory().setItem(0, backpack);
             player.getInventory().setItem(1, new ItemStack(Items.OAK_LOG, 32));
 
@@ -105,10 +105,21 @@ public final class BackpackPanelInteractionGameTest {
                 return;
             }
 
+            player.inventoryMenu.clicked(oakMenuSlot, 0, ContainerInput.PICKUP_ALL, player);
+            if (!player.inventoryMenu.getCarried().is(Items.OAK_LOG)
+                    || player.inventoryMenu.getCarried().getCount() != 32
+                    || !player.getInventory().getItem(1).isEmpty()
+                    || !panelItem(backpack, 0).is(Items.OAK_LOG)
+                    || panelItem(backpack, 0).getCount() != 32) {
+                helper.fail("Vanilla double-click drained the adjacent backpack panel");
+                return;
+            }
+
             player.inventoryMenu.clicked(oakMenuSlot, 0, ContainerInput.PICKUP, player);
             if (!player.inventoryMenu.getCarried().isEmpty()
                     || player.getInventory().getItem(1).getCount() != 32
-                    || total(player, Items.OAK_LOG) != 32) {
+                    || total(player, Items.OAK_LOG) != 32
+                    || panelItem(backpack, 0).getCount() != 32) {
                 helper.fail("Returning a vanilla carried stack changed its total count");
                 return;
             }
@@ -132,7 +143,8 @@ public final class BackpackPanelInteractionGameTest {
             ItemStack quickMoved = player.inventoryMenu.quickMoveStack(player, oakMenuSlot);
             if (!quickMoved.is(Items.OAK_LOG)
                     || total(player, Items.OAK_LOG) != 32
-                    || panelItem(backpack, 0).is(Items.OAK_LOG)) {
+                    || !panelItem(backpack, 0).is(Items.OAK_LOG)
+                    || panelItem(backpack, 0).getCount() != 32) {
                 helper.fail("Vanilla Shift-click was hijacked by the backpack side panel");
                 return;
             }
