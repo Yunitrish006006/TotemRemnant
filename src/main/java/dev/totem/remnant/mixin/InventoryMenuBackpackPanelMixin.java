@@ -3,6 +3,7 @@ package dev.totem.remnant.mixin;
 import dev.totem.remnant.inventory.BackpackPanelContainer;
 import dev.totem.remnant.inventory.BackpackPanelMenuAccess;
 import dev.totem.remnant.inventory.BackpackPanelSlot;
+import dev.totem.remnant.inventory.MutableSlotPosition;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.InventoryMenu;
@@ -88,18 +89,14 @@ abstract class InventoryMenuBackpackPanelMixin implements BackpackPanelMenuAcces
                     ? relativeTop + panelSlot / columns * 18
                     : -10_000;
             Slot current = menu.slots.get(menuSlot);
-            if (current.x == x && current.y == y
-                    && current instanceof BackpackPanelSlot) {
+            if (!(current instanceof BackpackPanelSlot)
+                    || !(current instanceof MutableSlotPosition mutable)) {
+                throw new IllegalStateException("Backpack panel slot identity was replaced");
+            }
+            if (current.x == x && current.y == y) {
                 continue;
             }
-            BackpackPanelSlot replacement = new BackpackPanelSlot(
-                    totem$backpackPanel,
-                    panelSlot,
-                    x,
-                    y
-            );
-            replacement.index = menuSlot;
-            menu.slots.set(menuSlot, replacement);
+            mutable.totem$setPosition(x, y);
             changed = true;
         }
         return changed;
