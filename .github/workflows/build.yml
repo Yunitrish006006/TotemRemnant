@@ -85,3 +85,13 @@ jobs:
           test -f "$marker_dir/verify.ok"
           test ! -f "$marker_dir/verify.failure"
 
+      - name: Upload validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: remnant-validation-evidence
+          path: |
+            build/reports/tests/
+            build/run/clientGameTest/screenshots/
+            test-artifacts/screenshots/
+          if-no-files-found: warn

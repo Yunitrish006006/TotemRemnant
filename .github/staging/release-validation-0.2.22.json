@@ -1,0 +1,48 @@
+{
+  "version": "0.2.22",
+  "date": "2026-09-09",
+  "implementation_commit": "c879342877f4a9505c4a11832cfe99b4155057b8",
+  "java": 25,
+  "minecraft": "26.2",
+  "core_commit": "f87cd10fe8aefce77925b9e75dad237f17f38966",
+  "core_version": "0.7.18",
+  "artifact": "totem-remnant-0.2.22.jar",
+  "sha512": "4dd7c32aab2764cb3745b8044b7b051a7430b38ac3e8d96e8efd6952d724ad9129ec66f0ed8ca259fa33f10ad662adce542ff6b767e10bb613e7219aa4be728d",
+  "module_validation": {
+    "build": "passed",
+    "unit_tests": "passed",
+    "server_gametests": 51,
+    "client_gametests": "passed",
+    "restart_seed": "passed",
+    "restart_verify": "passed"
+  },
+  "observer_validation": {
+    "relay_commit": "ec01d358db771c1be5f210cca3ebb566f3367e00",
+    "owner_present_integration": "passed",
+    "owner_present_screenshots": 10,
+    "dedicated_three_jvm": "passed",
+    "required_e2e_evidence_files": 206,
+    "missing_e2e_evidence_files": 0,
+    "e2e_screenshots": 31,
+    "production_runtime_module_absent": "passed",
+    "production_screenshots": 32
+  },
+  "visual_review": [
+    "Traditional Chinese inventory side panel",
+    "English inventory side panel",
+    "module-owned read-only BackpackScreen",
+    "remote carried stack"
+  ],
+  "release_gate_validation": [
+    "successful same-commit Build permits publication",
+    "failed Build refuses publication",
+    "missing Build refuses publication",
+    "newer pending Build refuses publication"
+  ],
+  "independent_review": "passed",
+  "notes": [
+    "Candidate owner presence is covered by integration and dedicated three-JVM tests. The separate production runtime gate covers the relay module-absent path.",
+    "Observer integration screenshot copy required GITHUB_WORKSPACE; all ten original test PNGs were preserved unchanged.",
+    "Remote release CI and Modrinth API readback are recorded separately by the publication workflow."
+  ]
+}
