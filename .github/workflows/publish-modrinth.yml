@@ -30,7 +30,7 @@ jobs:
           if grep -Fxq '.github/workflows/publish-modrinth.yml' <<<"$changed" || [[ -z "$previous" || "$previous" != "$current" ]]; then echo 'should_publish=true' >> "$GITHUB_OUTPUT"; echo 'dry_run=false' >> "$GITHUB_OUTPUT"; else echo 'should_publish=false' >> "$GITHUB_OUTPUT"; echo 'dry_run=false' >> "$GITHUB_OUTPUT"; fi
       - if: steps.release.outputs.should_publish == 'true'
         uses: actions/setup-java@v5
-        with: {distribution: temurin, java-version: '25.0.3'}
+        with: {distribution: temurin, java-version: '25'}
       - if: steps.release.outputs.should_publish == 'true'
         uses: gradle/actions/setup-gradle@v4
       - if: steps.release.outputs.should_publish == 'true'

@@ -5,7 +5,7 @@
   "core_commit": "f87cd10fe8aefce77925b9e75dad237f17f38966",
   "core_version": "0.7.18",
   "artifact": "totem-remnant-0.2.23.jar",
-  "sha512": "c9c15505ed1401c7ed1dac33d4e4d0470fd225904fb0b087af74becc64cec24a446a331fb2feae96e14aab87f9f828056a6476951f6a9059d113ab914d80646c",
+  "sha512": "5461af38f62254ac804db26afb2909c20c9e7905ada951ff62f102821bf8dfa343d42dbedb73c3cd582a78ad3ec46132899882d9a631f130c089638a2284837e",
   "unit_tests": 2,
   "server_gametests": 58,
   "candidate_equivalence": {
@@ -21,5 +21,15 @@
     "production_runtime_module_absent": "passed, 32 screenshots"
   },
   "independent_review": "No blocking findings; production code, Minecraft 26.2 bytecode compatibility and regression tests reviewed.",
-  "remote_validation": "Exact release commit Build and Modrinth readback are recorded separately by the owned workflow."
+  "remote_validation": "Exact release commit Build and Modrinth readback are recorded separately by the owned workflow.",
+  "remote_candidate_validation": {
+    "artifact_id": 10113210847,
+    "workflow_run": 34374267165,
+    "source_commit": "3292d94c3740df5d0cf59766be9e9878a35ad7e6",
+    "all_archive_entry_contents_byte_identical_to_local": true,
+    "difference": "None. The initial recorded hash was read before the local Gradle build completed final archive normalization. The completed local JAR is byte-identical to the remote candidate.",
+    "all_archive_bytes_identical_to_final_local": true
+  },
+  "preliminary_sha512": "c9c15505ed1401c7ed1dac33d4e4d0470fd225904fb0b087af74becc64cec24a446a331fb2feae96e14aab87f9f828056a6476951f6a9059d113ab914d80646c",
+  "final_local_sha512": "5461af38f62254ac804db26afb2909c20c9e7905ada951ff62f102821bf8dfa343d42dbedb73c3cd582a78ad3ec46132899882d9a631f130c089638a2284837e"
 }
