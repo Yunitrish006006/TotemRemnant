@@ -89,37 +89,55 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
                 }
             });
 
-            // Leave the vanilla double-click window before placing the stack back.
-            // A rapid second left-click intentionally runs PICKUP_ALL and may collect
-            // matching stacks from the interactive backpack panel.
-            context.waitTicks(8);
+            // A rapid second left-click is vanilla PICKUP_ALL. It must stay on the
+            // vanilla inventory surface instead of draining the adjacent backpack panel.
             context.getInput().pressMouse(0);
             context.waitTicks(3);
-            AtomicReference<String> vanillaReturnServerState = new AtomicReference<>();
+            AtomicReference<String> vanillaDoubleClickServerState = new AtomicReference<>();
             singleplayer.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
                 ItemStack source = player.getInventory().getItem(2);
                 ItemStack carried = player.inventoryMenu.getCarried();
                 int backpackOak = countContained(player.getInventory().getItem(0), Items.OAK_LOG);
-                vanillaReturnServerState.set("source=" + source
+                vanillaDoubleClickServerState.set("source=" + source
                         + ", carried=" + carried
                         + ", backpackOak=" + backpackOak
-                        + ", totalOak=" + (source.getCount() + carried.getCount() + backpackOak)
                         + ", stateId=" + player.inventoryMenu.getStateId());
             });
             context.runOnClient(client -> {
                 ItemStack source = client.player.getInventory().getItem(2);
                 ItemStack carried = client.player.inventoryMenu.getCarried();
-                if (!carried.isEmpty()
-                        || !source.is(Items.OAK_LOG)
-                        || source.getCount() != 32) {
-                    int backpackOak = countContained(client.player.getInventory().getItem(0), Items.OAK_LOG);
-                    throw new AssertionError("Returning the vanilla stack changed its client count: "
+                int backpackOak = countContained(client.player.getInventory().getItem(0), Items.OAK_LOG);
+                if (!source.isEmpty()
+                        || !carried.is(Items.OAK_LOG)
+                        || carried.getCount() != 32
+                        || backpackOak != 32) {
+                    throw new AssertionError("Vanilla double-click crossed into the backpack panel: "
                             + "client source=" + source + ", carried=" + carried
                             + ", backpackOak=" + backpackOak
-                            + ", totalOak=" + (source.getCount() + carried.getCount() + backpackOak)
-                            + ", stateId=" + client.player.inventoryMenu.getStateId()
-                            + "; server " + vanillaReturnServerState.get());
+                            + "; server " + vanillaDoubleClickServerState.get());
+                }
+            });
+
+            // Now leave the double-click window and place the carried stack back normally.
+            context.waitTicks(8);
+            context.getInput().pressMouse(0);
+            context.waitTicks(3);
+            singleplayer.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                if (!player.inventoryMenu.getCarried().isEmpty()
+                        || !player.getInventory().getItem(2).is(Items.OAK_LOG)
+                        || player.getInventory().getItem(2).getCount() != 32
+                        || countContained(player.getInventory().getItem(0), Items.OAK_LOG) != 32) {
+                    throw new AssertionError("Server failed to return the vanilla stack after double-click window");
+                }
+            });
+            context.runOnClient(client -> {
+                if (!client.player.inventoryMenu.getCarried().isEmpty()
+                        || !client.player.getInventory().getItem(2).is(Items.OAK_LOG)
+                        || client.player.getInventory().getItem(2).getCount() != 32
+                        || countContained(client.player.getInventory().getItem(0), Items.OAK_LOG) != 32) {
+                    throw new AssertionError("Returning the vanilla stack after double-click window changed ownership");
                 }
             });
 
