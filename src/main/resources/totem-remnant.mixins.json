@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_25",
   "mixins": [
     "AbstractContainerMenuInvoker",
+    "AbstractContainerMenuPickupAllMixin",
     "EntityMixin",
     "ItemEntityMixin",
     "InventoryMatchingPickupMixin",

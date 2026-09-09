@@ -509,6 +509,12 @@ public final class BackpackUpgradeGameTest {
     public void craftingResultClicksAndQuickMovesNeverDropItems(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         try {
+            // Other tests also create mock players at (0, 0, 0). Observe drops
+            // inside this test's own structure so unrelated item entities cannot
+            // make a successful result pickup look like an accidental drop.
+            var position = helper.absolutePos(new net.minecraft.core.BlockPos(1, 2, 1));
+            player.setPos(position.getX() + 0.5, position.getY(), position.getZ() + 0.5);
+            require(helper, nearbyDrops(player) == 0, "Crafting fixture already contains an ItemEntity");
             ItemStack backpack = new ItemStack(RemnantItemRegistration.BACKPACK_BASIC);
             install(backpack, RemnantItemRegistration.UPGRADE_CRAFTING);
             player.setItemInHand(InteractionHand.MAIN_HAND, backpack);

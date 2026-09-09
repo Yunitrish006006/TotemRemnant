@@ -12,6 +12,7 @@
       "dev.totem.remnant.gametest.RemnantRestartProbe"
     ],
     "fabric-gametest": [
+      "dev.totem.remnant.inventory.BackpackPanelInteractionGameTest",
       "dev.totem.remnant.death.DeathBackpackLifecycleGameTest",
       "dev.totem.remnant.death.BackpackUpgradeGameTest",
       "dev.totem.remnant.gametest.BackpackDyeingGameTest",
@@ -23,6 +24,7 @@
       "dev.totem.remnant.manual.RemnantManualGameTest"
     ],
     "fabric-client-gametest": [
+      "dev.totem.remnant.client.VanillaInventoryCraftingClientGameTest",
       "dev.totem.remnant.client.RemnantCreativeTabVisualGameTest",
       "dev.totem.remnant.client.RemnantObserverProviderClientGameTest",
       "dev.totem.remnant.client.TotemManualVisualGameTest",

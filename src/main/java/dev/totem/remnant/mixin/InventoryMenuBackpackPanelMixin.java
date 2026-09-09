@@ -21,7 +21,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 abstract class InventoryMenuBackpackPanelMixin implements BackpackPanelMenuAccess {
     @Unique private BackpackPanelContainer totem$backpackPanel;
     @Unique private int totem$backpackPanelSlotStart;
-    @Unique private boolean totem$pickupAllStartedInBackpackPanel;
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void totem$addBackpackPanelSlots(
@@ -56,25 +55,6 @@ abstract class InventoryMenuBackpackPanelMixin implements BackpackPanelMenuAcces
         // player's inventory/hotbar must retain vanilla quick-move behavior even while the E-screen
         // backpack panel is visible. The panel remains interactive, and Shift-clicking a panel slot
         // still moves that stack back into the normal player inventory.
-    }
-
-    @Inject(method = "canTakeItemForPickAll", at = @At("HEAD"), cancellable = true)
-    private void totem$boundPickupAllToItsOriginSurface(
-            ItemStack carried,
-            Slot target,
-            CallbackInfoReturnable<Boolean> callback
-    ) {
-        // InventoryMenu calls this once for the initially double-clicked slot with a null
-        // carried argument, then again while scanning candidate slots. Remember which
-        // surface owns the gesture so a vanilla inventory double-click cannot silently
-        // drain matching stacks out of the adjacent Remnant backpack.
-        if (carried == null) {
-            totem$pickupAllStartedInBackpackPanel = target instanceof BackpackPanelSlot;
-            return;
-        }
-        if (target instanceof BackpackPanelSlot && !totem$pickupAllStartedInBackpackPanel) {
-            callback.setReturnValue(false);
-        }
     }
 
     @Override

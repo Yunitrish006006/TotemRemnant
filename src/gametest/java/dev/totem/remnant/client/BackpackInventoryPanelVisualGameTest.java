@@ -89,8 +89,13 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
                 }
             });
 
-            // A rapid second left-click is vanilla PICKUP_ALL. It must stay on the
-            // vanilla inventory surface instead of draining the adjacent backpack panel.
+            // Start a fresh double-click after returning the single-click fixture.
+            // Client/server assertions between clicks can exceed Minecraft's real
+            // double-click deadline on a busy runner, turning it into two single clicks.
+            context.waitTicks(8);
+            context.getInput().pressMouse(0);
+            context.waitTicks(8);
+            context.getInput().pressMouse(0);
             context.getInput().pressMouse(0);
             context.waitTicks(3);
             AtomicReference<String> vanillaDoubleClickServerState = new AtomicReference<>();

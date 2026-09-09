@@ -2,6 +2,7 @@ package dev.totem.remnant.inventory;
 
 import dev.totem.remnant.registry.RemnantItemRegistration;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -220,6 +221,10 @@ public final class BackpackPanelInteractionGameTest {
     public void panelSupportsNativeSplitSwapThrowDragAndDoubleClick(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         try {
+            // THROW creates a real item entity; keep it inside this test's fixture
+            // instead of the shared default mock-player position used by other tests.
+            BlockPos position = helper.absolutePos(new BlockPos(1, 2, 1));
+            player.setPos(position.getX() + 0.5, position.getY(), position.getZ() + 0.5);
             ItemStack backpack = backpackWithItems(
                     new ItemStack(Items.IRON_INGOT, 5),
                     new ItemStack(Items.IRON_INGOT, 4),
@@ -290,9 +295,12 @@ public final class BackpackPanelInteractionGameTest {
                 return;
             }
 
-            player.inventoryMenu.setCarried(new ItemStack(Items.REDSTONE));
+            // The first physical click empties its origin; vanilla PICKUP_ALL
+            // intentionally does nothing when the clicked slot still holds an item.
+            player.inventoryMenu.setCarried(ItemStack.EMPTY);
+            player.inventoryMenu.clicked(panelStart + 3, 0, ContainerInput.PICKUP, player);
             player.inventoryMenu.clicked(panelStart + 3, 0, ContainerInput.PICKUP_ALL, player);
-            if (player.inventoryMenu.getCarried().getCount() != 9
+            if (player.inventoryMenu.getCarried().getCount() != 8
                     || !panelItem(backpack, 3).isEmpty()
                     || !panelItem(backpack, 4).isEmpty()
                     || !panelItem(backpack, 6).isEmpty()
@@ -304,6 +312,110 @@ public final class BackpackPanelInteractionGameTest {
         } finally {
             player.discard();
         }
+    }
+
+    @GameTest(maxTicks = 20)
+    public void doubleClickCollectionIsSymmetricAndDoesNotRememberPreviousSurface(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        try {
+            ItemStack backpack = backpackWithItems(new ItemStack(Items.REDSTONE, 5), new ItemStack(Items.REDSTONE, 7));
+            player.getInventory().setItem(0, backpack);
+            player.getInventory().setItem(2, new ItemStack(Items.REDSTONE, 11));
+            player.getInventory().setItem(3, new ItemStack(Items.REDSTONE, 13));
+            BackpackPanelMenuAccess access = (BackpackPanelMenuAccess) player.inventoryMenu;
+            access.totem$selectBackpackSlot(0);
+            int panel = access.totem$getBackpackPanelSlotStart();
+            int inventory = findPlayerInventoryMenuSlot(player, 2);
+
+            doubleClick(player, panel);
+            if (player.inventoryMenu.getCarried().getCount() != 12
+                    || !panelItem(backpack, 0).isEmpty() || !panelItem(backpack, 1).isEmpty()
+                    || player.getInventory().getItem(2).getCount() != 11
+                    || player.getInventory().getItem(3).getCount() != 13) {
+                helper.fail("Panel double-click crossed into player inventory or failed to collect its own surface");
+                return;
+            }
+            player.inventoryMenu.clicked(panel, 0, ContainerInput.PICKUP, player);
+
+            doubleClick(player, inventory);
+            if (player.inventoryMenu.getCarried().getCount() != 24
+                    || !player.getInventory().getItem(2).isEmpty()
+                    || !player.getInventory().getItem(3).isEmpty()
+                    || panelItem(backpack, 0).getCount() != 12) {
+                helper.fail("Inventory double-click inherited the preceding panel origin");
+                return;
+            }
+            player.inventoryMenu.clicked(inventory, 0, ContainerInput.PICKUP, player);
+
+            doubleClick(player, panel);
+            if (player.inventoryMenu.getCarried().getCount() != 12
+                    || player.getInventory().getItem(2).getCount() != 24
+                    || !panelItem(backpack, 0).isEmpty()) {
+                helper.fail("Panel double-click inherited the preceding inventory origin");
+                return;
+            }
+            helper.succeed();
+        } finally {
+            player.discard();
+        }
+    }
+
+    @GameTest(maxTicks = 20)
+    public void doubleClickKeepsVanillaMaximumAndConservesExcess(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        try {
+            ItemStack backpack = backpackWithItems(new ItemStack(Items.REDSTONE, 40), new ItemStack(Items.REDSTONE, 40));
+            player.getInventory().setItem(0, backpack);
+            player.getInventory().setItem(2, new ItemStack(Items.REDSTONE, 16));
+            BackpackPanelMenuAccess access = (BackpackPanelMenuAccess) player.inventoryMenu;
+            access.totem$selectBackpackSlot(0);
+            doubleClick(player, access.totem$getBackpackPanelSlotStart());
+            if (player.inventoryMenu.getCarried().getCount() != 64
+                    || !panelItem(backpack, 0).isEmpty()
+                    || panelItem(backpack, 1).getCount() != 16
+                    || player.getInventory().getItem(2).getCount() != 16) {
+                helper.fail("Panel double-click exceeded the native maximum or lost the uncollected remainder");
+                return;
+            }
+            helper.succeed();
+        } finally {
+            player.discard();
+        }
+    }
+
+    @GameTest(maxTicks = 20)
+    public void doubleClickInactiveOrOutsideOriginCannotCollect(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        try {
+            ItemStack backpack = backpackWith(new ItemStack(Items.REDSTONE, 5));
+            player.getInventory().setItem(0, backpack);
+            player.getInventory().setItem(2, new ItemStack(Items.REDSTONE, 7));
+            BackpackPanelMenuAccess access = (BackpackPanelMenuAccess) player.inventoryMenu;
+            access.totem$selectBackpackSlot(0);
+            int inactive = access.totem$getBackpackPanelSlotStart() + 9;
+            if (player.inventoryMenu.getSlot(inactive).isActive()) {
+                helper.fail("Expected a slot outside the basic backpack's nine-slot capacity");
+                return;
+            }
+            player.inventoryMenu.setCarried(new ItemStack(Items.REDSTONE));
+            for (int origin : new int[]{inactive, -999, -1}) {
+                player.inventoryMenu.clicked(origin, 0, ContainerInput.PICKUP_ALL, player);
+                if (player.inventoryMenu.getCarried().getCount() != 1
+                        || panelItem(backpack, 0).getCount() != 5
+                        || player.getInventory().getItem(2).getCount() != 7) {
+                    helper.fail("Inactive/outside double-click origin collected items: " + origin);
+                    return;
+                }
+            }
+            helper.succeed();
+        } finally {
+            player.discard();
+        }
+    }
+
+    private static void doubleClick(ServerPlayer player, int slot) {
+        player.inventoryMenu.clicked(slot, 0, ContainerInput.PICKUP, player);
+        player.inventoryMenu.clicked(slot, 0, ContainerInput.PICKUP_ALL, player);
     }
 
     private static int findPlayerInventoryMenuSlot(ServerPlayer player, int inventorySlot) {
