@@ -41,6 +41,7 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
                 player.getInventory().setItem(0, visualBackpack());
                 player.getInventory().setItem(1,
                         new ItemStack(RemnantItemRegistration.BACKPACK_BASIC));
+                player.getInventory().setItem(2, new ItemStack(Items.OAK_LOG, 32));
                 player.inventoryMenu.broadcastFullState();
             });
             context.waitFor(client -> client.player != null
@@ -64,6 +65,65 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
                 }
             });
             context.takeScreenshot("inventory-backpack-side-panel");
+
+            // Regression: the Remnant side panel must not disturb vanilla InventoryMenu
+            // cursor ownership for normal left/right clicks.
+            int[] vanillaSlot = inventorySlotCenter(context, 2);
+            context.getInput().setCursorPos(vanillaSlot[0], vanillaSlot[1]);
+            context.getInput().pressMouse(0);
+            context.waitTicks(3);
+            context.runOnClient(client -> {
+                if (!client.player.inventoryMenu.getCarried().is(Items.OAK_LOG)
+                        || client.player.inventoryMenu.getCarried().getCount() != 32
+                        || !client.player.getInventory().getItem(2).isEmpty()) {
+                    throw new AssertionError("Vanilla InventoryScreen left-click duplicated or desynchronized the stack");
+                }
+            });
+            singleplayer.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                if (!player.inventoryMenu.getCarried().is(Items.OAK_LOG)
+                        || player.inventoryMenu.getCarried().getCount() != 32
+                        || !player.getInventory().getItem(2).isEmpty()) {
+                    throw new AssertionError("Server disagreed with vanilla left-click ownership");
+                }
+            });
+
+            context.getInput().pressMouse(0);
+            context.waitTicks(3);
+            context.runOnClient(client -> {
+                if (!client.player.inventoryMenu.getCarried().isEmpty()
+                        || !client.player.getInventory().getItem(2).is(Items.OAK_LOG)
+                        || client.player.getInventory().getItem(2).getCount() != 32) {
+                    throw new AssertionError("Returning the vanilla stack changed its client count");
+                }
+            });
+
+            context.getInput().pressMouse(1);
+            context.waitTicks(3);
+            context.runOnClient(client -> {
+                if (!client.player.inventoryMenu.getCarried().is(Items.OAK_LOG)
+                        || client.player.inventoryMenu.getCarried().getCount() != 16
+                        || client.player.getInventory().getItem(2).getCount() != 16) {
+                    throw new AssertionError("Vanilla InventoryScreen right-click split duplicated or desynchronized items");
+                }
+            });
+            singleplayer.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                if (!player.inventoryMenu.getCarried().is(Items.OAK_LOG)
+                        || player.inventoryMenu.getCarried().getCount() != 16
+                        || player.getInventory().getItem(2).getCount() != 16) {
+                    throw new AssertionError("Server disagreed with vanilla right-click split ownership");
+                }
+            });
+
+            context.getInput().pressMouse(0);
+            context.waitTicks(3);
+            context.runOnClient(client -> {
+                if (!client.player.inventoryMenu.getCarried().isEmpty()
+                        || client.player.getInventory().getItem(2).getCount() != 32) {
+                    throw new AssertionError("Merging the vanilla split stack back changed its count");
+                }
+            });
 
             int[] firstSlot = panelSlotCenter(context, 0);
             int[] secondSlot = panelSlotCenter(context, 1);
@@ -324,6 +384,34 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
         contents.set(26, new ItemStack(Items.EMERALD, 7));
         backpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(contents));
         return backpack;
+    }
+
+    private static int[] inventorySlotCenter(ClientGameTestContext context, int inventorySlot) {
+        return context.computeOnClient(client -> {
+            InventoryScreen screen = (InventoryScreen) client.gui.screen();
+            var menu = client.player.inventoryMenu;
+            net.minecraft.world.inventory.Slot target = null;
+            for (var slot : menu.slots) {
+                if (slot.container == client.player.getInventory()
+                        && slot.getContainerSlot() == inventorySlot) {
+                    target = slot;
+                    break;
+                }
+            }
+            if (target == null) {
+                throw new IllegalStateException("Could not find player inventory slot " + inventorySlot);
+            }
+            int left = (screen.width - 176) / 2;
+            int top = (screen.height - 166) / 2;
+            double xScale = (double) client.getWindow().getScreenWidth()
+                    / client.getWindow().getGuiScaledWidth();
+            double yScale = (double) client.getWindow().getScreenHeight()
+                    / client.getWindow().getGuiScaledHeight();
+            return new int[]{
+                    (int) Math.round((left + target.x + 9) * xScale),
+                    (int) Math.round((top + target.y + 9) * yScale)
+            };
+        });
     }
 
     private static int[] panelSlotCenter(ClientGameTestContext context, int panelSlot) {
