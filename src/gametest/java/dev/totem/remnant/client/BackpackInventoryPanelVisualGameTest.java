@@ -42,6 +42,7 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
                 player.getInventory().setItem(1,
                         new ItemStack(RemnantItemRegistration.BACKPACK_BASIC));
                 player.getInventory().setItem(2, new ItemStack(Items.OAK_LOG, 32));
+                player.getInventory().setItem(3, new ItemStack(Items.OAK_PLANKS, 4));
                 player.inventoryMenu.broadcastFullState();
             });
             context.waitFor(client -> client.player != null
@@ -124,6 +125,65 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
                     throw new AssertionError("Merging the vanilla split stack back changed its count");
                 }
             });
+
+            // Physical 2x2 crafting regression: right-click one plank into each vanilla
+            // crafting input, then take exactly one crafting-table result.
+            int[] plankSlot = inventorySlotCenter(context, 3);
+            context.getInput().setCursorPos(plankSlot[0], plankSlot[1]);
+            context.getInput().pressMouse(0);
+            context.waitTicks(2);
+            for (int craftSlot = 1; craftSlot <= 4; craftSlot++) {
+                int[] craftCenter = menuSlotCenter(context, craftSlot);
+                context.getInput().setCursorPos(craftCenter[0], craftCenter[1]);
+                context.getInput().pressMouse(1);
+                context.waitTicks(2);
+            }
+            context.waitFor(client -> client.player.inventoryMenu.getCarried().isEmpty()
+                    && client.player.inventoryMenu.getSlot(0).getItem().is(Items.CRAFTING_TABLE));
+            singleplayer.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                if (!player.inventoryMenu.getCarried().isEmpty()
+                        || !player.inventoryMenu.getSlot(0).getItem().is(Items.CRAFTING_TABLE)) {
+                    throw new AssertionError("Server did not resolve the vanilla 2x2 crafting result");
+                }
+                for (int craftSlot = 1; craftSlot <= 4; craftSlot++) {
+                    if (!player.inventoryMenu.getSlot(craftSlot).getItem().is(Items.OAK_PLANKS)
+                            || player.inventoryMenu.getSlot(craftSlot).getItem().getCount() != 1) {
+                        throw new AssertionError("Server vanilla 2x2 input count diverged");
+                    }
+                }
+            });
+
+            int[] resultCenter = menuSlotCenter(context, 0);
+            context.getInput().setCursorPos(resultCenter[0], resultCenter[1]);
+            context.getInput().pressMouse(0);
+            context.waitTicks(3);
+            context.runOnClient(client -> {
+                if (!client.player.inventoryMenu.getCarried().is(Items.CRAFTING_TABLE)
+                        || client.player.inventoryMenu.getCarried().getCount() != 1) {
+                    throw new AssertionError("Vanilla 2x2 result was duplicated or desynchronized on the client");
+                }
+                for (int craftSlot = 1; craftSlot <= 4; craftSlot++) {
+                    if (client.player.inventoryMenu.getSlot(craftSlot).hasItem()) {
+                        throw new AssertionError("Client vanilla 2x2 input was not consumed exactly once");
+                    }
+                }
+            });
+            singleplayer.getServer().runOnServer(server -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                if (!player.inventoryMenu.getCarried().is(Items.CRAFTING_TABLE)
+                        || player.inventoryMenu.getCarried().getCount() != 1) {
+                    throw new AssertionError("Server vanilla 2x2 result ownership diverged");
+                }
+                for (int craftSlot = 1; craftSlot <= 4; craftSlot++) {
+                    if (player.inventoryMenu.getSlot(craftSlot).hasItem()) {
+                        throw new AssertionError("Server vanilla 2x2 input was not consumed exactly once");
+                    }
+                }
+            });
+            context.getInput().setCursorPos(plankSlot[0], plankSlot[1]);
+            context.getInput().pressMouse(0);
+            context.waitTicks(2);
 
             int[] firstSlot = panelSlotCenter(context, 0);
             int[] secondSlot = panelSlotCenter(context, 1);
@@ -384,6 +444,23 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
         contents.set(26, new ItemStack(Items.EMERALD, 7));
         backpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(contents));
         return backpack;
+    }
+
+    private static int[] menuSlotCenter(ClientGameTestContext context, int menuSlot) {
+        return context.computeOnClient(client -> {
+            InventoryScreen screen = (InventoryScreen) client.gui.screen();
+            var target = client.player.inventoryMenu.getSlot(menuSlot);
+            int left = (screen.width - 176) / 2;
+            int top = (screen.height - 166) / 2;
+            double xScale = (double) client.getWindow().getScreenWidth()
+                    / client.getWindow().getGuiScaledWidth();
+            double yScale = (double) client.getWindow().getScreenHeight()
+                    / client.getWindow().getGuiScaledHeight();
+            return new int[]{
+                    (int) Math.round((left + target.x + 9) * xScale),
+                    (int) Math.round((top + target.y + 9) * yScale)
+            };
+        });
     }
 
     private static int[] inventorySlotCenter(ClientGameTestContext context, int inventorySlot) {
