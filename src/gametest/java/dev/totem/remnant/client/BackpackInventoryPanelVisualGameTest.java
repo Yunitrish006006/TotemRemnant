@@ -89,6 +89,10 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
                 }
             });
 
+            // Leave the vanilla double-click window before placing the stack back.
+            // A rapid second left-click intentionally runs PICKUP_ALL and may collect
+            // matching stacks from the interactive backpack panel.
+            context.waitTicks(8);
             context.getInput().pressMouse(0);
             context.waitTicks(3);
             AtomicReference<String> vanillaReturnServerState = new AtomicReference<>();
