@@ -1,0 +1,11 @@
+{
+  "version": "0.2.25",
+  "java": 25,
+  "minecraft": "26.2",
+  "artifact": "totem-remnant-0.2.25.jar",
+  "sha512": "ee7fe00c63da74563230c4c7db811555fc9abd5d436d4ee458a8edc96d20e855e6d99f16ac42a2d0a2ddcafd51ac55050c0f85d6d1ce87478b274abaf383bd9c",
+  "unit_tests": 2,
+  "core_dependency": ">=0.7.21 <0.8.0",
+  "validation": "Versioned test, assemble and compileGametestJava passed locally. Previous source validation includes Nexus 108 server GameTests and VanillaTweaks/Alchemy en_us and zh_tw client tests, plus Alchemy/Core localized manual screenshots. Exact release commit CI is required by the publisher.",
+  "independent_review": "Independent source, localization and release workflow reviews completed; reported filename and whitespace fixes applied."
+}
