@@ -3,14 +3,13 @@
   "criteria": {
     "crafted_smithing_table": {
       "conditions": {
-        "recipe_id": "minecraft:smithing_table"
+        "recipes": "minecraft:smithing_table"
       },
       "trigger": "minecraft:recipe_crafted"
     }
   },
   "display": {
     "announce_to_chat": false,
-    "background": "minecraft:gui/advancements/backgrounds/adventure",
     "description": {
       "translate": "advancements.totem.remnant_root.description"
     },

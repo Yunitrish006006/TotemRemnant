@@ -181,7 +181,7 @@ public final class ContainerNestingDiagnostics {
         BundleContents bundle =
                 stack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
         int bundleIndex = 0;
-        for (ItemStack child : bundle.itemCopyStream().toList()) {
+        for (ItemStack child : bundle.itemCopies().toList()) {
             children.add(new ChildStack("bundle", bundleIndex++, child));
         }
         return children;

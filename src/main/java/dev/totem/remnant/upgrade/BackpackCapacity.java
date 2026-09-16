@@ -16,7 +16,7 @@ public final class BackpackCapacity {
         int configured = configuredSlots(backpack);
         if (configured == 0) return 0;
         int storedFootprint = (int) backpack.getOrDefault(
-                DataComponents.CONTAINER, ItemContainerContents.EMPTY).allItemsCopyStream().count();
+                DataComponents.CONTAINER, ItemContainerContents.EMPTY).itemCopies().count();
         int recoverable = (storedFootprint + SLOTS_PER_MODULE - 1) / SLOTS_PER_MODULE
                 * SLOTS_PER_MODULE;
         // Never hide legacy/orphaned contents. Once those rows are emptied, fromItems trims them

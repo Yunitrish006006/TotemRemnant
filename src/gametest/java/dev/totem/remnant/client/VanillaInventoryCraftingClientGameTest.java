@@ -26,7 +26,7 @@ public final class VanillaInventoryCraftingClientGameTest implements FabricClien
     @Override
     public void runTest(ClientGameTestContext context) {
         try (TestSingleplayerContext world = context.worldBuilder().create()) {
-            world.getClientLevel().waitForChunksRender();
+            world.getConnection().waitForChunksRender();
             for (boolean backpack : new boolean[]{false, true}) {
                 for (int column = 0; column < 2; column++) {
                     craftSticks(context, world, backpack, column, false);

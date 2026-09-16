@@ -13,7 +13,7 @@
     },
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
-      "conditions": { "recipe": "totem:remnant/upgrade_perfect_preservation" }
+      "conditions": { "recipes": "totem:remnant/upgrade_perfect_preservation" }
     }
   },
   "requirements": [["has_materials", "has_the_recipe"]],

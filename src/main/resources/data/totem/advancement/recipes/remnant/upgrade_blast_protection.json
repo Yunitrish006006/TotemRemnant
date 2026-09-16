@@ -10,7 +10,7 @@
     },
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
-      "conditions": { "recipe": "totem:remnant/upgrade_blast_protection" }
+      "conditions": { "recipes": "totem:remnant/upgrade_blast_protection" }
     }
   },
   "requirements": [["has_materials", "has_the_recipe"]],

@@ -10,7 +10,7 @@
     },
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
-      "conditions": { "recipe": "totem:remnant/upgrade_ender_access" }
+      "conditions": { "recipes": "totem:remnant/upgrade_ender_access" }
     }
   },
   "requirements": [["has_materials", "has_the_recipe"]],

@@ -10,7 +10,7 @@
     },
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
-      "conditions": { "recipe": "totem:remnant/backpack_advanced_dyed" }
+      "conditions": { "recipes": "totem:remnant/backpack_advanced_dyed" }
     }
   },
   "requirements": [["has_materials", "has_the_recipe"]],

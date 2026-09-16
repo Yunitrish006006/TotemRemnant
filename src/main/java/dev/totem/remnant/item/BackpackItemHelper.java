@@ -41,7 +41,7 @@ public final class BackpackItemHelper {
     public static int storedSlotFootprint(ItemStack backpackStack) {
         if (!isBackpackItem(backpackStack)) return 0;
         return (int) backpackStack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY)
-                .allItemsCopyStream().count();
+                .itemCopies().count();
     }
 
     public static boolean isDeathBackpackItem(ItemStack stack) {

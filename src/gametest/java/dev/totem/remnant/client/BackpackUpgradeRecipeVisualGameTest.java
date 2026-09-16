@@ -28,7 +28,7 @@ public final class BackpackUpgradeRecipeVisualGameTest implements FabricClientGa
         });
         try {
             try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
-                singleplayer.getClientLevel().waitForChunksRender();
+                singleplayer.getConnection().waitForChunksRender();
                 context.setScreen(UpgradeRecipeScreen::new);
                 context.waitForScreen(UpgradeRecipeScreen.class);
                 context.waitTicks(20);

@@ -244,7 +244,7 @@ public final class BackpackPanelContainer implements Container {
         }
 
         loadedContents = backpack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY);
-        List<ItemStack> serialized = loadedContents.allItemsCopyStream().toList();
+        List<ItemStack> serialized = loadedContents.itemCopies().toList();
         int visible = Math.min(MAX_PANEL_SLOTS, serialized.size());
         for (int slot = 0; slot < visible; slot++) {
             items.set(slot, serialized.get(slot));

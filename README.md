@@ -1,7 +1,7 @@
 # TotemRemnant
 
 TotemRemnant 是 Totem 系列的背包、死亡物品保護與可攜式容器安全模組。
-目前開發版本為 **0.2.24**，需要 TotemCore **0.7.19 以上、0.8.0 以下**。
+目前開發版本為 **0.2.26**，需要 TotemCore **0.7.19 以上、0.8.0 以下**。
 0.2.22 修正原版物品欄與背包側欄的物品歸屬：切換背包時維持格位身分與
 原版同步狀態，並防止原版雙擊收集誤取背包側欄物品。
 
@@ -9,17 +9,17 @@ TotemRemnant 是 Totem 系列的背包、死亡物品保護與可攜式容器安
 
 將下列 JAR 放入 Client 與 Server 的 `mods/`：
 
-1. Fabric API `0.154.2+26.2`
-2. TotemCore `>=0.7.21 <0.8.0`
+1. Fabric API `0.160.5+26.3`
+2. TotemCore `>=0.7.22 <0.8.0`
 3. TotemRemnant `0.2.22`
 
 | 項目 | 需求 |
 | --- | --- |
-| Minecraft | 26.2 |
-| Fabric Loader | 0.19.3+ |
+| Minecraft | 26.3 |
+| Fabric Loader | 0.19.5+ |
 | Java | 25+ |
-| 必要 Totem 模組 | `totem-core >=0.7.21 <0.8.0` |
-| 選配 | Trinkets Updated 4.1.0-beta.2+ |
+| 必要 Totem 模組 | `totem-core >=0.7.22 <0.8.0` |
+| 選配 | Trinkets Updated 4.2.0+ |
 
 舊整合 JAR 不應再與獨立 TotemRemnant 並用。
 

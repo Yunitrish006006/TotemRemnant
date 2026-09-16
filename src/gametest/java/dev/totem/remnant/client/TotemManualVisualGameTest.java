@@ -35,7 +35,7 @@ public final class TotemManualVisualGameTest implements FabricClientGameTest {
         context.getInput().resizeWindow(1280, 720);
 
         try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
-            singleplayer.getClientLevel().waitForChunksRender();
+            singleplayer.getConnection().waitForChunksRender();
             singleplayer.getServer().runOnServer(server -> server.getGameRules().set(
                     RemnantGameRules.DEATH_BACKPACK_OWNER_PICKUP_ONLY,
                     false,

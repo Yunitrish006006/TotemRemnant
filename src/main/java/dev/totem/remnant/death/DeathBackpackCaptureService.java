@@ -7,6 +7,7 @@ import com.adaptor.totem.api.death.DeathBackpackAddonSlot;
 import dev.totem.remnant.inventory.PortableContainerPolicy;
 import dev.totem.remnant.registry.RemnantGameRules;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.Prediction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -267,9 +268,9 @@ public final class DeathBackpackCaptureService {
 
             transientStack.clear();
             ItemStack looseContainer = stack.copy();
-            ItemEntity dropped = player.drop(looseContainer, false);
+            ItemEntity dropped = player.drop(looseContainer, false, Prediction.SERVER_ONLY);
             if (dropped == null) {
-                inventory.placeItemBackInInventory(looseContainer, false);
+                inventory.placeItemBackInInventory(looseContainer, Prediction.SERVER_ONLY);
             }
         }
     }
@@ -311,7 +312,7 @@ public final class DeathBackpackCaptureService {
     ) {
         for (TransientStack transientStack : transientStacks) {
             ItemStack restored = transientStack.stack().copy();
-            inventory.placeItemBackInInventory(restored, false);
+            inventory.placeItemBackInInventory(restored, Prediction.SERVER_ONLY);
         }
     }
 
@@ -334,7 +335,7 @@ public final class DeathBackpackCaptureService {
                         exception
                 );
             }
-            inventory.placeItemBackInInventory(restored, false);
+            inventory.placeItemBackInInventory(restored, Prediction.SERVER_ONLY);
         }
     }
 

@@ -31,7 +31,7 @@ public final class BackpackInventoryPanelVisualGameTest implements FabricClientG
     public void runTest(ClientGameTestContext context) {
         selectLanguage(context, "zh_tw");
         try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
-            singleplayer.getClientLevel().waitForChunksRender();
+            singleplayer.getConnection().waitForChunksRender();
             singleplayer.getServer().runOnServer(server -> {
                 var players = server.getPlayerList().getPlayers();
                 if (players.isEmpty()) {

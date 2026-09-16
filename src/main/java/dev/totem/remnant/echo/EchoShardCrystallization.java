@@ -2,6 +2,7 @@ package dev.totem.remnant.echo;
 
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.Prediction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -56,7 +57,7 @@ public final class EchoShardCrystallization {
         }
         ItemStack result = new ItemStack(Items.ECHO_SHARD);
         if (!serverPlayer.addItem(result)) {
-            serverPlayer.drop(result, false);
+            serverPlayer.drop(result, false, Prediction.SERVER_ONLY);
         }
         serverPlayer.awardStat(Stats.ITEM_USED.get(Items.AMETHYST_SHARD));
         serverLevel.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE,

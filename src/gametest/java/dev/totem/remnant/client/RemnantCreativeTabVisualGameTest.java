@@ -20,7 +20,7 @@ public final class RemnantCreativeTabVisualGameTest implements FabricClientGameT
     @Override
     public void runTest(ClientGameTestContext context) {
         try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
-            singleplayer.getClientLevel().waitForChunksRender();
+            singleplayer.getConnection().waitForChunksRender();
             singleplayer.getServer().runCommand("gamemode creative @a");
             context.waitFor(RemnantCreativeTabVisualGameTest::hasCreativeAbilities);
             context.runOnClient(RemnantCreativeTabVisualGameTest::openCreativeScreen);

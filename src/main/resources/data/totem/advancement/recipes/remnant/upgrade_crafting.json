@@ -10,7 +10,7 @@
     },
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
-      "conditions": { "recipe": "totem:remnant/upgrade_crafting" }
+      "conditions": { "recipes": "totem:remnant/upgrade_crafting" }
     }
   },
   "requirements": [["has_materials", "has_the_recipe"]],
