@@ -319,3 +319,50 @@ tasks.named('remapJar') {
         normalizeArchive(archiveFile.get().asFile)
     }
 }
+
+// A deterministic bounded client profile; toggling it restores the full source
+// entrypoint list on the next processGametestResources invocation.
+def backpackActionsOnly = providers.gradleProperty('totemBackpackActionsOnly').map { it.toBoolean() }.getOrElse(false)
+tasks.named('processGametestResources', ProcessResources).configure {
+    inputs.property('totemBackpackActionsOnly', backpackActionsOnly)
+    doLast {
+        if (backpackActionsOnly) {
+            File metadata = new File(destinationDir, 'fabric.mod.json')
+            def json = new groovy.json.JsonSlurper().parse(metadata)
+            json.entrypoints['fabric-client-gametest'] = [
+                    'dev.totem.remnant.client.BackpackActionsClientGameTest',
+                    'dev.totem.remnant.client.RemnantObserverProviderClientGameTest'
+            ]
+            metadata.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(json)) + '\n'
+        }
+    }
+}
+
+dependencies {
+    productionRuntimeMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    productionRuntimeMods files(totemCoreJar)
+    if (totemVisualModuleJars != null && !totemVisualModuleJars.isBlank()) {
+        totemVisualModuleJars.split(',').each { moduleJar -> productionRuntimeMods files(file(moduleJar.trim())) }
+    }
+}
+tasks.register('productionGametestModJar', Jar) {
+    dependsOn(sourceSets.gametest.classesTaskName, sourceSets.gametest.processResourcesTaskName)
+    archiveClassifier = 'production-gametest'
+    from sourceSets.gametest.output
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+tasks.register('runProductionClientGameTest', net.fabricmc.loom.task.prod.ClientProductionRunTask) {
+    dependsOn('productionGametestModJar')
+    mods.from(tasks.named('productionGametestModJar').flatMap { it.archiveFile })
+    jvmArgs.add('-Dfabric.client.gametest')
+    jvmArgs.add('-Dfabric.client.gametest.disableNetworkSynchronizer=true')
+    def expectedVanillaTweaks = providers.gradleProperty('totemExpectedVanillaTweaks').orNull
+    if (expectedVanillaTweaks != null) {
+        if (!(expectedVanillaTweaks in ['true', 'false'])) {
+            throw new GradleException('totemExpectedVanillaTweaks must be true or false')
+        }
+        jvmArgs.add("-Dtotem.remnant.test.expectedVanillaTweaks=${expectedVanillaTweaks}")
+    }
+    useXVFB = true
+}

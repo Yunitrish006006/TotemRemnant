@@ -10,6 +10,9 @@ public final class BackpackPanelPayloadRegistration {
     }
 
     public static void register() {
+        PayloadTypeRegistry.serverboundPlay().register(BackpackSortPayload.TYPE, BackpackSortPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(BackpackSortPayload.TYPE,
+                (payload, context) -> context.server().execute(() -> handleSort(context.player(), payload)));
         PayloadTypeRegistry.serverboundPlay().register(
                 SelectBackpackPanelPayload.TYPE,
                 SelectBackpackPanelPayload.CODEC
@@ -32,4 +35,25 @@ public final class BackpackPanelPayloadRegistration {
                 })
         );
     }
+    /** Same validated path for packet handling and deterministic server tests. */
+    public static boolean handleSort(net.minecraft.server.level.ServerPlayer player, BackpackSortPayload payload) {
+        var menu = player.containerMenu;
+        if (menu.containerId != payload.menuId() || menu.getStateId() != payload.stateId()) return false;
+        if (menu == player.inventoryMenu && menu instanceof BackpackPanelMenuAccess access) {
+            var panel = access.totem$getBackpackPanel();
+            if (panel.selectedInventorySlot() != payload.selectedSlot()
+                    || !net.minecraft.world.item.ItemStack.matches(panel.selectedBackpack(), payload.expectedBackpack())) return false;
+        } else if (!(menu instanceof dev.totem.remnant.inventory.BackpackMenu)
+                && !dev.totem.remnant.inventory.MatchingBackpackSort.isVanillaChest(menu)) return false;
+        int hovered = payload.hoveredSlot();
+        if (hovered < 0 || hovered >= menu.slots.size()) return false;
+        var slot = menu.getSlot(hovered);
+        if (!slot.isActive()) return false;
+        boolean playerSide = slot.container == player.getInventory();
+        if (!playerSide && !(slot instanceof dev.totem.remnant.inventory.BackpackPanelSlot)
+                && !dev.totem.remnant.inventory.MatchingBackpackSort.isVanillaChest(menu)
+                && (!(menu instanceof dev.totem.remnant.inventory.BackpackMenu b) || hovered >= b.storageSlotCount())) return false;
+        return dev.totem.remnant.inventory.BackpackActions.sort(player, playerSide);
+    }
+
 }

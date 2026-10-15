@@ -40,6 +40,7 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu>
     private final int visibleRows;
     private int firstVisibleRow;
     private Button enderAccessButton;
+    private Button equipButton;
     private final boolean observerReadOnly;
     private final Runnable observerStop;
 
@@ -62,7 +63,7 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu>
     protected void init() {
         super.init();
         // Centre the backpack and both side panels as one combined interface.
-        leftPos -= (BackpackMenu.CRAFTING_PANEL_X
+        if (!backpackMenu.isDeathBackpack()) leftPos -= (BackpackMenu.CRAFTING_PANEL_X
                 + BackpackMenu.CRAFTING_PANEL_WIDTH - imageWidth) / 2;
         enderAccessButton = Button.builder(Component.literal("◈"), ignored -> {
                     if (minecraft != null && minecraft.gameMode != null) {
@@ -77,6 +78,15 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu>
         enderAccessButton.visible = backpackMenu.hasUpgrade(BackpackUpgradeType.ENDER_ACCESS);
         enderAccessButton.active = !observerReadOnly;
         addRenderableWidget(enderAccessButton);
+        if (backpackMenu.isDeathBackpack()) {
+            equipButton = Button.builder(Component.translatable("container.totem.death_backpack.equip"), ignored -> {
+                if (!observerReadOnly && minecraft != null && minecraft.gameMode != null)
+                    minecraft.gameMode.handleInventoryButtonClick(menu.containerId, BackpackMenu.EQUIP_BUTTON_ID);
+            }).bounds(leftPos + 88, topPos - 23, 88, 20)
+                    .tooltip(Tooltip.create(Component.translatable("container.totem.death_backpack.equip.tooltip"))).build();
+            equipButton.active = !observerReadOnly;
+            addRenderableWidget(equipButton);
+        }
     }
 
     @Override
@@ -88,6 +98,8 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu>
         }
     }
 
+    public Button equipButton() { return equipButton; }
+
     public boolean isEnderAccessButtonVisible() {
         return enderAccessButton != null && enderAccessButton.visible;
     }
@@ -97,6 +109,7 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu>
         if (!super.hasClickedOutside(mouseX, mouseY, left, top)) {
             return false;
         }
+        if (backpackMenu.isDeathBackpack()) return equipButton == null || !equipButton.isMouseOver(mouseX, mouseY);
         if (insidePanel(mouseX, mouseY, left + BackpackMenu.UPGRADE_PANEL_X, top,
                 BackpackMenu.UPGRADE_PANEL_WIDTH, UPGRADE_PANEL_HEIGHT)) {
             return false;
@@ -176,6 +189,7 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu>
                 leftPos, topPos + storageHeight, 0.0F, 126.0F,
                 imageWidth, 96, 256, 256);
         renderScrollbar(graphics);
+        if (backpackMenu.isDeathBackpack()) return;
         int left = leftPos + BackpackMenu.UPGRADE_PANEL_X;
         int top = topPos;
         renderPanelBackground(graphics, left, top,
@@ -211,6 +225,7 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu>
     @Override
     protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         super.extractLabels(graphics, mouseX, mouseY);
+        if (backpackMenu.isDeathBackpack()) return;
         Component label = Component.translatable("container.totem.backpack.upgrades");
         graphics.text(font, label,
                 BackpackMenu.UPGRADE_PANEL_X

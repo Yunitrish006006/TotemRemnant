@@ -12,6 +12,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ObserverPacketProbeMixin {
     @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;)V", at = @At("HEAD"))
     private void totem$recordObserverPacket(Packet<?> packet, CallbackInfo ci) {
-        ObserverPacketProbe.record();
+        ObserverPacketProbe.record(packet);
     }
 }

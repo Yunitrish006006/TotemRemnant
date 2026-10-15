@@ -13,8 +13,9 @@ public final class BackpackMenuRegistration {
             BuiltInRegistries.MENU,
             Identifier.fromNamespaceAndPath("totem", "remnant/backpack"),
             new ExtendedMenuType<>(
-                    (containerId, inventory, data) -> BackpackMenu.clientSide(
-                            containerId, inventory, data & 0xFF, data >>> 8 & 0xFF),
+                    (containerId, inventory, data) -> (data & 0x10000) != 0
+                            ? BackpackMenu.deathClientSide(containerId, inventory, data & 0xFF)
+                            : BackpackMenu.clientSide(containerId, inventory, data & 0xFF, data >>> 8 & 0xFF),
                     ByteBufCodecs.VAR_INT
             )
     );

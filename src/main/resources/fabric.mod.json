@@ -6,10 +6,20 @@
   "icon": "assets/totem-remnant/icon.png",
   "environment": "*",
   "entrypoints": {
-    "main": ["dev.totem.remnant.TotemRemnant"],
-    "client": ["dev.totem.remnant.client.TotemRemnantClient"],
+    "main": [
+      "dev.totem.remnant.TotemRemnant"
+    ],
+    "client": [
+      "dev.totem.remnant.client.TotemRemnantClient"
+    ],
     "totem:observer_screen_provider": [
       "dev.totem.remnant.client.screen.RemnantBackpackObserverScreenProvider"
+    ],
+    "totem:container_sort_server_v1": [
+      "dev.totem.remnant.integration.sorting.RemnantSortProvider"
+    ],
+    "totem:container_sort_client_v1": [
+      "dev.totem.remnant.client.integration.RemnantSortClientProvider"
     ]
   },
   "mixins": [

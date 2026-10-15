@@ -21,12 +21,12 @@ import java.util.Map;
 public final class RemnantBackpackObserverScreenProvider implements ObserverScreenProvider {
     @Override public String familyId() { return "remnant_backpack"; }
     @Override public int protocolVersion() { return 1; }
-    @Override public Set<String> variants() { return Set.of(""); }
+    @Override public Set<String> variants() { return Set.of("", "death"); }
 
     @Override public Optional<ObserverScreenSnapshot> capture(Screen candidate, long sequence) {
         if (!(candidate instanceof BackpackScreen screen) || screen.totem$isObserverReadOnly()) return Optional.empty();
         BackpackMenu menu = screen.getMenu();
-        return Optional.of(new ObserverScreenSnapshot(familyId(), "", protocolVersion(), sequence,
+        return Optional.of(new ObserverScreenSnapshot(familyId(), menu.isDeathBackpack() ? "death" : "", protocolVersion(), sequence,
                 screen.getTitle(), menu.getItems(), new int[]{menu.getRowCount(), menu.upgradeSlotCount()},
                 Map.of(), new byte[0]));
     }
@@ -39,7 +39,9 @@ public final class RemnantBackpackObserverScreenProvider implements ObserverScre
         int rows = data.length > 0 ? Math.clamp(data[0], 1, 12) : 3;
         int upgradeSlots = data.length > 1 ? Math.clamp(data[1], 0, 4) : 0;
         Inventory detachedInventory = new Inventory(minecraft.player, new EntityEquipment());
-        BackpackMenu menu = BackpackMenu.clientSide(-1, detachedInventory, rows, upgradeSlots);
+        BackpackMenu menu = snapshot.variant().equals("death")
+                ? BackpackMenu.deathClientSide(-1, detachedInventory, rows)
+                : BackpackMenu.clientSide(-1, detachedInventory, rows, upgradeSlots);
         BackpackScreen screen = new BackpackScreen(menu, detachedInventory, snapshot.title(),
                 true, context.stopObserving());
         return new Handle(screen, menu, snapshot);
@@ -56,6 +58,7 @@ public final class RemnantBackpackObserverScreenProvider implements ObserverScre
         @Override public Screen screen() { return screen; }
         @Override public void applySnapshot(ObserverScreenSnapshot snapshot) {
             if (!RemnantBackpackObserverScreenProvider.this.supports(snapshot)
+                    || !snapshot.variant().equals(menu.isDeathBackpack() ? "death" : "")
                     || snapshot.sequence() <= sequence) return;
             var items = new ArrayList<ItemStack>(menu.slots.size());
             var remoteSlots = snapshot.slots();

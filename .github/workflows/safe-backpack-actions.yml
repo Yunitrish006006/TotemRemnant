@@ -1,0 +1,61 @@
+name: Safe backpack actions
+on:
+  workflow_dispatch:
+    inputs:
+      vanilla_tweaks_ref:
+        description: 'Exact VanillaTweaks source ref containing the optional sort hooks'
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install software graphics runtime
+        run: sudo apt-get update && sudo apt-get install -y libvulkan1 mesa-vulkan-drivers libgl1-mesa-dri xvfb xauth
+      - uses: actions/checkout@v4
+        with:
+          repository: Yunitrish006006/TotemCore
+          ref: 424b90dc3929caa8c1afcfca7e63c50a64bde669
+          path: .lockstep/TotemCore
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: Yunitrish006006/TotemVanillaTweaks
+          ref: ${{ inputs.vanilla_tweaks_ref }}
+          path: .lockstep/TotemVanillaTweaks
+          persist-credentials: false
+      - name: Build exact external modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew .lockstep/TotemCore/gradlew .lockstep/TotemVanillaTweaks/gradlew
+          .lockstep/TotemCore/gradlew -p .lockstep/TotemCore jar --console=plain
+          core_jar="${GITHUB_WORKSPACE}/.lockstep/TotemCore/build/libs/totem-core-0.7.23.jar"
+          .lockstep/TotemVanillaTweaks/gradlew -p .lockstep/TotemVanillaTweaks "-PtotemCoreJar=$core_jar" assemble --console=plain
+          vanilla_version="$(sed -n 's/^mod_version=//p' .lockstep/TotemVanillaTweaks/gradle.properties)"
+          echo "CORE_JAR=$core_jar" >> "$GITHUB_ENV"
+          echo "VANILLA_JAR=${GITHUB_WORKSPACE}/.lockstep/TotemVanillaTweaks/build/libs/totem-vanilla-tweaks-${vanilla_version}.jar" >> "$GITHUB_ENV"
+      - name: Verify server, formal clients and restart persistence
+        env:
+          TOTEM_ACTIONS_ARTIFACTS: ${{ github.workspace }}/test-artifacts/safe-backpack-actions
+          TOTEM_GRAPHICS_BACKEND: VULKAN
+        run: bash scripts/verify-safe-backpack-actions.sh "$CORE_JAR" "$VANILLA_JAR"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: safe-backpack-actions-evidence
+          path: |
+            test-artifacts/safe-backpack-actions/
+            run/screenshots/
+            build/reports/tests/

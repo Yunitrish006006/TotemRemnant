@@ -30,14 +30,16 @@ public final class DeathBackpackItem extends AbstractBackpackItem {
             int rows = Math.max(1, Math.min(6,
                     (BackpackItemHelper.storedSlotFootprint(migrated) + 8) / 9));
             DeathBackpackInventory inventory = new DeathBackpackInventory(serverPlayer, hand, rows * 9);
-            serverPlayer.openMenu(new SimpleMenuProvider((syncId, playerInventory, ignored) -> switch (rows) {
-                case 1 -> new BackpackMenu(MenuType.GENERIC_9x1, syncId, playerInventory, inventory, 1);
-                case 2 -> new BackpackMenu(MenuType.GENERIC_9x2, syncId, playerInventory, inventory, 2);
-                case 3 -> new BackpackMenu(MenuType.GENERIC_9x3, syncId, playerInventory, inventory, 3);
-                case 4 -> new BackpackMenu(MenuType.GENERIC_9x4, syncId, playerInventory, inventory, 4);
-                case 5 -> new BackpackMenu(MenuType.GENERIC_9x5, syncId, playerInventory, inventory, 5);
-                default -> new BackpackMenu(MenuType.GENERIC_9x6, syncId, playerInventory, inventory, 6);
-            }, Component.translatable("container.totem.death_backpack")));
+            serverPlayer.openMenu(new net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider<Integer>() {
+                @Override public Integer getScreenOpeningData(ServerPlayer player) {
+                    return dev.totem.remnant.registry.BackpackMenuRegistration.openingData(rows, 0) | 0x10000;
+                }
+                @Override public Component getDisplayName() { return Component.translatable("container.totem.death_backpack"); }
+                @Override public net.minecraft.world.inventory.AbstractContainerMenu createMenu(
+                        int id, net.minecraft.world.entity.player.Inventory inv, Player player) {
+                    return BackpackMenu.deathServerSide(id, inv, inventory, rows);
+                }
+            });
         }
         return InteractionResult.SUCCESS;
     }

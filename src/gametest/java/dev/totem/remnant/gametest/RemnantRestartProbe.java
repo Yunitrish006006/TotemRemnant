@@ -65,6 +65,7 @@ public final class RemnantRestartProbe implements ModInitializer {
             backpack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(new ItemStack(Items.DIAMOND, 11))));
             DeathBackpackNodeBinding.write(backpack, NODE_ID);
             chest(level).setItem(0, backpack);
+            seedActions(server, level);
             SoulboundDeathItemRestartProbeAccess.seed(server, SOULBOUND_PLAYER_ID);
             return;
         }
@@ -76,12 +77,64 @@ public final class RemnantRestartProbe implements ModInitializer {
                     "Restart did not preserve Remnant death backpack contents");
             require(NODE_ID.equals(DeathBackpackNodeBinding.read(backpack)),
                     "Restart did not preserve Remnant death backpack node binding");
+            verifyActions(level);
             SoulboundDeathItemRestartProbeAccess.verifyAndRemove(server, SOULBOUND_PLAYER_ID);
-            chest(level).setItem(0, ItemStack.EMPTY);
+            for (int i = 0; i <= 4; i++) chest(level).setItem(i, ItemStack.EMPTY);
             level.setChunkForced(CHUNK_X, CHUNK_Z, false);
             return;
         }
         throw new IllegalArgumentException("Unknown Remnant restart probe phase: " + phase);
+    }
+
+    private static void seedActions(MinecraftServer server, ServerLevel level) {
+        var profile = new com.mojang.authlib.GameProfile(UUID.fromString("df6d381c-9651-41b8-8549-33c069f357eb"), "RestartProbe");
+        var player = new net.minecraft.server.level.ServerPlayer(server, level, profile,
+                net.minecraft.server.level.ClientInformation.createDefault());
+        var connection = new net.minecraft.network.Connection(net.minecraft.network.protocol.PacketFlow.SERVERBOUND);
+        var channel = new io.netty.channel.embedded.EmbeddedChannel(connection);
+        server.getPlayerList().placeNewPlayer(connection, player,
+                net.minecraft.server.network.CommonListenerCookie.createInitial(profile, false));
+        player.setPos(POS.getX() + 0.5, POS.getY(), POS.getZ() + 0.5);
+        try {
+            ItemStack ordinary = new ItemStack(RemnantItemRegistration.BACKPACK_BASIC);
+            ordinary.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(new ItemStack(Items.IRON_INGOT, 8))));
+            chest(level).setItem(1, ordinary); chest(level).setItem(2, new ItemStack(Items.IRON_INGOT));
+            player.containerMenu = net.minecraft.world.inventory.ChestMenu.threeRows(21, player.getInventory(), chest(level));
+            require(dev.totem.remnant.inventory.BackpackActions.sort(player, false), "Restart matching deposit failed");
+            ItemStack death = new ItemStack(RemnantItemRegistration.DEATH_BACKPACK);
+            ItemStack helmet = new ItemStack(Items.DIAMOND_HELMET); helmet.setDamageValue(19);
+            death.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(helmet, new ItemStack(Items.APPLE, 2))));
+            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, death);
+            var storage = new dev.totem.remnant.inventory.DeathBackpackInventory(player, net.minecraft.world.InteractionHand.MAIN_HAND, 9);
+            var menu = dev.totem.remnant.inventory.BackpackMenu.deathServerSide(22, player.getInventory(), storage, 1);
+            player.containerMenu = menu;
+            require(menu.clickMenuButton(player, dev.totem.remnant.inventory.BackpackMenu.EQUIP_BUTTON_ID), "Restart equip failed");
+            chest(level).setItem(3, death);
+            ItemStack equipped = player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD);
+            player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, ItemStack.EMPTY);
+            chest(level).setItem(4, equipped);
+            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            verifyActions(level);
+        } finally {
+            player.containerMenu = player.inventoryMenu;
+            server.getPlayerList().remove(player);
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    private static void verifyActions(ServerLevel level) {
+        ItemStack ordinary = chest(level).getItem(1);
+        require(ordinary.is(RemnantItemRegistration.BACKPACK_BASIC)
+                        && ordinary.get(DataComponents.CONTAINER).nonEmptyItemCopyStream()
+                        .filter(item -> item.is(Items.IRON_INGOT)).mapToInt(ItemStack::getCount).sum() == 9
+                        && chest(level).getItem(2).isEmpty(), "Restart lost matching-deposit state");
+        ItemStack death = chest(level).getItem(3);
+        var remaining = death.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).nonEmptyItemCopyStream().toList();
+        require(death.is(RemnantItemRegistration.DEATH_BACKPACK) && remaining.size() == 1
+                        && remaining.getFirst().is(Items.APPLE) && remaining.getFirst().getCount() == 2,
+                "Restart duplicated or lost equip source contents");
+        require(chest(level).getItem(4).is(Items.DIAMOND_HELMET) && chest(level).getItem(4).getDamageValue() == 19,
+                "Restart lost equipped item data");
     }
 
     private static ItemStack requireBackpack(ServerLevel level) {

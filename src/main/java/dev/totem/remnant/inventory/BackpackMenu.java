@@ -32,6 +32,8 @@ import java.util.List;
 /** Backpack storage plus dedicated removable upgrade slots and an embedded 3x3 crafting grid. */
 public final class BackpackMenu extends ChestMenu {
     public static final int ENDER_ACCESS_BUTTON_ID = 1;
+    public static final int EQUIP_BUTTON_ID = 2;
+    private boolean deathBackpack;
     public static final int UPGRADE_PANEL_X = 177;
     public static final int UPGRADE_PANEL_WIDTH = 102;
     public static final int CRAFTING_PANEL_X = 177;
@@ -128,6 +130,25 @@ public final class BackpackMenu extends ChestMenu {
                 BackpackUpgradeInventory.clientSide(0), rows, backpackInventory.getBackpackStack());
     }
 
+    public static BackpackMenu deathClientSide(int id, Inventory inventory, int rows) {
+        BackpackMenu menu = clientSide(id, inventory, rows, 0);
+        menu.deathBackpack = true;
+        return menu;
+    }
+
+    public static BackpackMenu deathServerSide(int id, Inventory inventory, DeathBackpackInventory storage, int rows) {
+        BackpackMenu menu = new BackpackMenu(BackpackMenuRegistration.BACKPACK, id, inventory, storage, rows);
+        menu.deathBackpack = true;
+        return menu;
+    }
+
+    public boolean isDeathBackpack() { return deathBackpack; }
+    public ItemStack trackedBackpack() { return trackedBackpackStack; }
+    public int storageSlotCount() { return activeBackpackSlotCount(); }
+    public DeathBackpackInventory storage() {
+        return getSlot(0).container instanceof DeathBackpackInventory storage ? storage : null;
+    }
+
     public int upgradeSlotCount() {
         return upgrades.getContainerSize();
     }
@@ -146,6 +167,10 @@ public final class BackpackMenu extends ChestMenu {
 
     @Override
     public boolean clickMenuButton(Player player, int buttonId) {
+        if (buttonId == EQUIP_BUTTON_ID) {
+            return deathBackpack && player instanceof ServerPlayer serverPlayer
+                    && BackpackActions.equip(serverPlayer, this);
+        }
         if (buttonId != ENDER_ACCESS_BUTTON_ID
                 || !(player instanceof ServerPlayer serverPlayer)
                 || player != owner

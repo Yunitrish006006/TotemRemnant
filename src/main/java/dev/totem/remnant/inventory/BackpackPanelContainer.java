@@ -83,6 +83,12 @@ public final class BackpackPanelContainer implements Container {
         }
     }
 
+    /** Invalidate the same-tick cache after a validated external transaction. */
+    public void refreshAfterExternalCommit() {
+        lastContentRefreshGameTime = Long.MIN_VALUE;
+        refresh();
+    }
+
     public int selectedInventorySlot() {
         refresh();
         return selectedInventorySlot;
@@ -167,6 +173,23 @@ public final class BackpackPanelContainer implements Container {
         }
         items.set(slot, stored);
         setChanged();
+    }
+
+    /** Replace active storage as one commit; retain inactive and overflow items. */
+    public boolean replaceActiveContents(List<ItemStack> replacement, ItemStack expected) {
+        refresh();
+        if (selectedBackpack != expected || replacement.size() != activeSlots
+                || !loadedContents.equals(expected.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY))) return false;
+        ItemContainerContents before = loadedContents;
+        try {
+            for (int i = 0; i < activeSlots; i++) items.set(i, replacement.get(i).copy());
+            setChanged();
+            return true;
+        } catch (RuntimeException failure) {
+            expected.set(DataComponents.CONTAINER, before);
+            load(expected);
+            return false;
+        }
     }
 
     @Override
