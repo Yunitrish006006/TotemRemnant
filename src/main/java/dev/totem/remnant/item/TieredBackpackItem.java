@@ -24,6 +24,27 @@ public final class TieredBackpackItem extends AbstractBackpackItem {
     public TieredBackpackItem(Properties properties, BackpackTier tier) { super(properties); this.tier = tier; }
     public BackpackTier tier() { return tier; }
 
+    @Override public boolean overrideStackedOnOther(ItemStack bag, net.minecraft.world.inventory.Slot slot,
+            net.minecraft.world.inventory.ClickAction action, Player player) {
+        return dev.totem.remnant.inventory.BackpackItemInteraction.onOther(bag, slot, action, player);
+    }
+
+    @Override public boolean overrideOtherStackedOnMe(ItemStack bag, ItemStack carried,
+            net.minecraft.world.inventory.Slot slot, net.minecraft.world.inventory.ClickAction action,
+            Player player, net.minecraft.world.entity.SlotAccess cursor) {
+        return dev.totem.remnant.inventory.BackpackItemInteraction.onMe(bag, carried, slot, action, player, cursor);
+    }
+
+    @Override public void appendHoverText(ItemStack bag, Item.TooltipContext context,
+            net.minecraft.world.item.component.TooltipDisplay display,
+            java.util.function.Consumer<Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
+        super.appendHoverText(bag, context, display, tooltip, flag);
+        ItemStack selected = dev.totem.remnant.inventory.BackpackItemInteraction.selectedStack(bag);
+        if (!selected.isEmpty()) tooltip.accept(Component.translatable("tooltip.totem.backpack.selected",
+                selected.getHoverName(), selected.getCount()).withStyle(net.minecraft.ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("tooltip.totem.backpack.bundle_controls").withStyle(net.minecraft.ChatFormatting.GRAY));
+    }
+
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {

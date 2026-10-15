@@ -101,6 +101,15 @@ public final class RemnantRestartProbe implements ModInitializer {
             chest(level).setItem(1, ordinary); chest(level).setItem(2, new ItemStack(Items.IRON_INGOT));
             player.containerMenu = net.minecraft.world.inventory.ChestMenu.threeRows(21, player.getInventory(), chest(level));
             require(dev.totem.remnant.inventory.BackpackActions.sort(player, false), "Restart matching deposit failed");
+            player.containerMenu.setCarried(new ItemStack(Items.IRON_INGOT, 2));
+            player.containerMenu.clicked(1, 0, net.minecraft.world.inventory.ContainerInput.PICKUP, player);
+            require(player.containerMenu.getCarried().isEmpty(), "Restart direct deposit failed");
+            player.containerMenu.clicked(1, 1, net.minecraft.world.inventory.ContainerInput.PICKUP, player);
+            require(player.containerMenu.getCarried().is(Items.IRON_INGOT)
+                    && player.containerMenu.getCarried().getCount() == 11, "Restart direct withdrawal failed");
+            player.containerMenu.clicked(1, 0, net.minecraft.world.inventory.ContainerInput.PICKUP, player);
+            require(player.containerMenu.getCarried().isEmpty(), "Restart redeposit failed");
+            require(dev.totem.remnant.inventory.BackpackItemInteraction.select(ordinary, 0), "Restart selection failed");
             ItemStack death = new ItemStack(RemnantItemRegistration.DEATH_BACKPACK);
             ItemStack helmet = new ItemStack(Items.DIAMOND_HELMET); helmet.setDamageValue(19);
             death.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(helmet, new ItemStack(Items.APPLE, 2))));
@@ -126,7 +135,8 @@ public final class RemnantRestartProbe implements ModInitializer {
         ItemStack ordinary = chest(level).getItem(1);
         require(ordinary.is(RemnantItemRegistration.BACKPACK_BASIC)
                         && ordinary.get(DataComponents.CONTAINER).nonEmptyItemCopyStream()
-                        .filter(item -> item.is(Items.IRON_INGOT)).mapToInt(ItemStack::getCount).sum() == 9
+                        .filter(item -> item.is(Items.IRON_INGOT)).mapToInt(ItemStack::getCount).sum() == 11
+                        && ordinary.getOrDefault(dev.totem.remnant.registry.RemnantDataComponents.SELECTED_ITEM, -1) == 0
                         && chest(level).getItem(2).isEmpty(), "Restart lost matching-deposit state");
         ItemStack death = chest(level).getItem(3);
         var remaining = death.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).nonEmptyItemCopyStream().toList();

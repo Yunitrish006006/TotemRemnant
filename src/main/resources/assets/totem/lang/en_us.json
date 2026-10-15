@@ -121,5 +121,7 @@
   "book.totem.remnant.container_safety.page.1": "No unsafe nesting\n\nWhile enabled by default, Remnant backpacks, %1$s, %2$s, and tagged portable containers cannot be placed inside one another. Existing nested contents are not deleted: remove them, but they cannot be inserted again.",
   "book.totem.remnant.container_safety.page.2": "World rule (default: true)\n\nAllow Remnant nesting:\n/gamerule totem:remnant_prevent_portable_container_nesting false\n\nDisabling it removes only Remnant's added restrictions; vanilla restrictions remain.\n\nAdmins can run:\n/totem containers scan",
   "container.totem.death_backpack.equip": "Equip",
-  "container.totem.death_backpack.equip.tooltip": "Equip armor into empty equipment slots. Existing equipment is kept."
+  "container.totem.death_backpack.equip.tooltip": "Equip armor into empty equipment slots. Existing equipment is kept.",
+  "tooltip.totem.backpack.selected": "Selected: %s × %s",
+  "tooltip.totem.backpack.bundle_controls": "Left-click: store · Right-click: take · Scroll: select"
 }

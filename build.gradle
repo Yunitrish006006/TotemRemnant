@@ -323,15 +323,21 @@ tasks.named('remapJar') {
 // A deterministic bounded client profile; toggling it restores the full source
 // entrypoint list on the next processGametestResources invocation.
 def backpackActionsOnly = providers.gradleProperty('totemBackpackActionsOnly').map { it.toBoolean() }.getOrElse(false)
+def backpackBundleOnly = providers.gradleProperty('totemBackpackBundleOnly').map { it.toBoolean() }.getOrElse(false)
 tasks.named('processGametestResources', ProcessResources).configure {
     inputs.property('totemBackpackActionsOnly', backpackActionsOnly)
+    inputs.property('totemBackpackBundleOnly', backpackBundleOnly)
     doLast {
-        if (backpackActionsOnly) {
+        if (backpackActionsOnly || backpackBundleOnly) {
             File metadata = new File(destinationDir, 'fabric.mod.json')
             def json = new groovy.json.JsonSlurper().parse(metadata)
             json.entrypoints['fabric-client-gametest'] = [
                     'dev.totem.remnant.client.BackpackActionsClientGameTest',
+                    'dev.totem.remnant.client.BackpackBundleClientGameTest',
                     'dev.totem.remnant.client.RemnantObserverProviderClientGameTest'
+            ]
+            if (backpackBundleOnly) json.entrypoints['fabric-client-gametest'] = [
+                    'dev.totem.remnant.client.BackpackBundleClientGameTest'
             ]
             metadata.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(json)) + '\n'
         }

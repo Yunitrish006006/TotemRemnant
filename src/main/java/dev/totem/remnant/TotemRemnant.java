@@ -32,6 +32,7 @@ public final class TotemRemnant implements ModInitializer {
     @Override
     public void onInitialize() {
         RemnantGameRules.register();
+        dev.totem.remnant.registry.RemnantDataComponents.register();
         RemnantItemRegistration.register();
         BackpackMenuRegistration.register();
         BackpackPanelPayloadRegistration.register();

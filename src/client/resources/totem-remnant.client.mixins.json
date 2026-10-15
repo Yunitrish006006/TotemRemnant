@@ -6,7 +6,8 @@
   "client": [
     "InventoryScreenBackpackPanelMixin",
     "ItemEntityRenderStateMixin",
-    "ItemEntityRendererMixin"
+    "ItemEntityRendererMixin",
+    "BackpackItemMouseActionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

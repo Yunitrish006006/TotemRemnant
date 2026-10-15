@@ -23,7 +23,8 @@
       "dev.totem.remnant.echo.EchoShardCrystallizationGameTest",
       "dev.totem.remnant.manual.RemnantManualGameTest",
       "dev.totem.remnant.inventory.BackpackActionsGameTest",
-      "dev.totem.remnant.inventory.MatchingBackpackSortGameTest"
+      "dev.totem.remnant.inventory.MatchingBackpackSortGameTest",
+      "dev.totem.remnant.inventory.BackpackItemInteractionGameTest"
     ],
     "fabric-client-gametest": [
       "dev.totem.remnant.client.VanillaInventoryCraftingClientGameTest",
@@ -33,7 +34,8 @@
       "dev.totem.remnant.client.BackpackDyeingVisualGameTest",
       "dev.totem.remnant.client.BackpackInventoryPanelVisualGameTest",
       "dev.totem.remnant.client.BackpackUpgradeRecipeVisualGameTest",
-      "dev.totem.remnant.client.BackpackActionsClientGameTest"
+      "dev.totem.remnant.client.BackpackActionsClientGameTest",
+      "dev.totem.remnant.client.BackpackBundleClientGameTest"
     ]
   },
   "depends": {

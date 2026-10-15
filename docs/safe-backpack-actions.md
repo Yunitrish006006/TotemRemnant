@@ -64,16 +64,12 @@ No hard Remnant/VanillaTweaks dependency is introduced.
 
 ## Remaining development plan
 
-1. Bundle-style direct item interaction: inspect current native Bundle slot,
-   cursor and tooltip semantics; add left/right deposit/withdraw and wheel item
-   selection while preserving whole-backpack pickup, carried-stack limits,
-   anti-nesting, server identity checks and Observer input suppression.
-2. Other workstation sidebars: crafting/enchanting and other supported native
+1. Other workstation sidebars: crafting/enchanting and other supported native
    screens expose real backpack slots. Preserve functional slot indices,
    quick-move and recipes; provide native owner semantic Observer reconstruction.
-3. Death sidebar: allow explicit death-backpack selection and storage operations,
+2. Death sidebar: allow explicit death-backpack selection and storage operations,
    preserve owner/recovery lifecycle and access to large/overflow contents.
-4. Embedded material sourcing: the existing embedded crafting grid may stage
+3. Embedded material sourcing: the existing embedded crafting grid may stage
    recipe ingredients from permitted backpack slots. Determine the actual
    enchanting UI owner/existence before adding its integration. Validate target
    item, lapis, XP and owner costs server-side; consume output ingredients once.
@@ -81,4 +77,36 @@ No hard Remnant/VanillaTweaks dependency is introduced.
 For each next stage, narrow ownership/contracts with intelligence, stage and
 validate atomic mutations, cover full/partial/changed inputs, repeated actions,
 close/reopen and reload, then perform focused client/Observer tests and review.
-These four stages are not implemented by the safe-actions mainline integration.
+These three stages are not implemented by the safe-actions mainline integration.
+
+## Bundle-style direct item interaction (verified)
+
+Ordinary backpacks support native Bundle gestures in either cursor/slot
+orientation: left-click with an item deposits it; right-click with an empty
+cursor/target withdraws the selected stack. Empty-handed left-click still picks
+up the whole backpack. Native wheel/hover/quick-move lifecycle selects/resets
+items, with translated vanilla tooltip guidance. Death sidebar/direct-item
+recovery policy remains a separate stage.
+
+CONTAINER is the only contents store. A bounded selected-index component is
+synchronized and persisted. Server selection binds menu/state/slot/expected
+stack and rejects dead players and spectators. Transfers stage contents, retain
+inactive/overflow rows and source remainders, enforce destination limits and
+portable-container policy, restore components/sources on failure, and refresh
+open/panel views in the same tick. Observer input cannot mutate selection or
+send packets.
+
+Validation: all 77 server GameTests, native-input client with explicit
+VanillaTweaks absence, server-confirmed original item totals, whole-bag
+movement, Observer suppression, separate-JVM contents/selection reload, and
+current-JAR owner-UI scoped three-JVM ordinary/death regression all passed.
+Main JAR SHA256: `1ac755406fdcb5921e62b56ee3a9280f70ee3f2a00e0bfc87317a9865aa006df`.
+Screenshots were visually reviewed; independent review cleared production
+transactions, authority guards and final test barriers. Native double-click
+collection remains vanilla behavior; the placement fixture uses a different
+empty slot. Evidence: /tmp/remnant-bundle-evidence-20261015-6b3gvftb.
+
+Bounded local client profile: `-PtotemBackpackBundleOnly=true`. The existing
+full safe-actions profile/runner also includes this test. Neither profile
+changes production authentication. Full account-v1 admission is still outside
+this passing owner-UI scope. No version bump or publication was performed.

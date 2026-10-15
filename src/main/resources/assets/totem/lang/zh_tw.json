@@ -121,5 +121,7 @@
   "book.totem.remnant.container_safety.page.1": "禁止不安全巢狀\n\n預設開啟時，圖靈騰殘響背包、%1$s、%2$s及標記為可攜式容器的物品不能互相放入。舊世界的巢狀內容不會被刪除：可以取出，但不能再次放回。",
   "book.totem.remnant.container_safety.page.2": "世界規則（預設開啟）\n\n允許圖靈騰殘響巢狀：\n/gamerule totem:remnant_prevent_portable_container_nesting false\n\n關閉只解除圖靈騰殘響的額外限制，原版禁止的組合仍不變。\n\n管理員可執行：\n/totem containers scan",
   "container.totem.death_backpack.equip": "一鍵穿戴",
-  "container.totem.death_backpack.equip.tooltip": "只填入空裝備槽；已穿裝備與其餘物品保持原位。"
+  "container.totem.death_backpack.equip.tooltip": "只填入空裝備槽；已穿裝備與其餘物品保持原位。",
+  "tooltip.totem.backpack.selected": "選取：%s × %s",
+  "tooltip.totem.backpack.bundle_controls": "左鍵存入・右鍵取出・滾輪選擇"
 }
