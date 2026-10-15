@@ -16,16 +16,20 @@ public final class BackpackActions {
     private BackpackActions() { }
 
     public static boolean sort(ServerPlayer player, boolean playerSide) {
+        return sort(player, playerSide, false);
+    }
+
+    public static boolean sort(ServerPlayer player, boolean playerSide, boolean panelSide) {
         AbstractContainerMenu menu = player.containerMenu;
         if (player.isSpectator() || !player.isAlive() || !menu.stillValid(player)) return false;
         BackpackMenu backpack = menu instanceof BackpackMenu b ? b : null;
-        BackpackPanelContainer panel = menu == player.inventoryMenu && menu instanceof BackpackPanelMenuAccess a
+        BackpackPanelContainer panel = BackpackPanelMenuAccess.supports(menu) && menu instanceof BackpackPanelMenuAccess a
                 ? a.totem$getBackpackPanel() : null;
         if (backpack == null && panel == null && !MatchingBackpackSort.isVanillaChest(menu)) return false;
         ItemStack pinned = backpack != null ? backpack.trackedBackpack()
                 : panel != null ? panel.selectedBackpack() : ItemStack.EMPTY;
         if (backpack != null && (backpack.storage() == null || !backpack.storage().contentsCurrent())) return false;
-        if (playerSide || MatchingBackpackSort.isVanillaChest(menu))
+        if (playerSide || (!panelSide && MatchingBackpackSort.isVanillaChest(menu)))
             return MatchingBackpackSort.sort(player, playerSide, pinned);
         List<Slot> targets = new ArrayList<>();
         if (playerSide) {
@@ -44,11 +48,26 @@ public final class BackpackActions {
         List<ItemStack> before = targets.stream().map(slot -> slot.getItem().copy()).toList();
         List<ItemStack> proposal = sorted(before);
         if (proposal.size() != targets.size()) return false;
+        boolean deathStorage = backpack != null ? backpack.isDeathBackpack()
+                : pinned.getItem() instanceof dev.totem.remnant.item.DeathBackpackItem;
+        List<ItemStack> capturedBackpacks = new ArrayList<>(before);
         for (int i = 0; i < targets.size(); i++) {
             Slot slot = targets.get(i);
             ItemStack item = proposal.get(i);
+            // Death capture can contain a backpack that normal insertion forbids. Sorting may
+            // relocate each exact existing stack once, without admitting any new nested stack.
+            boolean retainedCapture = false;
+            if (deathStorage && item.getItem() instanceof dev.totem.remnant.item.AbstractBackpackItem) {
+                for (int j = 0; j < capturedBackpacks.size(); j++) {
+                    if (ItemStack.matches(capturedBackpacks.get(j), item)) {
+                        capturedBackpacks.set(j, ItemStack.EMPTY);
+                        retainedCapture = true;
+                        break;
+                    }
+                }
+            }
             if (!slot.isActive() || !slot.mayPickup(player) || (!item.isEmpty()
-                    && (!slot.mayPlace(item) || !slot.container.canPlaceItem(slot.getContainerSlot(), item)
+                    && ((!retainedCapture && (!slot.mayPlace(item) || !slot.container.canPlaceItem(slot.getContainerSlot(), item)))
                     || item.getCount() > slot.getMaxStackSize(item)
                     || item.getCount() > slot.container.getMaxStackSize(item)))) return false;
         }

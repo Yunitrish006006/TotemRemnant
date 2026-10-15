@@ -110,7 +110,7 @@ public final class BackpackActionsClientGameTest implements FabricClientGameTest
                 // Screenshots yield frames; ordinary world packets between frames are
                 // unrelated to this synchronous read-only keyboard action.
                 ObserverPacketProbe.reset();
-                handle.screen().keyPressed(new KeyEvent(256, 0, 0));
+                handle.screen().keyPressed(new KeyEvent(com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE, 0, 0));
                 require(stops.get() == 1, "Observer close did not request stop exactly once");
                 require(ObserverPacketProbe.sends() == 0, "Observer close attempted mutation");
                 client.setScreenAndShow(null);

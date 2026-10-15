@@ -64,7 +64,7 @@ public final class RemnantObserverProviderClientGameTest implements FabricClient
                 ObserverPacketProbe.reset();
                 require(screen.mouseClicked(new MouseButtonEvent(1, 1,
                                 new MouseButtonInfo(0, 0)), false), "Observer mouse input was not consumed");
-                require(screen.keyPressed(new KeyEvent(65, 0, 0)),
+                require(screen.keyPressed(new KeyEvent(com.mojang.blaze3d.platform.InputConstants.KEY_A, 0, 0)),
                         "Observer keyboard input was not consumed");
                 require(ObserverPacketProbe.sends() == 0, "Backpack Observer input attempted a packet");
             });
@@ -72,7 +72,7 @@ public final class RemnantObserverProviderClientGameTest implements FabricClient
             context.takeScreenshot("remnant-observer-owner-production-screen");
             context.runOnClient(client -> {
                 ObserverPacketProbe.reset();
-                require(handle.screen().keyPressed(new KeyEvent(256, 0, 0)), "Escape was not consumed");
+                require(handle.screen().keyPressed(new KeyEvent(com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE, 0, 0)), "Escape was not consumed");
                 require(stops.get() == 1, "Escape did not request stop-observing exactly once");
                 require(ObserverPacketProbe.sends() == 0, "Closing Observer mode attempted a packet");
                 client.setScreenAndShow(null);

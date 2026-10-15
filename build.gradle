@@ -18,7 +18,7 @@ def remnantRestartProbeMarkerDirectory = providers.gradleProperty("totemRemnantR
         .orElse(providers.environmentVariable("TOTEM_REMNANT_RESTART_PROBE_MARKER_DIR"))
         .orNull
 def totemCoreJar = file(providers.gradleProperty("totemCoreJar")
-        .getOrElse("../TotemCore/build/libs/totem-core-0.7.22.jar"))
+        .getOrElse("../TotemCore/build/libs/totem-core-0.7.23.jar"))
 
 loom {
     splitEnvironmentSourceSets()
@@ -323,12 +323,14 @@ tasks.named('remapJar') {
 // A deterministic bounded client profile; toggling it restores the full source
 // entrypoint list on the next processGametestResources invocation.
 def backpackActionsOnly = providers.gradleProperty('totemBackpackActionsOnly').map { it.toBoolean() }.getOrElse(false)
+def backpackSidebarOnly = providers.gradleProperty('totemBackpackSidebarOnly').map { it.toBoolean() }.getOrElse(false)
 def backpackBundleOnly = providers.gradleProperty('totemBackpackBundleOnly').map { it.toBoolean() }.getOrElse(false)
 tasks.named('processGametestResources', ProcessResources).configure {
     inputs.property('totemBackpackActionsOnly', backpackActionsOnly)
     inputs.property('totemBackpackBundleOnly', backpackBundleOnly)
+    inputs.property('totemBackpackSidebarOnly', backpackSidebarOnly)
     doLast {
-        if (backpackActionsOnly || backpackBundleOnly) {
+        if (backpackActionsOnly || backpackBundleOnly || backpackSidebarOnly) {
             File metadata = new File(destinationDir, 'fabric.mod.json')
             def json = new groovy.json.JsonSlurper().parse(metadata)
             json.entrypoints['fabric-client-gametest'] = [
@@ -338,6 +340,10 @@ tasks.named('processGametestResources', ProcessResources).configure {
             ]
             if (backpackBundleOnly) json.entrypoints['fabric-client-gametest'] = [
                     'dev.totem.remnant.client.BackpackBundleClientGameTest'
+            ]
+            if (backpackSidebarOnly) json.entrypoints['fabric-client-gametest'] = [
+                    'dev.totem.remnant.client.BackpackSidebarObserverClientGameTest',
+                    'dev.totem.remnant.client.BackpackWorkstationClientGameTest'
             ]
             metadata.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(json)) + '\n'
         }
@@ -363,6 +369,11 @@ tasks.register('runProductionClientGameTest', net.fabricmc.loom.task.prod.Client
     mods.from(tasks.named('productionGametestModJar').flatMap { it.archiveFile })
     jvmArgs.add('-Dfabric.client.gametest')
     jvmArgs.add('-Dfabric.client.gametest.disableNetworkSynchronizer=true')
+    def expectedObserver = providers.gradleProperty('totemExpectedObserver').orNull
+    if (expectedObserver != null) {
+        if (!(expectedObserver in ['true','false'])) throw new GradleException('totemExpectedObserver must be true or false')
+        jvmArgs.add("-Dtotem.remnant.test.expectedObserver=${expectedObserver}")
+    }
     def expectedVanillaTweaks = providers.gradleProperty('totemExpectedVanillaTweaks').orNull
     if (expectedVanillaTweaks != null) {
         if (!(expectedVanillaTweaks in ['true', 'false'])) {

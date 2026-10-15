@@ -28,7 +28,7 @@ public final class MatchingBackpackSort {
     static boolean sort(ServerPlayer player, boolean playerSide, ItemStack pinned) {
         var menu = player.containerMenu;
         if (player.isSpectator() || !player.isAlive() || !menu.stillValid(player)) return false;
-        if (!(menu instanceof BackpackMenu) && menu != player.inventoryMenu && !isVanillaChest(menu)) return false;
+        if (!(menu instanceof BackpackMenu) && !BackpackPanelMenuAccess.supports(menu) && !isVanillaChest(menu)) return false;
         if (!playerSide && !isVanillaChest(menu)) return false;
         List<Slot> loose = new ArrayList<>();
         List<Bag> bags = new ArrayList<>();
@@ -36,6 +36,7 @@ public final class MatchingBackpackSort {
         java.util.Map<net.minecraft.world.Container, Set<Integer>> addresses = new IdentityHashMap<>();
         int inventorySize = player.getInventory().getNonEquipmentItems().size();
         for (Slot slot : menu.slots) {
+            if (slot instanceof BackpackPanelSlot) continue;
             boolean inventory = slot.container == player.getInventory();
             int index = slot.getContainerSlot();
             if (playerSide ? !inventory || index < 0 || index >= inventorySize : inventory) continue;
@@ -136,6 +137,8 @@ public final class MatchingBackpackSort {
     }
     private static void refreshViews(ServerPlayer player) {
         if (player.inventoryMenu instanceof BackpackPanelMenuAccess access)
+            access.totem$getBackpackPanel().refreshAfterExternalCommit();
+        if (player.containerMenu != player.inventoryMenu && BackpackPanelMenuAccess.supports(player.containerMenu) && player.containerMenu instanceof BackpackPanelMenuAccess access)
             access.totem$getBackpackPanel().refreshAfterExternalCommit();
         if (player.containerMenu instanceof BackpackMenu menu && menu.storage() != null)
             menu.storage().refreshAfterExternalCommit();

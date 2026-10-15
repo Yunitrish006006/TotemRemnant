@@ -163,6 +163,8 @@ public final class BackpackItemInteraction {
     private static void refresh(Player player) {
         if (player.inventoryMenu instanceof BackpackPanelMenuAccess access)
             access.totem$getBackpackPanel().refreshAfterExternalCommit();
+        if (player.containerMenu != player.inventoryMenu && BackpackPanelMenuAccess.supports(player.containerMenu) && player.containerMenu instanceof BackpackPanelMenuAccess access)
+            access.totem$getBackpackPanel().refreshAfterExternalCommit();
         if (player.containerMenu instanceof BackpackMenu menu && menu.storage() != null)
             menu.storage().refreshAfterExternalCommit();
     }

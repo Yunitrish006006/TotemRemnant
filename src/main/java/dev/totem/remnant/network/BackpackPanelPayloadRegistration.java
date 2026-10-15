@@ -28,8 +28,10 @@ public final class BackpackPanelPayloadRegistration {
                 SelectBackpackPanelPayload.TYPE,
                 (payload, context) -> context.server().execute(() -> {
                     var player = context.player();
-                    if (player.containerMenu != player.inventoryMenu
-                            || !(player.inventoryMenu instanceof BackpackPanelMenuAccess access)) {
+                    if (player.isSpectator() || !player.isAlive()
+                            || player.containerMenu.containerId != payload.menuId()
+                            || !player.containerMenu.stillValid(player)
+                            || !(BackpackPanelMenuAccess.supports(player.containerMenu) && player.containerMenu instanceof BackpackPanelMenuAccess access)) {
                         return;
                     }
 
@@ -46,7 +48,7 @@ public final class BackpackPanelPayloadRegistration {
     public static boolean handleSort(net.minecraft.server.level.ServerPlayer player, BackpackSortPayload payload) {
         var menu = player.containerMenu;
         if (menu.containerId != payload.menuId() || menu.getStateId() != payload.stateId()) return false;
-        if (menu == player.inventoryMenu && menu instanceof BackpackPanelMenuAccess access) {
+        if (BackpackPanelMenuAccess.supports(menu) && menu instanceof BackpackPanelMenuAccess access) {
             var panel = access.totem$getBackpackPanel();
             if (panel.selectedInventorySlot() != payload.selectedSlot()
                     || !net.minecraft.world.item.ItemStack.matches(panel.selectedBackpack(), payload.expectedBackpack())) return false;
@@ -60,7 +62,8 @@ public final class BackpackPanelPayloadRegistration {
         if (!playerSide && !(slot instanceof dev.totem.remnant.inventory.BackpackPanelSlot)
                 && !dev.totem.remnant.inventory.MatchingBackpackSort.isVanillaChest(menu)
                 && (!(menu instanceof dev.totem.remnant.inventory.BackpackMenu b) || hovered >= b.storageSlotCount())) return false;
-        return dev.totem.remnant.inventory.BackpackActions.sort(player, playerSide);
+        return dev.totem.remnant.inventory.BackpackActions.sort(player, playerSide,
+                slot instanceof dev.totem.remnant.inventory.BackpackPanelSlot);
     }
 
 }

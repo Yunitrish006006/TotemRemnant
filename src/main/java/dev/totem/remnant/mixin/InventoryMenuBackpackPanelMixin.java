@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** Adds bounded real backpack slots to the normal player InventoryMenu. */
+/** Appends bounded real slots after each supported native menu has constructed its slots. */
 @Mixin(InventoryMenu.class)
 abstract class InventoryMenuBackpackPanelMixin implements BackpackPanelMenuAccess {
     @Unique private BackpackPanelContainer totem$backpackPanel;
@@ -24,14 +24,16 @@ abstract class InventoryMenuBackpackPanelMixin implements BackpackPanelMenuAcces
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void totem$addBackpackPanelSlots(
-            Inventory inventory,
-            boolean active,
-            Player owner,
             CallbackInfo callback
     ) {
+        if (totem$backpackPanel != null) return; // Delegating constructors also reach TAIL.
+        var nativeMenu = (net.minecraft.world.inventory.AbstractContainerMenu) (Object) this;
+        if (!BackpackPanelMenuAccess.isNativeClass(nativeMenu)) return;
+        Inventory inventory = nativeMenu.slots.stream().map(slot -> slot.container)
+                .filter(Inventory.class::isInstance).map(Inventory.class::cast).findFirst().orElseThrow();
         totem$backpackPanel = new BackpackPanelContainer(inventory);
         totem$backpackPanel.selectFirstBackpack();
-        InventoryMenu menu = (InventoryMenu) (Object) this;
+        var menu = (net.minecraft.world.inventory.AbstractContainerMenu) (Object) this;
         totem$backpackPanelSlotStart = menu.slots.size();
         for (int slot = 0; slot < BackpackPanelContainer.MAX_PANEL_SLOTS; slot++) {
             ((AbstractContainerMenuInvoker) this).totem$addSlot(
@@ -46,8 +48,8 @@ abstract class InventoryMenuBackpackPanelMixin implements BackpackPanelMenuAcces
             int slotIndex,
             CallbackInfoReturnable<ItemStack> callback
     ) {
-        InventoryMenu menu = (InventoryMenu) (Object) this;
-        if (slotIndex >= totem$backpackPanelSlotStart
+        var menu = (net.minecraft.world.inventory.AbstractContainerMenu) (Object) this;
+        if (totem$backpackPanel != null && slotIndex >= totem$backpackPanelSlotStart
                 && slotIndex < totem$backpackPanelSlotStart + BackpackPanelContainer.MAX_PANEL_SLOTS) {
             callback.setReturnValue(totem$moveFromPanel(player, menu, slotIndex));
         }
@@ -69,24 +71,32 @@ abstract class InventoryMenuBackpackPanelMixin implements BackpackPanelMenuAcces
 
     @Override
     public boolean totem$selectBackpackSlot(int inventorySlot) {
-        return totem$backpackPanel.select(inventorySlot);
+        return totem$backpackPanel != null && totem$backpackPanel.select(inventorySlot);
     }
 
     @Override
     public boolean totem$layoutBackpackSlots(int relativeLeft, int relativeTop, int columns) {
-        if (columns <= 0) {
+        return totem$layoutBackpackWindow(relativeLeft, relativeTop, columns, 0, Integer.MAX_VALUE);
+    }
+
+    @Override
+    public boolean totem$layoutBackpackWindow(int relativeLeft, int relativeTop, int columns, int firstRow, int rows) {
+        if (totem$backpackPanel == null) return false;
+        if (columns <= 0 || firstRow < 0 || rows < 0) {
             throw new IllegalArgumentException("Backpack panel columns must be positive");
         }
-        InventoryMenu menu = (InventoryMenu) (Object) this;
+        var menu = (net.minecraft.world.inventory.AbstractContainerMenu) (Object) this;
         boolean changed = false;
         int activeSlots = totem$backpackPanel.activeSlotCount();
         for (int panelSlot = 0; panelSlot < BackpackPanelContainer.MAX_PANEL_SLOTS; panelSlot++) {
             int menuSlot = totem$backpackPanelSlotStart + panelSlot;
-            int x = panelSlot < activeSlots
-                    ? relativeLeft + panelSlot % columns * 18
+            int offset = panelSlot - firstRow * columns;
+            boolean visible = panelSlot < activeSlots && offset >= 0 && offset / columns < rows;
+            int x = visible
+                    ? relativeLeft + offset % columns * 18
                     : -10_000;
-            int y = panelSlot < activeSlots
-                    ? relativeTop + panelSlot / columns * 18
+            int y = visible
+                    ? relativeTop + offset / columns * 18
                     : -10_000;
             Slot current = menu.slots.get(menuSlot);
             if (!(current instanceof BackpackPanelSlot)
@@ -103,7 +113,7 @@ abstract class InventoryMenuBackpackPanelMixin implements BackpackPanelMenuAcces
     }
 
     @Unique
-    private ItemStack totem$moveFromPanel(Player player, InventoryMenu menu, int slotIndex) {
+    private ItemStack totem$moveFromPanel(Player player, net.minecraft.world.inventory.AbstractContainerMenu menu, int slotIndex) {
         if (slotIndex < 0 || slotIndex >= menu.slots.size()) {
             return ItemStack.EMPTY;
         }
@@ -113,14 +123,16 @@ abstract class InventoryMenuBackpackPanelMixin implements BackpackPanelMenuAcces
         }
         ItemStack stack = source.getItem();
         ItemStack original = stack.copy();
-        if (!((AbstractContainerMenuInvoker) this).totem$moveItemStackTo(
-                stack,
-                InventoryMenu.INV_SLOT_START,
-                InventoryMenu.USE_ROW_SLOT_END,
-                true
-        )) {
-            return ItemStack.EMPTY;
+        boolean moved = false;
+        // Only real main inventory/hotbar destinations, never native functional slots or equipment.
+        for (int i = totem$backpackPanelSlotStart - 1; i >= 0 && !stack.isEmpty(); i--) {
+            Slot target = menu.getSlot(i);
+            if (target.container == player.getInventory() && target.getContainerSlot() < 36
+                    && target.getContainerSlot() >= 0) {
+                moved |= ((AbstractContainerMenuInvoker) this).totem$moveItemStackTo(stack, i, i + 1, false);
+            }
         }
+        if (!moved) return ItemStack.EMPTY;
         totem$finishQuickMove(player, source, stack, original);
         return original;
     }

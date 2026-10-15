@@ -14,13 +14,13 @@ import java.util.function.BiFunction;
 public final class RemnantSortClientProvider implements BiFunction<AbstractContainerScreen<?>, Slot, Boolean> {
     @Override public Boolean apply(AbstractContainerScreen<?> screen, Slot hovered) {
         var menu = screen.getMenu();
-        if (!(menu instanceof BackpackMenu) && !(menu instanceof BackpackPanelMenuAccess)
+        if (!(menu instanceof BackpackMenu) && !BackpackPanelMenuAccess.supports(menu)
                 && !dev.totem.remnant.inventory.MatchingBackpackSort.isVanillaChest(menu)) return false;
         if (screen instanceof ObserverReadOnlyScreen observer && observer.totem$isObserverReadOnly()) return true;
         if (hovered == null || !hovered.isActive()) return true;
         int selected = -1;
         ItemStack expected = ItemStack.EMPTY;
-        if (menu instanceof BackpackPanelMenuAccess access) {
+        if (BackpackPanelMenuAccess.supports(menu) && menu instanceof BackpackPanelMenuAccess access) {
             selected = access.totem$getBackpackPanel().selectedInventorySlot();
             expected = access.totem$getBackpackPanel().selectedBackpack().copy();
         }

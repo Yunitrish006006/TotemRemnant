@@ -11,7 +11,7 @@ Owner: TotemRemnant. VanillaTweaks owns the configurable sort key.
   and Data Components, then sorts the remainder. Hotbar backpacks may receive
   player-main-inventory items; loose hotbar/equipment/offhand items are not drained.
 - Backpacks stay pinned to their original objects and positions. Destinations are
-  deterministic; full bags retain source remainders. Backpacks are never nested.
+  deterministic; full bags retain source remainders. New backpack nesting remains forbidden.
 - Death backpacks open the production BackpackScreen and safely sort storage.
   One-click equip fills only empty HEAD/CHEST/LEGS/FEET slots, preserving all item
   components; occupied equipment is never overwritten or dropped.
@@ -62,22 +62,21 @@ No hard Remnant/VanillaTweaks dependency is introduced.
   assert optional-module presence. Its manual CI workflow has not been dispatched.
 - No version bump or publication is part of this integration.
 
-## Remaining development plan
+## Authorized workstation/death sidebar scope
 
-1. Other workstation sidebars: crafting/enchanting and other supported native
-   screens expose real backpack slots. Preserve functional slot indices,
-   quick-move and recipes; provide native owner semantic Observer reconstruction.
-2. Death sidebar: allow explicit death-backpack selection and storage operations,
-   preserve owner/recovery lifecycle and access to large/overflow contents.
-3. Embedded material sourcing: the existing embedded crafting grid may stage
-   recipe ingredients from permitted backpack slots. Determine the actual
-   enchanting UI owner/existence before adding its integration. Validate target
-   item, lapis, XP and owner costs server-side; consume output ingredients once.
+The exact native allowlist is InventoryMenu, CraftingMenu, EnchantmentMenu and
+ChestMenu. Other UI families are deferred by the user (2026-10-15).
+Workstation support means manually taking backpack items into vanilla functional
+slots; automatic recipe sourcing and automatic XP/lapis deduction are excluded.
 
-For each next stage, narrow ownership/contracts with intelligence, stage and
-validate atomic mutations, cover full/partial/changed inputs, repeated actions,
-close/reopen and reload, then perform focused client/Observer tests and review.
-These three stages are not implemented by the safe-actions mainline integration.
+Ordinary and death backpacks share stable physical sidebar slots, client-local
+scrolling, exact hovered sorting and close/recovery lifecycle. Death sorting may
+relocate each exact preexisting captured backpack once without allowing new
+nested insertion. Backpack components, hidden storage and overflow are retained.
+
+Final owner-capture three-JVM validation and independent review passed. The
+verified implementation is ready for the requested mainline integration. No
+publication is requested.
 
 ## Bundle-style direct item interaction (verified)
 
@@ -85,8 +84,8 @@ Ordinary backpacks support native Bundle gestures in either cursor/slot
 orientation: left-click with an item deposits it; right-click with an empty
 cursor/target withdraws the selected stack. Empty-handed left-click still picks
 up the whole backpack. Native wheel/hover/quick-move lifecycle selects/resets
-items, with translated vanilla tooltip guidance. Death sidebar/direct-item
-recovery policy remains a separate stage.
+items, with translated vanilla tooltip guidance. Death backpacks use the same sidebar slot operations and sorting; bundle-style
+direct item gestures apply to ordinary backpacks.
 
 CONTAINER is the only contents store. A bounded selected-index component is
 synchronized and persisted. Server selection binds menu/state/slot/expected
@@ -110,3 +109,32 @@ Bounded local client profile: `-PtotemBackpackBundleOnly=true`. The existing
 full safe-actions profile/runner also includes this test. Neither profile
 changes production authentication. Full account-v1 admission is still outside
 this passing owner-UI scope. No version bump or publication was performed.
+
+## Workstation/death sidebar final validation
+
+Final safe-actions regression: all 81 GameTests passed (2026-10-15), including
+captured-backpack death sorting, explicit constructors, native functional slot
+indices, deep death contents, hovered sort routing, chest Shift-click boundaries
+and close recovery. VanillaTweaks-present and -absent clients and separate-JVM
+seed/reload all passed. Evidence: `test-artifacts/safe-actions-20261015223056`.
+
+The native sidebar provider uses `remnant_sidebar@1` with inventory/crafting/
+enchanting/chest variants. It snapshots native slots plus one explicit selected
+bag (including offhand selection), reconstructs stable physical panel indices,
+and uses detached target identity, XP, creative state and effects. Unsent recipe
+search text is represented only by a boolean. The provider also implements
+`Predicate<Screen>` as optional ownership contract v1: Observer must suppress
+native adapters for a claimed screen even if capture fails or the peer lacks
+owner transport. Module-present and fault-injected client checks passed in v12 and the final
+artifact client rerun. Final JAR SHA256: `895f5a76e4a31ec28c0cf103e2ec43f49c1fd52d77808fdd61e8aeb8ff10f12f`.
+Real-target-capture three-JVM validation passed for all eight ordinary/death
+sidebar variants: initial/later contents, remote cursor, input suppression, target
+close, Stop and dedicated-server cleanup. Evidence:
+`/tmp/remnant-sidebar-owner-ui-e2e-final.log` and
+`/tmp/observer-remnant-sidebar-integration/build/e2e/results`.
+
+Final source identity matches all 255 entries recorded by the safe-actions runner.
+Independent review cleared the final implementation, compatibility prerequisites
+and actual validation evidence. Final crafting and death-chest E2E screenshots
+were visually reviewed. Logs, profiles, source hashes, JARs and screenshots are
+preserved locally at: /tmp/remnant-sidebar-integration-evidence-20261015-6v5eylbk

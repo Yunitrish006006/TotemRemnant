@@ -7,7 +7,17 @@
     "InventoryScreenBackpackPanelMixin",
     "ItemEntityRenderStateMixin",
     "ItemEntityRendererMixin",
-    "BackpackItemMouseActionMixin"
+    "BackpackItemMouseActionMixin",
+    "SidebarAbstractRecipeBookScreenAccessor",
+    "SidebarRecipeBookComponentAccessor",
+    "SidebarRecipeBookPageAccessor",
+    "SidebarMenuDataAccessor",
+    "SidebarRecipeBookGuardMixin",
+    "SidebarInventoryRenderMixin",
+    "SidebarEnchantingRenderMixin",
+    "SidebarEffectsRenderMixin",
+    "SidebarWidgetGuardMixin",
+    "SidebarRecipeBookHitboxMixin"
   ],
   "injectors": {
     "defaultRequire": 1

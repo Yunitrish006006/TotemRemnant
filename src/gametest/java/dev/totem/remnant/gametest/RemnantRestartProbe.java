@@ -122,6 +122,16 @@ public final class RemnantRestartProbe implements ModInitializer {
             ItemStack equipped = player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD);
             player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, ItemStack.EMPTY);
             chest(level).setItem(4, equipped);
+            ItemStack captured = ordinary.copy();
+            ItemStack capturedDeath = new ItemStack(RemnantItemRegistration.DEATH_BACKPACK);
+            capturedDeath.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(
+                    new ItemStack(Items.DIRT, 40), captured, new ItemStack(Items.DIRT, 32))));
+            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, capturedDeath);
+            var capturedStorage = new dev.totem.remnant.inventory.DeathBackpackInventory(player,
+                    net.minecraft.world.InteractionHand.MAIN_HAND, 9);
+            player.containerMenu = dev.totem.remnant.inventory.BackpackMenu.deathServerSide(23, player.getInventory(), capturedStorage, 1);
+            require(dev.totem.remnant.inventory.BackpackActions.sort(player, false), "Restart captured backpack sort failed");
+            chest(level).setItem(5, capturedDeath);
             player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             verifyActions(level);
         } finally {
@@ -145,6 +155,13 @@ public final class RemnantRestartProbe implements ModInitializer {
                 "Restart duplicated or lost equip source contents");
         require(chest(level).getItem(4).is(Items.DIAMOND_HELMET) && chest(level).getItem(4).getDamageValue() == 19,
                 "Restart lost equipped item data");
+        ItemStack capturedDeath = chest(level).getItem(5);
+        var capturedContents = capturedDeath.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY)
+                .nonEmptyItemCopyStream().toList();
+        require(capturedDeath.is(RemnantItemRegistration.DEATH_BACKPACK) && capturedContents.size() == 3
+                        && capturedContents.stream().filter(i -> i.is(Items.DIRT)).mapToInt(ItemStack::getCount).sum() == 72
+                        && capturedContents.stream().anyMatch(i -> ItemStack.matches(i, ordinary)),
+                "Restart lost sorted captured backpack contents or selection");
     }
 
     private static ItemStack requireBackpack(ServerLevel level) {

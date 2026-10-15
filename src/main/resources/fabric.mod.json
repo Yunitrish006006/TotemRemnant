@@ -13,7 +13,8 @@
       "dev.totem.remnant.client.TotemRemnantClient"
     ],
     "totem:observer_screen_provider": [
-      "dev.totem.remnant.client.screen.RemnantBackpackObserverScreenProvider"
+      "dev.totem.remnant.client.screen.RemnantBackpackObserverScreenProvider",
+      "dev.totem.remnant.client.screen.RemnantSidebarObserverScreenProvider"
     ],
     "totem:container_sort_server_v1": [
       "dev.totem.remnant.integration.sorting.RemnantSortProvider"

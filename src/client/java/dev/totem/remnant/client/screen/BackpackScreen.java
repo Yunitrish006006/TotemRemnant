@@ -154,7 +154,7 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu>
 
     @Override public boolean keyPressed(KeyEvent event) {
         if (!observerReadOnly) return super.keyPressed(event);
-        if (event.key() == 256) onClose();
+        if (event.key() == com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE) onClose();
         return true;
     }
 

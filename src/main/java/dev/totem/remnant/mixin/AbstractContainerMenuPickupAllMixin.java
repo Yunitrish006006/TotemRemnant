@@ -21,7 +21,7 @@ abstract class AbstractContainerMenuPickupAllMixin {
             AbstractContainerMenu menu, ItemStack carried, Slot candidate,
             Operation<Boolean> original, int slotId, int button, ContainerInput input, Player player
     ) {
-        if (!(menu instanceof InventoryMenu)) return original.call(menu, carried, candidate);
+        if (!(menu instanceof dev.totem.remnant.inventory.BackpackPanelMenuAccess)) return original.call(menu, carried, candidate);
         if (slotId < 0 || slotId >= menu.slots.size()) return false;
         Slot origin = menu.getSlot(slotId);
         if (!origin.isActive() || !candidate.isActive()

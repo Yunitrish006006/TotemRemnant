@@ -1,6 +1,7 @@
 package dev.totem.remnant.inventory;
 
-import dev.totem.remnant.item.TieredBackpackItem;
+import dev.totem.remnant.item.AbstractBackpackItem;
+import dev.totem.remnant.item.DeathBackpackItem;
 import dev.totem.remnant.upgrade.BackpackCapacity;
 import dev.totem.remnant.upgrade.BackpackCompaction;
 import net.minecraft.core.NonNullList;
@@ -15,9 +16,9 @@ import net.minecraft.world.item.component.ItemContainerContents;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Mutable, bounded view of one ordinary backpack selected in the player inventory. */
+/** Mutable, bounded view of one backpack selected in the player inventory. */
 public final class BackpackPanelContainer implements Container {
-    public static final int MAX_PANEL_SLOTS = 72;
+    public static final int MAX_PANEL_SLOTS = 256;
 
     private final Inventory playerInventory;
     private final Player owner;
@@ -37,7 +38,7 @@ public final class BackpackPanelContainer implements Container {
 
     public boolean selectFirstBackpack() {
         for (int slot = 0; slot < playerInventory.getContainerSize(); slot++) {
-            if (playerInventory.getItem(slot).getItem() instanceof TieredBackpackItem) {
+            if (isBackpack(playerInventory.getItem(slot))) {
                 return select(slot);
             }
         }
@@ -75,7 +76,7 @@ public final class BackpackPanelContainer implements Container {
                 DataComponents.CONTAINER,
                 ItemContainerContents.EMPTY
         );
-        int configured = Math.min(MAX_PANEL_SLOTS, BackpackCapacity.configuredSlots(current));
+        int configured = capacity(current);
         if (current != selectedBackpack
                 || configured != activeSlots
                 || !contents.equals(loadedContents)) {
@@ -246,7 +247,7 @@ public final class BackpackPanelContainer implements Container {
             return ItemStack.EMPTY;
         }
         ItemStack candidate = playerInventory.getItem(inventorySlot);
-        return candidate.getItem() instanceof TieredBackpackItem
+        return isBackpack(candidate)
                 ? candidate
                 : ItemStack.EMPTY;
     }
@@ -256,7 +257,7 @@ public final class BackpackPanelContainer implements Container {
         lastContentRefreshGameTime = owner.level().getGameTime();
         activeSlots = backpack.isEmpty()
                 ? 0
-                : Math.min(MAX_PANEL_SLOTS, BackpackCapacity.configuredSlots(backpack));
+                : capacity(backpack);
         for (int slot = 0; slot < items.size(); slot++) {
             items.set(slot, ItemStack.EMPTY);
         }
@@ -277,6 +278,32 @@ public final class BackpackPanelContainer implements Container {
                 : serialized.subList(MAX_PANEL_SLOTS, serialized.size()).stream()
                 .map(ItemStack::copy)
                 .toList();
+    }
+
+    public Inventory playerInventory() { return playerInventory; }
+
+    public static boolean isBackpack(ItemStack stack) {
+        return stack.getItem() instanceof AbstractBackpackItem && stack.getCount() == 1;
+    }
+
+    private static int capacity(ItemStack stack) {
+        if (stack.getItem() instanceof DeathBackpackItem) return MAX_PANEL_SLOTS;
+        return Math.clamp(BackpackCapacity.configuredSlots(stack), 0, 72);
+    }
+
+    /** Complete recovery only at a menu close, after every stored slot is empty. */
+    public void finishRecovery(Player player) {
+        refreshAfterExternalCommit();
+        ItemStack current = validBackpackAt(selectedInventorySlot);
+        if (!(player instanceof net.minecraft.server.level.ServerPlayer serverPlayer)
+                || player != owner || current != selectedBackpack
+                || !(current.getItem() instanceof DeathBackpackItem)
+                || current.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY)
+                    .nonEmptyItemCopyStream().findAny().isPresent()) return;
+        dev.totem.remnant.death.DeathBackpackRecoveryService.recoverBoundNode(serverPlayer, current);
+        playerInventory.setItem(selectedInventorySlot, ItemStack.EMPTY);
+        playerInventory.setChanged();
+        select(-1);
     }
 
     private static boolean inBounds(int slot) {

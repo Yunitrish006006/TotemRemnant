@@ -13,6 +13,7 @@
     ],
     "fabric-gametest": [
       "dev.totem.remnant.inventory.BackpackPanelInteractionGameTest",
+      "dev.totem.remnant.inventory.BackpackWorkstationPanelGameTest",
       "dev.totem.remnant.death.DeathBackpackLifecycleGameTest",
       "dev.totem.remnant.death.BackpackUpgradeGameTest",
       "dev.totem.remnant.gametest.BackpackDyeingGameTest",
@@ -35,7 +36,9 @@
       "dev.totem.remnant.client.BackpackInventoryPanelVisualGameTest",
       "dev.totem.remnant.client.BackpackUpgradeRecipeVisualGameTest",
       "dev.totem.remnant.client.BackpackActionsClientGameTest",
-      "dev.totem.remnant.client.BackpackBundleClientGameTest"
+      "dev.totem.remnant.client.BackpackBundleClientGameTest",
+      "dev.totem.remnant.client.BackpackSidebarObserverClientGameTest",
+      "dev.totem.remnant.client.BackpackWorkstationClientGameTest"
     ]
   },
   "depends": {
