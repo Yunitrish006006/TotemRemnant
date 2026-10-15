@@ -119,5 +119,9 @@
   "book.totem.remnant.rules.change_hint": "Cambia con /gamerule · Tab completa",
   "book.totem.remnant.container_safety.title": "Seguridad de contenedores portátiles",
   "book.totem.remnant.container_safety.page.1": "Sin anidamiento inseguro\n\nAunque está activada de forma predeterminada, las mochilas de Remnant, %1$s, %2$s y los contenedores portátiles etiquetados no pueden colocarse unos dentro de otros. El contenido anidado existente no se elimina: retíralo, pero no podrás insertarlo de nuevo.",
-  "book.totem.remnant.container_safety.page.2": "Regla del mundo (predeterminado: true)\n\nPermitir anidamiento de Remnant:\n/gamerule totem:remnant_prevent_portable_container_nesting false\n\nDesactivarla elimina solo las restricciones añadidas por Remnant; las restricciones de Minecraft se mantienen.\n\nLos administradores pueden ejecutar:\n/totem containers scan"
+  "book.totem.remnant.container_safety.page.2": "Regla del mundo (predeterminado: true)\n\nPermitir anidamiento de Remnant:\n/gamerule totem:remnant_prevent_portable_container_nesting false\n\nDesactivarla elimina solo las restricciones añadidas por Remnant; las restricciones de Minecraft se mantienen.\n\nLos administradores pueden ejecutar:\n/totem containers scan",
+  "container.totem.death_backpack.equip": "Equipar",
+  "container.totem.death_backpack.equip.tooltip": "Equipa armadura en las ranuras vacías. Conserva el equipo actual.",
+  "tooltip.totem.backpack.selected": "Seleccionado: %s × %s",
+  "tooltip.totem.backpack.bundle_controls": "Clic izquierdo: guardar · Clic derecho: sacar · Rueda: seleccionar"
 }

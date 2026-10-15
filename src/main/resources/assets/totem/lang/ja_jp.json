@@ -119,5 +119,9 @@
   "book.totem.remnant.rules.change_hint": "/gamerule で変更・Tab で補完",
   "book.totem.remnant.container_safety.title": "携帯コンテナの安全性",
   "book.totem.remnant.container_safety.page.1": "安全でない入れ子の防止\n\n既定で有効な間は、レムナントのバックパック、%1$s、%2$s、タグ付き携帯コンテナを互いの中に入れられない。既存の入れ子内容は削除されないので取り出せるが、再び入れることはできない。",
-  "book.totem.remnant.container_safety.page.2": "ワールドルール（既定: true）\n\nレムナントの入れ子を許可する:\n/gamerule totem:remnant_prevent_portable_container_nesting false\n\n無効にするとレムナント追加の制限だけが外れ、バニラの制限は残る。\n\n管理者は次を実行できる:\n/totem containers scan"
+  "book.totem.remnant.container_safety.page.2": "ワールドルール（既定: true）\n\nレムナントの入れ子を許可する:\n/gamerule totem:remnant_prevent_portable_container_nesting false\n\n無効にするとレムナント追加の制限だけが外れ、バニラの制限は残る。\n\n管理者は次を実行できる:\n/totem containers scan",
+  "container.totem.death_backpack.equip": "装備する",
+  "container.totem.death_backpack.equip.tooltip": "空いている防具スロットに装備します。装備中のアイテムはそのままです。",
+  "tooltip.totem.backpack.selected": "選択中: %s × %s",
+  "tooltip.totem.backpack.bundle_controls": "左クリック: 収納 · 右クリック: 取り出す · ホイール: 選択"
 }

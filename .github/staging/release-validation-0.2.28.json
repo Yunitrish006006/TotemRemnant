@@ -1,0 +1,12 @@
+{
+  "version": "0.2.28",
+  "java": 25,
+  "minecraft": "26.3",
+  "artifact": "totem-remnant-0.2.28.jar",
+  "sha512": "e3d29b6d6258a4e9df7ec3fce0d798bf5b8126204a6ce275b2045cce7cdb28ba4441521533537e9082b0282d1332172251e97fc20fdaa9ce62bc8a9e86fc7967",
+  "core_version": "0.7.23",
+  "core_source_commit": "424b90dc3929caa8c1afcfca7e63c50a64bde669",
+  "core_artifact_sha512": "c3d2f88252ee23500d91f7d49a742f47ae981f25acf1e3cdfcf76c81aa36319943ea92f7aa0a7caf1685d89cb765a1e83ac6a0ee1f1af00cec9ea071cdbe923d",
+  "validation_scope": "Versioned candidate assembled; all 126 production classes match the final81-server/native-client/optional-module/restart/8variant-owner-UI-E2E tested candidate. Exact-source Build and immutable artifact/read-back required before publication. Spanish/Japanese new operation labels completed; source/JAR preflight passed.",
+  "independent_review": "Independent release review cleared version/changelog/translations, exact JAR hash, immutable source/artifact gates and prior functional evidence before push."
+}
