@@ -21,6 +21,34 @@ import java.util.List;
 
 public final class BackpackWorkstationPanelGameTest {
     @GameTest(maxTicks = 20)
+    public void adapterRegistryRejectsSubclassesAndPreservesAllChestBoundaries(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        try {
+            require(BackpackSidebarAdapters.variants().equals(java.util.Set.of("inventory", "crafting", "enchanting", "chest")),
+                    "Registered variants drifted from the native Observer contract");
+            require(BackpackPanelMenuAccess.supports(player.inventoryMenu), "Inventory adapter was not attached");
+            for (int rows = 1; rows <= 6; rows++) {
+                var menu = new ChestMenu(net.minecraft.world.inventory.MenuType.GENERIC_9x1, 20 + rows,
+                        player.getInventory(), new net.minecraft.world.SimpleContainer(rows * 9), rows);
+                var access = (BackpackPanelMenuAccess) menu;
+                int nativeCount = rows * 9 + 36;
+                require(BackpackSidebarAdapters.find(menu) == BackpackSidebarAdapters.CHEST
+                        && access.totem$getBackpackPanelSlotStart() == nativeCount
+                        && menu.slots.size() == nativeCount + 256, "Chest constructor attached at the wrong boundary");
+                var original = menu.getSlot(nativeCount);
+                require(BackpackPanelAttachment.attach(menu) == null && menu.slots.size() == nativeCount + 256
+                        && menu.getSlot(nativeCount) == original, "Repeated attachment changed physical slots");
+            }
+            var custom = new ChestMenu(net.minecraft.world.inventory.MenuType.GENERIC_9x1, 30,
+                    player.getInventory(), new net.minecraft.world.SimpleContainer(9), 1) {};
+            require(BackpackSidebarAdapters.find(custom) == null && !BackpackPanelMenuAccess.supports(custom)
+                    && ((BackpackPanelMenuAccess) custom).totem$getBackpackPanel() == null
+                    && custom.slots.size() == 45, "Custom menu inherited an unregistered adapter");
+            helper.succeed();
+        } finally { player.discard(); }
+    }
+
+    @GameTest(maxTicks = 20)
     public void capturedBackpackSortPreservesNestedContentsAndRejectsNewNesting(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         try {

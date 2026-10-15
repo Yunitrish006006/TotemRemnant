@@ -18,16 +18,20 @@ import java.util.*;
 public final class RemnantSidebarObserverScreenProvider implements ObserverScreenProvider, java.util.function.Predicate<Screen> {
     @Override public String familyId() { return "remnant_sidebar"; }
     @Override public int protocolVersion() { return 1; }
-    @Override public Set<String> variants() { return Set.of("inventory", "crafting", "enchanting", "chest"); }
+    @Override public Set<String> variants() { return dev.totem.remnant.inventory.BackpackSidebarAdapters.variants(); }
     private static void clientThread() {
         if (!Minecraft.getInstance().isSameThread()) throw new IllegalStateException("Sidebar Observer requires client thread");
     }
     private static String variant(AbstractContainerScreen<?> screen) {
-        if (screen.getClass() == InventoryScreen.class) return "inventory";
-        if (screen.getClass() == CraftingScreen.class) return "crafting";
-        if (screen.getClass() == EnchantmentScreen.class) return "enchanting";
-        if (screen.getClass() == ContainerScreen.class) return "chest";
-        return "";
+        var adapter = dev.totem.remnant.inventory.BackpackSidebarAdapters.find(screen.getMenu());
+        if (adapter == null) return "";
+        Class<?> expectedScreen = switch (adapter) {
+            case INVENTORY -> InventoryScreen.class;
+            case CRAFTING -> CraftingScreen.class;
+            case ENCHANTING -> EnchantmentScreen.class;
+            case CHEST -> ContainerScreen.class;
+        };
+        return screen.getClass() == expectedScreen ? adapter.variant() : "";
     }
     /** Local ownership survives missing transport capability and capture/encoding failure. */
     @Override public boolean test(Screen candidate) {

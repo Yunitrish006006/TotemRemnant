@@ -6,9 +6,9 @@ import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-/** Exposes the menu primitives used by the InventoryMenu backpack extension. */
+/** Exposes the menu primitives used by the shared backpack attachment. */
 @Mixin(AbstractContainerMenu.class)
-interface AbstractContainerMenuInvoker {
+public interface AbstractContainerMenuInvoker {
     @Invoker("addSlot")
     Slot totem$addSlot(Slot slot);
 

@@ -8,19 +8,32 @@ public interface BackpackPanelMenuAccess {
     }
 
     static boolean isNativeClass(net.minecraft.world.inventory.AbstractContainerMenu menu) {
-        Class<?> type = menu.getClass();
-        return type == net.minecraft.world.inventory.InventoryMenu.class
-                || type == net.minecraft.world.inventory.CraftingMenu.class
-                || type == net.minecraft.world.inventory.EnchantmentMenu.class
-                || type == net.minecraft.world.inventory.ChestMenu.class;
+        return BackpackSidebarAdapters.find(menu) != null;
     }
 
-    BackpackPanelContainer totem$getBackpackPanel();
+    BackpackPanelAttachment totem$getBackpackPanelAttachment();
 
-    int totem$getBackpackPanelSlotStart();
+    default BackpackPanelContainer totem$getBackpackPanel() {
+        var attachment = totem$getBackpackPanelAttachment();
+        return attachment == null ? null : attachment.panel();
+    }
 
-    boolean totem$selectBackpackSlot(int inventorySlot);
+    default int totem$getBackpackPanelSlotStart() {
+        var attachment = totem$getBackpackPanelAttachment();
+        return attachment == null ? -1 : attachment.slotStart();
+    }
 
-    boolean totem$layoutBackpackSlots(int relativeLeft, int relativeTop, int columns);
-    boolean totem$layoutBackpackWindow(int relativeLeft, int relativeTop, int columns, int firstRow, int rows);
+    default boolean totem$selectBackpackSlot(int inventorySlot) {
+        var panel = totem$getBackpackPanel();
+        return panel != null && panel.select(inventorySlot);
+    }
+
+    default boolean totem$layoutBackpackSlots(int relativeLeft, int relativeTop, int columns) {
+        return totem$layoutBackpackWindow(relativeLeft, relativeTop, columns, 0, Integer.MAX_VALUE);
+    }
+
+    default boolean totem$layoutBackpackWindow(int relativeLeft, int relativeTop, int columns, int firstRow, int rows) {
+        var attachment = totem$getBackpackPanelAttachment();
+        return attachment != null && attachment.layoutWindow(relativeLeft, relativeTop, columns, firstRow, rows);
+    }
 }
