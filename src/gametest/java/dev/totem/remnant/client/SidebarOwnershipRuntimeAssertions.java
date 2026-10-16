@@ -15,11 +15,23 @@ final class SidebarOwnershipRuntimeAssertions {
         Minecraft client=Minecraft.getInstance();var previous=client.gui.screen();
         Class<?> nativeClient=Class.forName("dev.totem.observer.client.ObserverNativeClient");
         Class<?> transport=Class.forName("dev.totem.observer.client.ObserverOwnedScreenTransportClient");
-        Class<?> adapter=Class.forName(source instanceof EnchantmentScreen
-                ?"dev.totem.observer.client.ObserverNativeEnchantingScreenClient"
-                :source instanceof ContainerScreen?"dev.totem.observer.client.ObserverNativeScreenClient"
-                :"dev.totem.observer.client.ObserverNativeCraftingScreenClient");
-        String openName=source instanceof ContainerScreen?"targetContainerOpen":"targetOpen";
+        String variant=dev.totem.remnant.inventory.BackpackSidebarAdapters.find(source.getMenu()).variant();
+        String adapterName=switch(variant) {
+            case "inventory","crafting" -> "ObserverNativeCraftingScreenClient";
+            case "enchanting" -> "ObserverNativeEnchantingScreenClient";
+            case "chest","hopper","furnace","smoker","blast_furnace" -> "ObserverNativeScreenClient";
+            case "anvil" -> "ObserverNativeAnvilScreenClient";
+            case "merchant" -> "ObserverNativeMerchantScreenClient";
+            case "cartography" -> "ObserverCartographyScreenClient";
+            case "brewing" -> "ObserverBrewingScreenClient";
+            default -> "Observer"+Character.toUpperCase(variant.charAt(0))+variant.substring(1)+"ScreenClient";
+        };
+        Class<?> adapter=Class.forName("dev.totem.observer.client."+adapterName);
+        String openName=switch(variant) {
+            case "chest","hopper" -> "targetContainerOpen";
+            case "furnace","smoker","blast_furnace" -> "targetFurnaceOpen";
+            default -> "targetOpen";
+        };
         var state=new LinkedHashMap<Field,Object>();
         for(var pair:List.of(new Object[]{nativeClient,"targetStateEnabled"},new Object[]{nativeClient,"targetScreenCapabilities"},
                 new Object[]{transport,"providers"},new Object[]{transport,"ownershipScreen"},new Object[]{transport,"ownershipTick"},

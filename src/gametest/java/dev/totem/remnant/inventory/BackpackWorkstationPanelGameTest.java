@@ -20,11 +20,59 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class BackpackWorkstationPanelGameTest {
+    @GameTest(maxTicks = 40)
+    public void allNativeAdaptersTransferOrdinaryAndDeathMaterialsWithoutChangingSlots(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        try {
+            int id=60;
+            for (var adapter : BackpackSidebarAdapters.values()) for (boolean death : List.of(false,true)) {
+                player.getInventory().clearContent();
+                var bag=new ItemStack(death?RemnantItemRegistration.DEATH_BACKPACK:RemnantItemRegistration.BACKPACK_BASIC);
+                var material = switch(adapter) {
+                    case FURNACE, BLAST_FURNACE -> Items.RAW_IRON;
+                    case SMOKER -> Items.BEEF;
+                    case ENCHANTING -> Items.LAPIS_LAZULI;
+                    case SMITHING -> Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE;
+                    case GRINDSTONE -> Items.IRON_PICKAXE;
+                    case LOOM -> Items.BANNER.white();
+                    case CARTOGRAPHY -> Items.PAPER;
+                    case BREWING -> Items.GLASS_BOTTLE;
+                    default -> Items.STONE;
+                };
+                var item=new ItemStack(material,adapter==BackpackSidebarAdapters.BREWING?1:Math.min(7,material.getDefaultMaxStackSize()));
+                var stored=new ArrayList<ItemStack>();for(int i=0;i<(death?256:9);i++)stored.add(ItemStack.EMPTY);
+                int deep=death?255:0;stored.set(deep,item.copy());bag.set(DataComponents.CONTAINER,ItemContainerContents.fromItems(stored));
+                player.getInventory().setItem(0,bag);
+                var menu=adapter.createMenu(id++,player.getInventory());player.containerMenu=menu;
+                require(BackpackPanelMenuAccess.supports(menu),"Missing native attachment: "+adapter);
+                var access=(BackpackPanelMenuAccess)menu;access.totem$selectBackpackSlot(0);
+                int start=adapter.nativeSlotCount(menu);
+                require(access.totem$getBackpackPanelSlotStart()==start && menu.slots.size()==start+256,"Changed native boundaries: "+adapter);
+                var physical=menu.getSlot(start+deep);
+                menu.clicked(start+deep,0,ContainerInput.PICKUP,player);
+                require(ItemStack.matches(menu.getCarried(),item),"Sidebar withdrawal failed: "+adapter);
+                int input=adapter==BackpackSidebarAdapters.CRAFTING || adapter==BackpackSidebarAdapters.INVENTORY || adapter==BackpackSidebarAdapters.ENCHANTING || adapter==BackpackSidebarAdapters.CARTOGRAPHY?1:0;
+                menu.clicked(input,0,ContainerInput.PICKUP,player);
+                require(menu.getCarried().isEmpty() && ItemStack.matches(menu.getSlot(input).getItem(),item),"Native input rejected material: "+adapter);
+                menu.clicked(input,0,ContainerInput.PICKUP,player);menu.clicked(start+deep,0,ContainerInput.PICKUP,player);
+                require(menu.getCarried().isEmpty() && ItemStack.matches(physical.getItem(),item),"Returning material lost items: "+adapter);
+                require(ItemStack.matches(menu.quickMoveStack(player,start+deep),item) && physical.getItem().isEmpty(),"Sidebar shift transfer failed: "+adapter);
+                require(menu.getSlot(start+deep)==physical,"Physical slot remapped: "+adapter);
+            }
+            // Hopper vanilla quick-move must never use appended sidebar destinations.
+            player.getInventory().clearContent();var bag=new ItemStack(RemnantItemRegistration.BACKPACK_BASIC);
+            player.getInventory().setItem(0,bag);var hopper=new net.minecraft.world.inventory.HopperMenu(id,player.getInventory());
+            var access=(BackpackPanelMenuAccess)hopper;access.totem$selectBackpackSlot(0);hopper.getSlot(0).set(new ItemStack(Items.DIAMOND,9));
+            require(hopper.quickMoveStack(player,0).getCount()==9 && contents(bag).isEmpty(),"Hopper native shift drained into sidecar");
+            helper.succeed();
+        } finally { player.containerMenu=player.inventoryMenu;player.discard(); }
+    }
+
     @GameTest(maxTicks = 20)
     public void adapterRegistryRejectsSubclassesAndPreservesAllChestBoundaries(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         try {
-            require(BackpackSidebarAdapters.variants().equals(java.util.Set.of("inventory", "crafting", "enchanting", "chest")),
+            require(BackpackSidebarAdapters.variants().size() == 16,
                     "Registered variants drifted from the native Observer contract");
             require(BackpackPanelMenuAccess.supports(player.inventoryMenu), "Inventory adapter was not attached");
             for (int rows = 1; rows <= 6; rows++) {

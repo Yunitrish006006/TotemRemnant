@@ -26,7 +26,8 @@ public final class BackpackSidebarObserverClientGameTest implements FabricClient
             var provider=new RemnantSidebarObserverScreenProvider();
             boolean observerLoaded=net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("totem-observer");
             require(observerLoaded==Boolean.getBoolean("totem.remnant.test.expectedObserver"),"Unexpected Observer runtime presence");
-            for(String variant:List.of("inventory","crafting","enchanting","chest")) for(boolean death:List.of(false,true)) {
+            for(String variant:List.of("inventory","crafting","enchanting","chest","furnace","smoker","blast_furnace","anvil","stonecutter","smithing","grindstone","loom","cartography","brewing","hopper","merchant")) for(boolean death:List.of(false,true)) {
+                var sourceRef=new java.util.concurrent.atomic.AtomicReference<AbstractContainerScreen<?>>();
                 var initial=context.computeOnClient(client->{
                     var target=new RemotePlayer(client.level,new GameProfile(UUID.randomUUID(),"Source"));
                     target.setId(-314159);target.experienceLevel=42;var inv=target.getInventory();
@@ -39,8 +40,34 @@ public final class BackpackSidebarObserverClientGameTest implements FabricClient
                         case "inventory"->new InventoryScreen(target);
                         case "crafting"->new CraftingScreen(new CraftingMenu(12,inv),inv,Component.literal("Crafting"));
                         case "enchanting"->new EnchantmentScreen(new EnchantmentMenu(12,inv),inv,Component.literal("Enchanting"));
+                        case "furnace"->new FurnaceScreen(new FurnaceMenu(12,inv),inv,Component.literal("furnace"));
+                        case "smoker"->new SmokerScreen(new SmokerMenu(12,inv),inv,Component.literal("smoker"));
+                        case "blast_furnace"->new BlastFurnaceScreen(new BlastFurnaceMenu(12,inv),inv,Component.literal("blast_furnace"));
+                        case "anvil"->new AnvilScreen(new AnvilMenu(12,inv),inv,Component.literal("anvil"));
+                        case "stonecutter"->new StonecutterScreen(new StonecutterMenu(12,inv),inv,Component.literal("stonecutter"));
+                        case "smithing"->new SmithingScreen(new SmithingMenu(12,inv),inv,Component.literal("smithing"));
+                        case "grindstone"->new GrindstoneScreen(new GrindstoneMenu(12,inv),inv,Component.literal("grindstone"));
+                        case "loom"->new LoomScreen(new LoomMenu(12,inv),inv,Component.literal("loom"));
+                        case "cartography"->new CartographyTableScreen(new CartographyTableMenu(12,inv),inv,Component.literal("cartography"));
+                        case "brewing"->new BrewingStandScreen(new BrewingStandMenu(12,inv),inv,Component.literal("brewing"));
+                        case "hopper"->new HopperScreen(new HopperMenu(12,inv),inv,Component.literal("hopper"));
+                        case "merchant"->new MerchantScreen(new MerchantMenu(12,inv),inv,Component.literal("merchant"));
                         default->new ContainerScreen(ChestMenu.sixRows(12,inv),inv,Component.literal("Chest"));
                     };
+                    sourceRef.set(source);
+                    if(source.getMenu() instanceof AnvilMenu anvil) {
+                        anvil.getSlot(0).set(new ItemStack(Items.DIAMOND));
+                        var draft=new ItemStack(Items.DIAMOND);draft.set(DataComponents.CUSTOM_NAME,Component.literal("PRIVATE_ANVIL_DRAFT"));
+                        anvil.getSlot(AnvilMenu.RESULT_SLOT).set(draft);
+                    }
+                    if(source.getMenu() instanceof MerchantMenu merchant) {
+                        var offers=new net.minecraft.world.item.trading.MerchantOffers();
+                        for(int offer=0;offer<9;offer++)offers.add(new net.minecraft.world.item.trading.MerchantOffer(new net.minecraft.world.item.trading.ItemCost(Items.EMERALD,3),Optional.empty(),new ItemStack(Items.DIAMOND),2,7,3,0.2F));
+                        merchant.setOffers(offers);merchant.setMerchantLevel(4);merchant.setXp(100);merchant.setShowProgressBar(true);merchant.setCanRestock(true);
+                    }
+                    if(source.getMenu() instanceof AbstractFurnaceMenu furnace) {
+                        furnace.setData(0,10);furnace.setData(1,100);furnace.setData(2,20);furnace.setData(3,200);
+                    }
                     if(source instanceof AbstractRecipeBookScreen<?> recipe) {
                         source.init(client.getWindow().getGuiScaledWidth(),client.getWindow().getGuiScaledHeight());
                         var ra=(dev.totem.remnant.mixin.client.SidebarAbstractRecipeBookScreenAccessor)recipe;
@@ -48,9 +75,32 @@ public final class BackpackSidebarObserverClientGameTest implements FabricClient
                         ba.remnant$initVisuals();ba.remnant$setVisible(true);
                         ba.remnant$getSearchBox().setValue("PRIVATE_UNSENT_SIDEBAR_QUERY");
                     }
+                    if(source instanceof dev.totem.remnant.mixin.client.SidebarStonecutterScreenAccessor state) {
+                        state.remnant$setStartIndex(4);state.remnant$setScrollOffs(0.5F);
+                    }
+                    if(source instanceof dev.totem.remnant.mixin.client.SidebarLoomScreenAccessor state) {
+                        state.remnant$setStartRow(1);state.remnant$setScrollOffs(0.5F);
+                    }
+                    if(source instanceof dev.totem.remnant.mixin.client.SidebarMerchantScreenAccessor state) {
+                        state.remnant$setShopItem(2);state.remnant$setScrollOff(1);
+                    }
                     ((BackpackPanelMenuAccess)source.getMenu()).totem$selectBackpackSlot(40);
                     ((BackpackSidebarLayout)source).remnant$firstRow(death?255:0);
                     if(observerLoaded) verifyOwnership(source,provider);
+                    sourceRef.set(source);
+                    if(source.getMenu() instanceof AnvilMenu anvil) {
+                        anvil.getSlot(0).set(new ItemStack(Items.DIAMOND));
+                        var draft=new ItemStack(Items.DIAMOND);draft.set(DataComponents.CUSTOM_NAME,Component.literal("PRIVATE_ANVIL_DRAFT"));
+                        anvil.getSlot(AnvilMenu.RESULT_SLOT).set(draft);
+                    }
+                    if(source.getMenu() instanceof MerchantMenu merchant) {
+                        var offers=new net.minecraft.world.item.trading.MerchantOffers();
+                        for(int offer=0;offer<9;offer++)offers.add(new net.minecraft.world.item.trading.MerchantOffer(new net.minecraft.world.item.trading.ItemCost(Items.EMERALD,3),Optional.empty(),new ItemStack(Items.DIAMOND),2,7,3,0.2F));
+                        merchant.setOffers(offers);merchant.setMerchantLevel(4);merchant.setXp(100);merchant.setShowProgressBar(true);merchant.setCanRestock(true);
+                    }
+                    if(source.getMenu() instanceof AbstractFurnaceMenu furnace) {
+                        furnace.setData(0,10);furnace.setData(1,100);furnace.setData(2,20);furnace.setData(3,200);
+                    }
                     if(source instanceof AbstractRecipeBookScreen<?> recipe) {
                         var ra=(dev.totem.remnant.mixin.client.SidebarAbstractRecipeBookScreenAccessor)recipe;
                         var ba=(dev.totem.remnant.mixin.client.SidebarRecipeBookComponentAccessor)ra.remnant$getRecipeBookComponent();
@@ -61,6 +111,17 @@ public final class BackpackSidebarObserverClientGameTest implements FabricClient
                     require(!snapshot.metadata().toString().contains("PRIVATE_UNSENT"),"Unsent recipe query leaked");
                     return snapshot;
                 });
+                if(death && List.of("merchant","stonecutter","loom").contains(variant)) {
+                    context.runOnClient(client->{client.setScreenAndShow(sourceRef.get());((BackpackSidebarLayout)sourceRef.get()).remnant$firstRow(0);});
+                    context.waitTicks(3);
+                    context.runOnClient(client->{
+                        var nativeScreen=sourceRef.get();var layout=(BackpackSidebarLayout)nativeScreen;
+                        var panelAccess=(BackpackPanelMenuAccess)nativeScreen.getMenu();var slot=nativeScreen.getMenu().getSlot(panelAccess.totem$getBackpackPanelSlotStart());
+                        nativeScreen.mouseScrolled(layout.remnant$left()+slot.x+8,layout.remnant$top()+slot.y+8,0,-1);
+                        require(layout.remnant$firstRow()>0,"Native scroll override swallowed sidebar input: "+variant);
+                        client.setScreenAndShow(null);
+                    });
+                }
                 var stops=new AtomicInteger();
                 var handle=context.computeOnClient(client->provider.create(new ObserverScreenContext(UUID.randomUUID(),"Target",stops::incrementAndGet),initial));
                 context.runOnClient(client->{
@@ -80,14 +141,42 @@ public final class BackpackSidebarObserverClientGameTest implements FabricClient
                             "Sidebar viewport missing: "+variant+" death="+death+" x="+menu.getSlot(deep).x+" y="+menu.getSlot(deep).y+" firstRow="+((BackpackSidebarLayout)screen).remnant$firstRow()+" width="+screen.width);
                     var visible=menu.getSlot(deep);
                     require(visible.x>=189 || visible.x+16<=-13,"Sidebar overlapped native functional area");
+                    if(menu instanceof MerchantMenu merchant) {
+                        require(merchant.getOffers().size()==9 && merchant.getOffers().getFirst().getUses()==2 && merchant.getTraderLevel()==4 && merchant.getTraderXp()==100,"Merchant state missing");
+                    }
+                    if(menu instanceof AnvilMenu)require(initial.slots().get(AnvilMenu.RESULT_SLOT).get(DataComponents.CUSTOM_NAME)==null,"Anvil rename draft leaked");
+                    if(screen instanceof dev.totem.remnant.mixin.client.SidebarStonecutterScreenAccessor state)
+                        require(state.remnant$getStartIndex()==4 && state.remnant$getScrollOffs()==0.5F,"Stonecutter public scroll state missing");
+                    if(screen instanceof dev.totem.remnant.mixin.client.SidebarLoomScreenAccessor state)
+                        require(state.remnant$getStartRow()==1 && state.remnant$getScrollOffs()==0.5F,"Loom public scroll state missing");
+                    if(screen instanceof dev.totem.remnant.mixin.client.SidebarMerchantScreenAccessor state)
+                        require(state.remnant$getShopItem()==2 && state.remnant$getScrollOff()==1,"Merchant public selection missing");
+                    var nativeData=((dev.totem.remnant.mixin.client.SidebarMenuDataAccessor)menu).remnant$dataSlots();
+                    for(int i=0;i<nativeData.size();i++)require(nativeData.get(i).get()==initial.data()[10+i],"Native menu data missing: "+variant);
                     require(provider.capture(screen,2).isEmpty(),"Projection was rebroadcast");
                     var slots=new ArrayList<>(initial.slots());var bag=slots.getLast().copy();
                     var contents=new ArrayList<>(bag.get(DataComponents.CONTAINER).itemCopies().toList());
                     contents.set(death?255:0,new ItemStack(Items.EMERALD,11));bag.set(DataComponents.CONTAINER,ItemContainerContents.fromItems(contents));slots.set(slots.size()-1,bag);
-                    var update=new ObserverScreenSnapshot(provider.familyId(),variant,1,2,initial.title(),slots,initial.data(),initial.metadata(),new byte[0]);
+                    var update=new ObserverScreenSnapshot(provider.familyId(),variant,1,2,initial.title(),slots,initial.data(),initial.metadata(),initial.ownerPayload());
                     handle.applySnapshot(update);handle.applySnapshot(initial);
                     handle.applySnapshot(new ObserverScreenSnapshot(provider.familyId(),"wrong",1,3,initial.title(),slots,initial.data(),Map.of(),new byte[0]));
                     require(menu.getSlot(deep).getItem().is(Items.EMERALD)&&menu.getSlot(deep).getItem().getCount()==11,"Exact monotonic update policy failed");
+                    if(menu instanceof MerchantMenu merchant) {
+                        byte[] trailing=Arrays.copyOf(initial.ownerPayload(),initial.ownerPayload().length+1);
+                        for(byte[] invalid:List.of(new byte[]{1},new byte[]{1,33},trailing, new byte[]{2,0})) {
+                            handle.applySnapshot(new ObserverScreenSnapshot(provider.familyId(),variant,1,3,initial.title(),initial.slots(),initial.data(),initial.metadata(),invalid));
+                            require(menu.getSlot(deep).getItem().getCount()==11 && merchant.getOffers().size()==9,"Invalid merchant payload mutated accepted state");
+                        }
+                        var recoverySlots=new ArrayList<>(slots);var recoveryBag=recoverySlots.getLast().copy();
+                        var recoveryContents=new ArrayList<>(recoveryBag.get(DataComponents.CONTAINER).itemCopies().toList());
+                        recoveryContents.set(death?255:0,new ItemStack(Items.EMERALD,13));
+                        recoveryBag.set(DataComponents.CONTAINER,ItemContainerContents.fromItems(recoveryContents));
+                        recoverySlots.set(recoverySlots.size()-1,recoveryBag);
+                        handle.applySnapshot(new ObserverScreenSnapshot(provider.familyId(),variant,1,3,initial.title(),recoverySlots,initial.data(),initial.metadata(),initial.ownerPayload()));
+                        require(menu.getSlot(deep).getItem().getCount()==13,"Invalid payload consumed a valid update sequence");
+                        handle.applySnapshot(new ObserverScreenSnapshot(provider.familyId(),variant,1,2,initial.title(),slots,initial.data(),initial.metadata(),initial.ownerPayload()));
+                        require(menu.getSlot(deep).getItem().getCount()==13,"Stale merchant update restored the previous contents");
+                    }
                     handle.applyCursor(new ObserverRemoteCursor(2,88,83,176,166,new ItemStack(Items.GOLD_INGOT,3)));
                     handle.applyCursor(new ObserverRemoteCursor(1,0,0,176,166,ItemStack.EMPTY));
                     require(menu.getCarried().getCount()==3,"Stale cursor replaced carried item");

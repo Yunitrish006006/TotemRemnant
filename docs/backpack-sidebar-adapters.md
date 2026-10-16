@@ -8,7 +8,7 @@ menu/state/selected-stack validation. The sidebar never remaps its 256 physical 
 
 `BackpackSidebarAdapters` is the immutable registration table shared by menu admission
 and Observer variant discovery. It admits exact native classes only: InventoryMenu,
-CraftingMenu, EnchantmentMenu and ChestMenu. ChestMenu covers vanilla chests, barrels and
+CraftingMenu, EnchantmentMenu, ChestMenu and twelve additional native workstation/container menus. ChestMenu covers vanilla chests, barrels and
 ender chests. Subclasses, including Remnant's own standalone BackpackMenu, do not inherit
 admission. A native slot-count mismatch fails closed before any sidebar slots are added.
 
@@ -32,9 +32,24 @@ snapshots, monotonic validation, cursor/carried stack, close handling and input/
 suppression. Never admit a menu without that matching client and Observer implementation.
 Use an exhaustive adapter switch for screen-class admission so new enum registrations require
 a deliberate client pairing. Keep protocol compatibility or introduce a new protocol when the
-snapshot contract changes. The current refactor preserves `remnant_sidebar@1` unchanged.
+snapshot contract changes. The sidebar extensions preserve `remnant_sidebar@1` unchanged.
 
 Validate native indices and constructor paths, registered/unsupported classes, transfer and
 sort item conservation, ordinary/death storage and recovery, and rendered production client
 coverage. Run the owning module's Observer tests plus the relay's module-present and
 module-absent coverage for any new family or protocol change.
+
+## Registered workstation extensions
+
+Furnace, smoker, blast furnace, anvil, stonecutter, smithing table, grindstone,
+loom, cartography table, brewing stand, hopper and merchant screens share the
+same attachment. Furnace and item-combiner constructors append only after their
+native slots are complete. Hopper quick-move clamps its destination range like
+ChestMenu. All admissions remain exact-class checks.
+
+The Remnant provider carries native data slots and public scroll/selection state.
+Merchant offers use a variant-specific version1 payload bounded to32 offers and
+64KiB; malformed, oversized or trailing data is rejected. Anvil prospective-result
+custom names are redacted, and its projection name responder cannot send packets.
+The matching Observer changes suppress competing native senders and restrict
+fallback snapshots to native slots; ship these consumer changes with the expansion.

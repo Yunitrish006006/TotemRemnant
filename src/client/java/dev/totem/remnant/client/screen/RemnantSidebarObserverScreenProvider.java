@@ -30,6 +30,19 @@ public final class RemnantSidebarObserverScreenProvider implements ObserverScree
             case CRAFTING -> CraftingScreen.class;
             case ENCHANTING -> EnchantmentScreen.class;
             case CHEST -> ContainerScreen.class;
+            case FURNACE -> FurnaceScreen.class;
+            case SMOKER -> SmokerScreen.class;
+            case BLAST_FURNACE -> BlastFurnaceScreen.class;
+            case ANVIL -> AnvilScreen.class;
+            case STONECUTTER -> StonecutterScreen.class;
+            case SMITHING -> SmithingScreen.class;
+            case GRINDSTONE -> GrindstoneScreen.class;
+            case LOOM -> LoomScreen.class;
+            case CARTOGRAPHY -> CartographyTableScreen.class;
+            case BREWING -> BrewingStandScreen.class;
+            case HOPPER -> HopperScreen.class;
+            case MERCHANT -> MerchantScreen.class;
+
         };
         return screen.getClass() == expectedScreen ? adapter.variant() : "";
     }
@@ -52,7 +65,13 @@ public final class RemnantSidebarObserverScreenProvider implements ObserverScree
         var panel = access.totem$getBackpackPanel();
         int nativeCount = access.totem$getBackpackPanelSlotStart();
         var slots = new ArrayList<ItemStack>();
-        for (int i = 0; i < nativeCount; i++) slots.add(menu.getSlot(i).getItem().copy());
+        for (int i = 0; i < nativeCount; i++) {
+            var item=menu.getSlot(i).getItem().copy();
+            // The prospective anvil result can contain the private rename draft until taken.
+            if (menu instanceof AnvilMenu && i == AnvilMenu.RESULT_SLOT)
+                item.remove(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
+            slots.add(item);
+        }
         // Offhand bags are selectable but are absent from most vanilla menus.
         slots.add(panel.selectedBackpack().copy());
         var player = panel.playerInventory().player;
@@ -83,8 +102,11 @@ public final class RemnantSidebarObserverScreenProvider implements ObserverScree
             metadata.put("effect"+(effectIndex++), BuiltInRegistries.MOB_EFFECT.getKey(effect.getEffect().value())+","+effect.getDuration()+","+effect.getAmplifier()+","+effect.isAmbient()+","+effect.isVisible()+","+effect.showIcon());
         }
         for (int i = 0; i < nativeData.size(); i++) data[10+i] = nativeData.get(i).get();
+        SidebarWorkstationState.capture(screen, metadata);
+        byte[] workstationPayload = SidebarWorkstationState.capturePayload(screen);
+        if (workstationPayload == null) return Optional.empty();
         return Optional.of(new ObserverScreenSnapshot(familyId(), variant(screen), protocolVersion(), sequence,
-                screen.getTitle(), slots, data, metadata, new byte[0]));
+                screen.getTitle(), slots, data, metadata, workstationPayload));
     }
     private static String tabId(RecipeBookTabButton tab) {
         var category = tab.getCategory();
@@ -108,6 +130,18 @@ public final class RemnantSidebarObserverScreenProvider implements ObserverScree
             case "enchanting" -> new SidebarNativeScreens.EnchantingView(new EnchantmentMenu(-1,inventory), inventory, snapshot.title(), target, context.stopObserving());
             case "chest" -> new SidebarNativeScreens.ChestView(new ChestMenu(chestType(rows),-1,inventory,
                     new net.minecraft.world.SimpleContainer(Math.clamp(rows,1,6)*9),Math.clamp(rows,1,6)), inventory, snapshot.title(), target, context.stopObserving());
+            case "furnace" -> new SidebarNativeScreens.FurnaceView(new FurnaceMenu(-1,inventory),inventory,snapshot.title(),target,context.stopObserving());
+            case "smoker" -> new SidebarNativeScreens.SmokerView(new SmokerMenu(-1,inventory),inventory,snapshot.title(),target,context.stopObserving());
+            case "blast_furnace" -> new SidebarNativeScreens.BlastFurnaceView(new BlastFurnaceMenu(-1,inventory),inventory,snapshot.title(),target,context.stopObserving());
+            case "anvil" -> new SidebarNativeScreens.AnvilView(new AnvilMenu(-1,inventory),inventory,snapshot.title(),target,context.stopObserving());
+            case "stonecutter" -> new SidebarNativeScreens.StonecutterView(new StonecutterMenu(-1,inventory),inventory,snapshot.title(),target,context.stopObserving());
+            case "smithing" -> new SidebarNativeScreens.SmithingView(new SmithingMenu(-1,inventory),inventory,snapshot.title(),target,context.stopObserving());
+            case "grindstone" -> new SidebarNativeScreens.GrindstoneView(new GrindstoneMenu(-1,inventory),inventory,snapshot.title(),target,context.stopObserving());
+            case "loom" -> new SidebarNativeScreens.LoomView(new LoomMenu(-1,inventory),inventory,snapshot.title(),target,context.stopObserving());
+            case "cartography" -> new SidebarNativeScreens.CartographyView(new CartographyTableMenu(-1,inventory),inventory,snapshot.title(),target,context.stopObserving());
+            case "brewing" -> new SidebarNativeScreens.BrewingView(new BrewingStandMenu(-1,inventory),inventory,snapshot.title(),target,context.stopObserving());
+            case "hopper" -> new SidebarNativeScreens.HopperView(new HopperMenu(-1,inventory),inventory,snapshot.title(),target,context.stopObserving());
+            case "merchant" -> new SidebarNativeScreens.MerchantView(new MerchantMenu(-1,inventory),inventory,snapshot.title(),target,context.stopObserving());
             default -> throw new IllegalArgumentException("Unsupported native sidebar variant");
         };
         return new Handle(screen, target, snapshot);
@@ -138,6 +172,7 @@ public final class RemnantSidebarObserverScreenProvider implements ObserverScree
                     || data[5] != ((SidebarMenuDataAccessor)menu).remnant$dataSlots().size()
                     || data.length != 10+data[5] || slots.size()!=nativeCount+1
                     || variant.equals("chest") && data[4] != ((ChestMenu)menu).getRowCount()) return;
+            if (!SidebarWorkstationState.applyPayload(screen, snapshot)) return;
             for (int i=0;i<nativeCount;i++) menu.getSlot(i).set(slots.get(i).copy());
             if(data[0]>=0) target.getInventory().setItem(data[0], slots.get(nativeCount).copy());
             access.totem$selectBackpackSlot(data[0]);access.totem$getBackpackPanel().refreshAfterExternalCommit();
@@ -162,6 +197,7 @@ public final class RemnantSidebarObserverScreenProvider implements ObserverScree
         }
     }
     static void recipeState(AbstractContainerScreen<?> screen, int[] data, Map<String,String> metadata) {
+        SidebarWorkstationState.apply(screen, metadata);
         if (!(screen instanceof AbstractRecipeBookScreen<?> recipeScreen)) return;
         var ra=(SidebarAbstractRecipeBookScreenAccessor)recipeScreen;
         var book=ra.remnant$getRecipeBookComponent();var ba=(SidebarRecipeBookComponentAccessor)book;

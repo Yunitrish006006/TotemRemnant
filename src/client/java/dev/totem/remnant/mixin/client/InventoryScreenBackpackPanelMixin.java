@@ -72,12 +72,16 @@ abstract class InventoryScreenBackpackPanelMixin extends Screen implements dev.t
     @Inject(method = "mouseScrolled", at = @At("HEAD"), cancellable = true)
     private void totem$scrollPanel(double mouseX, double mouseY, double dx, double dy,
                                    CallbackInfoReturnable<Boolean> callback) {
-        if (totem$observerReadOnly()) { callback.setReturnValue(true); return; }
-        if (!totem$overPanel(mouseX, mouseY) || !(BackpackPanelMenuAccess.supports(menu) && menu instanceof BackpackPanelMenuAccess access)) return;
+        if (remnant$scrollPanel(mouseX, mouseY, dx, dy)) callback.setReturnValue(true);
+    }
+
+    @Override public boolean remnant$scrollPanel(double mouseX, double mouseY, double dx, double dy) {
+        if (totem$observerReadOnly()) return true;
+        if (!totem$overPanel(mouseX, mouseY) || !(BackpackPanelMenuAccess.supports(menu) && menu instanceof BackpackPanelMenuAccess access)) return false;
         int rows = (access.totem$getBackpackPanel().activeSlotCount() + totem$columns - 1) / totem$columns;
         totem$firstRow = Math.clamp(totem$firstRow - (int)Math.signum(dy), 0, Math.max(0, rows - totem$visibleRows));
         totem$clearTransientSlotState();
-        callback.setReturnValue(true);
+        return true;
     }
 
     @Unique private boolean totem$overPanel(double x, double y) {

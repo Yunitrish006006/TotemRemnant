@@ -17,7 +17,12 @@
     "SidebarEnchantingRenderMixin",
     "SidebarEffectsRenderMixin",
     "SidebarWidgetGuardMixin",
-    "SidebarRecipeBookHitboxMixin"
+    "SidebarRecipeBookHitboxMixin",
+    "SidebarMerchantScreenAccessor",
+    "SidebarStonecutterScreenAccessor",
+    "SidebarLoomScreenAccessor",
+    "SidebarAnvilInputGuardMixin",
+    "SidebarWorkstationScrollMixin"
   ],
   "injectors": {
     "defaultRequire": 1

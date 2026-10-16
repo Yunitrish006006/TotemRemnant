@@ -17,7 +17,16 @@
     "PlayerDeathBackpackMixin",
     "ShulkerBoxBlockEntityMixin",
     "ShulkerBoxSlotMixin",
-    "SlotPositionMixin"
+    "SlotPositionMixin",
+    "FurnaceMenusBackpackPanelMixin",
+    "CombinerMenusBackpackPanelMixin",
+    "WorkstationMenusBackpackPanelMixin",
+    "BrewingMenusBackpackPanelMixin",
+    "HopperMenusBackpackPanelMixin",
+    "MerchantMenusBackpackPanelMixin",
+    "HopperMenuBackpackQuickMoveMixin"
   ],
-  "injectors": { "defaultRequire": 1 }
+  "injectors": {
+    "defaultRequire": 1
+  }
 }
