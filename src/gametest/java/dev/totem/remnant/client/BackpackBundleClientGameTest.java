@@ -138,6 +138,8 @@ public final class BackpackBundleClientGameTest implements FabricClientGameTest 
             context.takeScreenshot("backpack-bundle-observer-read-only");
             context.runOnClient(client -> client.setScreenAndShow(null));
             verifyLaterPage(context, world);
+            BackpackSidebarSortClientAssertions.verify(context, world);
+            BackpackOpenSortClientAssertions.verify(context, world);
             verifyHoveredContainers(context, world);
         }
     }
@@ -153,6 +155,8 @@ public final class BackpackBundleClientGameTest implements FabricClientGameTest 
                 && preview.selectedIndex() < preview.firstShownIndex() + preview.shownItems().size(),
                 "Selected item is hidden outside preview page");
         require(preview.shownItems().size() <= BackpackTooltip.PAGE_SIZE, "Unbounded tooltip grid");
+        require(new ClientBackpackTooltip(preview).getHeight(net.minecraft.client.Minecraft.getInstance().font)
+                == ((preview.shownItems().size() + 3) / 4) * 24, "Preview retained a text footer");
     }
 
     private static void verifyLaterPage(ClientGameTestContext context,
@@ -264,7 +268,8 @@ public final class BackpackBundleClientGameTest implements FabricClientGameTest 
         world.getServer().runOnServer(server -> {
             var player = server.getPlayerList().getPlayers().getFirst(); player.getInventory().clearContent();
             var root = new ItemStack(RemnantItemRegistration.DEATH_BACKPACK);
-            root.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(unsortedBag(), new ItemStack(Items.DIAMOND, 7))));
+            root.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(unsortedBag(),
+                    new ItemStack(Items.DIRT, 2), new ItemStack(Items.APPLE, 3), new ItemStack(Items.DIRT, 3), new ItemStack(Items.DIAMOND, 7))));
             player.getInventory().setItem(0, root); player.inventoryMenu.broadcastFullState();
         });
         context.waitFor(client -> client.player.getInventory().getItem(0).is(RemnantItemRegistration.DEATH_BACKPACK));
@@ -274,15 +279,19 @@ public final class BackpackBundleClientGameTest implements FabricClientGameTest 
                 .totem$getBackpackPanel().selectedInventorySlot() == 0);
         int index = context.computeOnClient(client -> ((dev.totem.remnant.inventory.BackpackPanelMenuAccess)
                 client.player.inventoryMenu).totem$getBackpackPanelSlotStart());
-        move(context, index); context.getInput().pressMouse(2);
-        context.waitFor(client -> previewSorted(client.player.getInventory().getItem(0)
-                .get(DataComponents.CONTAINER).itemCopies().findFirst().orElse(ItemStack.EMPTY)));
+        move(context, index); context.runOnClient(client -> ObserverPacketProbe.reset()); context.getInput().pressMouse(2);
+        context.waitFor(client -> client.player.getInventory().getItem(0).get(DataComponents.CONTAINER)
+                .itemCopies().findFirst().orElse(ItemStack.EMPTY).is(Items.APPLE));
         world.getServer().runOnServer(server -> {
             var root = server.getPlayerList().getPlayers().getFirst().getInventory().getItem(0);
-            var contents = root.get(DataComponents.CONTAINER).itemCopies().toList();
-            require(previewSorted(contents.getFirst()) && contents.get(1).getCount() == 7, "Captured backpack hover sort lost outer contents");
+            var contents = root.get(DataComponents.CONTAINER).nonEmptyItemCopyStream().toList();
+            require(contents.size() == 4 && contents.get(0).is(Items.APPLE) && contents.get(0).getCount() == 3
+                    && contents.get(1).is(Items.DIAMOND) && contents.get(1).getCount() == 7
+                    && contents.get(2).is(Items.DIRT) && contents.get(2).getCount() == 5
+                    && ItemStack.matches(contents.get(3), unsortedBag()), "Death sidebar did not sort outer contents and retain captured backpack");
         });
-        context.takeScreenshot("backpack-hover-middle-click-captured-sorted");
+        context.runOnClient(client -> require(ObserverPacketProbe.lastSort() != null, "Death sidebar used item sort"));
+        context.takeScreenshot("backpack-sidebar-middle-click-death-sorted");
         context.runOnClient(client -> client.player.closeContainer()); context.waitForScreen(null);
     }
     private static ItemStack unsortedBag() {

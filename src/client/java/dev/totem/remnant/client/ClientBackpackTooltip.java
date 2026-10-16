@@ -18,7 +18,7 @@ public final class ClientBackpackTooltip implements ClientTooltipComponent {
 
     public ClientBackpackTooltip(BackpackTooltip contents) { this.contents = contents; }
     @Override public int getWidth(Font font) { return COLUMNS * SLOT_SIZE; }
-    @Override public int getHeight(Font font) { return rows() * SLOT_SIZE + font.lineHeight + 4; }
+    @Override public int getHeight(Font font) { return rows() * SLOT_SIZE; }
     @Override public boolean showTooltipWithItemInHand() { return true; }
     private int rows() { return (contents.shownItems().size() + COLUMNS - 1) / COLUMNS; }
 
@@ -35,8 +35,5 @@ public final class ClientBackpackTooltip implements ClientTooltipComponent {
             graphics.itemDecorations(font, item, sx + 4, sy + 4);
             if (selected) graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SELECTED_FRONT, sx, sy, SLOT_SIZE, SLOT_SIZE);
         }
-        String position = (contents.selectedIndex() + 1) + " / " + contents.items().size();
-        graphics.text(font, position, left + (getWidth(font) - font.width(position)) / 2,
-                y + rows() * SLOT_SIZE + 2, 0xFFAAAAAA, false);
     }
 }

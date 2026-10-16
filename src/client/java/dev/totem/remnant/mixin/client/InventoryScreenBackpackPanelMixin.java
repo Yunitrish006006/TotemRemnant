@@ -55,6 +55,7 @@ abstract class InventoryScreenBackpackPanelMixin extends Screen implements dev.t
     @Shadow protected int leftPos;
     @Shadow protected int topPos;
     @Shadow protected Slot hoveredSlot;
+    @Shadow private Slot getHoveredSlot(double x, double y) { throw new AssertionError(); }
     @Shadow @Final protected Set<Slot> quickCraftSlots;
     @Unique private int totem$firstRow;
     @Unique private int totem$columns = 9;
@@ -213,6 +214,7 @@ abstract class InventoryScreenBackpackPanelMixin extends Screen implements dev.t
     }
 
     @Override public boolean remnant$contains(double x,double y) { return totem$overPanel(x,y); }
+    @Override public Slot remnant$hoveredSlot(double x,double y) { return getHoveredSlot(x,y); }
     @Override public int remnant$left() { return leftPos; }
     @Override public int remnant$top() { return topPos; }
     @Override public int remnant$firstRow() { return totem$firstRow; }

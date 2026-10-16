@@ -19,7 +19,8 @@ public abstract class BackpackItemMouseActionMixin {
         // VanillaTweaks owns its configurable sort binding when present.
         if (event.button() == 2 && !net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("totem-vanilla-tweaks")
                 && new dev.totem.remnant.client.integration.RemnantSortClientProvider().apply(
-                        (AbstractContainerScreen<?>) (Object) this, getHoveredSlot(event.x(), event.y()))) ci.setReturnValue(true);
+                        (AbstractContainerScreen<?>) (Object) this, getHoveredSlot(event.x(), event.y()),
+                        event.x(), event.y())) ci.setReturnValue(true);
     }
     @Inject(method = "init", at = @At("TAIL"))
     private void totem$addBackpackActions(CallbackInfo ci) {

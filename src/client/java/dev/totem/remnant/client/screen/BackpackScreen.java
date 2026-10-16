@@ -100,6 +100,11 @@ public final class BackpackScreen extends AbstractContainerScreen<BackpackMenu>
 
     public Button equipButton() { return equipButton; }
 
+    /** Storage viewport and its frame, excluding player inventory and functional panels. */
+    public boolean containsStorage(double mouseX, double mouseY) {
+        return insidePanel(mouseX, mouseY, leftPos, topPos, imageWidth, 17 + visibleRows * 18);
+    }
+
     public boolean isEnderAccessButtonVisible() {
         return enderAccessButton != null && enderAccessButton.visible;
     }

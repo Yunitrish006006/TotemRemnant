@@ -1,0 +1,12 @@
+{
+  "version": "0.2.31",
+  "java": 25,
+  "minecraft": "26.3",
+  "artifact": "totem-remnant-0.2.31.jar",
+  "sha512": "f1d2764e1d44164a1b8f7b621bed4c63cf78dffee97c44154e4fb2d5a423f924eeeb9ff3d39595ac8d5f22b1f1a226cc281a31c2e767e1f3ddcdd9f223edf92e",
+  "core_version": "0.7.23",
+  "core_source_commit": "424b90dc3929caa8c1afcfca7e63c50a64bde669",
+  "core_artifact_sha512": "c3d2f88252ee23500d91f7d49a742f47ae981f25acf1e3cdfcf76c81aa36319943ea92f7aa0a7caf1685d89cb765a1e83ac6a0ee1f1af00cec9ea071cdbe923d",
+  "validation_scope": "All 157 production classes and all resources except fabric.mod.json version match the final sidebar/open-backpack region-sorting candidate. Final test/assemble/compileGametestJava, production clients without/with VanillaTweaks0.1.31 and Observer0.1.7, icon-only English/Traditional Chinese screenshots, persisted server counts and scoped three-JVM owner-UI passed. The59 inventory/network/death/upgrade classes match the89-server-tested0.2.30 baseline. Scoped E2E uses independently reviewed bounded timeout allowances and excludes unrelated account-admission fixtures. Exact-source CI Build/server/restart, immutable artifact and Modrinth read-back remain mandatory.",
+  "independent_review": "Independent production/region/security/fixture/visual and release review passed without blockers. Reviewer verified157 identical classes, version-only JAR delta, SHA512, manifest evidence scope, release notes and preflight. Exact-source CI/immutable artifact/read-back gates unchanged."
+}
