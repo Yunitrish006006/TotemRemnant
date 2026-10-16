@@ -1,0 +1,12 @@
+{
+  "version": "0.2.30",
+  "java": 25,
+  "minecraft": "26.3",
+  "artifact": "totem-remnant-0.2.30.jar",
+  "sha512": "dc15aee74cc464a225976c4e9e9c23a8b4300a294d9d7445e60eb943b753a11943487b9c4e184caaa43976b3a109bae7331f94c3f259628a91ab79a8f51a43f0",
+  "core_version": "0.7.23",
+  "core_source_commit": "424b90dc3929caa8c1afcfca7e63c50a64bde669",
+  "core_artifact_sha512": "c3d2f88252ee23500d91f7d49a742f47ae981f25acf1e3cdfcf76c81aa36319943ea92f7aa0a7caf1685d89cb765a1e83ac6a0ee1f1af00cec9ea071cdbe923d",
+  "validation_scope": "All 157 production classes and every resource except fabric.mod.json version are byte-identical to the final89-server-GameTest, native client wheel/hover-sort/withdrawal/locale/readonly and scoped three-JVM owner-UI candidate. Scoped E2E uses independently reviewed private startup/client/completion budgets; unrelated account-admission test fixtures excluded. Exact-source CI Build, immutable artifact and Modrinth read-back remain mandatory.",
+  "independent_review": "Independent production/security/visual and release review passed. Reviewer verified157 byte-identical classes, version-only JAR delta, exactSHA512, release notes and preflight; no blockers. Exact-source CI/artifact/read-back gates unchanged."
+}

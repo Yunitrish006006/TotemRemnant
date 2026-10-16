@@ -20,6 +20,9 @@ import java.util.Map;
 public final class TotemRemnantClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
+        net.fabricmc.fabric.api.client.rendering.v1.ClientTooltipComponentCallback.EVENT.register(component ->
+                component instanceof dev.totem.remnant.item.BackpackTooltip backpack
+                        ? new ClientBackpackTooltip(backpack) : null);
         RemnantManualRecipeCache.register();
         RemnantManualPageOverlay.register();
         ClientPlayNetworking.registerGlobalReceiver(

@@ -24,6 +24,10 @@ public final class TieredBackpackItem extends AbstractBackpackItem {
     public TieredBackpackItem(Properties properties, BackpackTier tier) { super(properties); this.tier = tier; }
     public BackpackTier tier() { return tier; }
 
+    @Override public java.util.Optional<net.minecraft.world.inventory.tooltip.TooltipComponent> getTooltipImage(ItemStack bag) {
+        return BackpackTooltip.from(bag);
+    }
+
     @Override public boolean overrideStackedOnOther(ItemStack bag, net.minecraft.world.inventory.Slot slot,
             net.minecraft.world.inventory.ClickAction action, Player player) {
         return dev.totem.remnant.inventory.BackpackItemInteraction.onOther(bag, slot, action, player);
@@ -41,7 +45,7 @@ public final class TieredBackpackItem extends AbstractBackpackItem {
         super.appendHoverText(bag, context, display, tooltip, flag);
         ItemStack selected = dev.totem.remnant.inventory.BackpackItemInteraction.selectedStack(bag);
         if (!selected.isEmpty()) tooltip.accept(Component.translatable("tooltip.totem.backpack.selected",
-                selected.getHoverName(), selected.getCount()).withStyle(net.minecraft.ChatFormatting.GRAY));
+                selected.getHoverName(), selected.getCount()).withStyle(net.minecraft.ChatFormatting.YELLOW));
         tooltip.accept(Component.translatable("tooltip.totem.backpack.bundle_controls").withStyle(net.minecraft.ChatFormatting.GRAY));
     }
 

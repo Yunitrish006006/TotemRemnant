@@ -135,7 +135,7 @@ public final class MatchingBackpackSort {
                 && item.getCount() <= slot.getMaxStackSize(item)
                 && item.getCount() <= slot.container.getMaxStackSize(item));
     }
-    private static void refreshViews(ServerPlayer player) {
+    static void refreshViews(ServerPlayer player) {
         if (player.inventoryMenu instanceof BackpackPanelMenuAccess access)
             access.totem$getBackpackPanel().refreshAfterExternalCommit();
         if (player.containerMenu != player.inventoryMenu && BackpackPanelMenuAccess.supports(player.containerMenu) && player.containerMenu instanceof BackpackPanelMenuAccess access)

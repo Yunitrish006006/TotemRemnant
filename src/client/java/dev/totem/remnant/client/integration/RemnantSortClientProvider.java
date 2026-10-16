@@ -10,7 +10,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import java.util.function.BiFunction;
 
-/** Loaded only by VanillaTweaks' client v1 entrypoint; retains its configurable key. */
+/** Shared dispatch for native middle-click and VanillaTweaks' configurable v1 binding. */
 public final class RemnantSortClientProvider implements BiFunction<AbstractContainerScreen<?>, Slot, Boolean> {
     @Override public Boolean apply(AbstractContainerScreen<?> screen, Slot hovered) {
         var menu = screen.getMenu();
@@ -18,6 +18,11 @@ public final class RemnantSortClientProvider implements BiFunction<AbstractConta
                 && !dev.totem.remnant.inventory.MatchingBackpackSort.isVanillaChest(menu)) return false;
         if (screen instanceof ObserverReadOnlyScreen observer && observer.totem$isObserverReadOnly()) return true;
         if (hovered == null || !hovered.isActive()) return true;
+        if (dev.totem.remnant.inventory.BackpackPanelContainer.isBackpack(hovered.getItem())) {
+            if (ClientPlayNetworking.canSend(dev.totem.remnant.network.SortHoveredBackpackPayload.TYPE))
+                ClientPlayNetworking.send(dev.totem.remnant.network.SortHoveredBackpackPayload.forSlot(menu, hovered));
+            return true;
+        }
         int selected = -1;
         ItemStack expected = ItemStack.EMPTY;
         if (BackpackPanelMenuAccess.supports(menu) && menu instanceof BackpackPanelMenuAccess access) {

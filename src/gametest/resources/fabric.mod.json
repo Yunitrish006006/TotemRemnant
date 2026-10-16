@@ -25,7 +25,8 @@
       "dev.totem.remnant.manual.RemnantManualGameTest",
       "dev.totem.remnant.inventory.BackpackActionsGameTest",
       "dev.totem.remnant.inventory.MatchingBackpackSortGameTest",
-      "dev.totem.remnant.inventory.BackpackItemInteractionGameTest"
+      "dev.totem.remnant.inventory.BackpackItemInteractionGameTest",
+      "dev.totem.remnant.inventory.HoveredBackpackSortGameTest"
     ],
     "fabric-client-gametest": [
       "dev.totem.remnant.client.VanillaInventoryCraftingClientGameTest",

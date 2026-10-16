@@ -10,6 +10,13 @@ public final class BackpackPanelPayloadRegistration {
     }
 
     public static void register() {
+        PayloadTypeRegistry.serverboundPlay().register(SortHoveredBackpackPayload.TYPE, SortHoveredBackpackPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(SortHoveredBackpackPayload.TYPE,
+                (payload, context) -> context.server().execute(() -> {
+                    if (!SortHoveredBackpackPayload.handle(context.player(), payload)
+                            && context.player().containerMenu.containerId == payload.menuId())
+                        context.player().containerMenu.broadcastFullState();
+                }));
         PayloadTypeRegistry.serverboundPlay().register(SelectBackpackItemPayload.TYPE, SelectBackpackItemPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(SelectBackpackItemPayload.TYPE,
                 (payload, context) -> context.server().execute(() -> {
