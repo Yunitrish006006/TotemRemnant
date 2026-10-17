@@ -12,7 +12,23 @@ import java.util.function.BiFunction;
 
 /** Shared dispatch for native middle-click and VanillaTweaks' configurable v1 binding. */
 public final class RemnantSortClientProvider implements BiFunction<AbstractContainerScreen<?>, Slot, Boolean> {
+    private record ClickPointer(AbstractContainerScreen<?> screen, double x, double y) { }
+    private static final ThreadLocal<ClickPointer> CLICK_POINTER = new ThreadLocal<>();
+
+    /** Keep the originating click coordinates across optional shortcut providers. */
+    public static boolean withClick(AbstractContainerScreen<?> screen,
+            net.minecraft.client.input.MouseButtonEvent event, java.util.function.BooleanSupplier action) {
+        ClickPointer previous = CLICK_POINTER.get();
+        CLICK_POINTER.set(new ClickPointer(screen, event.x(), event.y()));
+        try { return action.getAsBoolean(); }
+        finally {
+            if (previous == null) CLICK_POINTER.remove(); else CLICK_POINTER.set(previous);
+        }
+    }
+
     @Override public Boolean apply(AbstractContainerScreen<?> screen, Slot hovered) {
+        ClickPointer click = CLICK_POINTER.get();
+        if (click != null && click.screen() == screen) return apply(screen, hovered, click.x(), click.y());
         var client = net.minecraft.client.Minecraft.getInstance();
         return apply(screen, hovered, client.mouseHandler.getScaledXPos(client.getWindow()),
                 client.mouseHandler.getScaledYPos(client.getWindow()));

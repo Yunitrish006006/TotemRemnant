@@ -41,7 +41,7 @@ final class BackpackSidebarSortClientAssertions {
             context.waitFor(client -> ((BackpackPanelMenuAccess) client.player.containerMenu)
                     .totem$getBackpackPanel().selectedInventorySlot() == 0);
             context.waitTicks(3);
-            for (int area = 0; area < 4; area++) {
+            for (int area = 0; area < 5; area++) {
                 world.getServer().runOnServer(server -> {
                     var p = server.getPlayerList().getPlayers().getFirst();
                     p.getInventory().setItem(0, bag()); p.containerMenu.broadcastFullState();
@@ -55,7 +55,7 @@ final class BackpackSidebarSortClientAssertions {
                     double x = layout.remnant$left() + slot.x + (region == 3 ? -5 : 8);
                     double y = layout.remnant$top() + slot.y + (region == 2 ? -10 : 8);
                     require(layout.remnant$contains(x, y), "Sort point outside sidebar");
-                    if (region >= 2) require(layout.remnant$hoveredSlot(x, y) == null, "Frame point overlapped a slot");
+                    if (region == 2 || region == 3) require(layout.remnant$hoveredSlot(x, y) == null, "Frame point overlapped a slot");
                     return new int[]{(int)Math.round(x * client.getWindow().getScreenWidth() / client.getWindow().getGuiScaledWidth()),
                             (int)Math.round(y * client.getWindow().getScreenHeight() / client.getWindow().getGuiScaledHeight())};
                 });
@@ -67,7 +67,33 @@ final class BackpackSidebarSortClientAssertions {
                             && s.getContainerSlot() == 9).findFirst().orElseThrow();
                     require(new RemnantSortClientProvider().apply(screen, stale), "Shared shortcut ignored sidebar frame");
                 });
-                else context.getInput().pressMouse(2);
+                else if (region == 4) {
+                    // The dispatched event is authoritative even if MouseHandler still reports
+                    // the player inventory position (queued/forwarded input).
+                    int[] playerPoint = context.computeOnClient(client -> {
+                        var screen = (AbstractContainerScreen<?>) client.gui.screen();
+                        var layout = (BackpackSidebarLayout) screen;
+                        var slot = screen.getMenu().slots.stream().filter(s -> s.container == client.player.getInventory()
+                                && s.getContainerSlot() == 9).findFirst().orElseThrow();
+                        return new int[]{(int)Math.round((layout.remnant$left() + slot.x + 8.0) * client.getWindow().getScreenWidth() / client.getWindow().getGuiScaledWidth()),
+                                (int)Math.round((layout.remnant$top() + slot.y + 8.0) * client.getWindow().getScreenHeight() / client.getWindow().getGuiScaledHeight())};
+                    });
+                    context.getInput().setCursorPos(playerPoint[0], playerPoint[1]); context.waitTicks(2);
+                    context.runOnClient(client -> {
+                        var screen = (AbstractContainerScreen<?>) client.gui.screen();
+                        var layout = (BackpackSidebarLayout) screen;
+                        var access = (BackpackPanelMenuAccess) screen.getMenu();
+                        var slot = screen.getMenu().getSlot(access.totem$getBackpackPanelSlotStart());
+                        ObserverPacketProbe.reset();
+                        screen.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(
+                                layout.remnant$left() + slot.x + 8.0, layout.remnant$top() + slot.y + 8.0,
+                                new net.minecraft.client.input.MouseButtonInfo(com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_MIDDLE, 0)), false);
+                        var request = ObserverPacketProbe.lastSort();
+                        require(request != null && screen.getMenu().getSlot(request.hoveredSlot())
+                                instanceof dev.totem.remnant.inventory.BackpackPanelSlot,
+                                "Sidebar event coordinates routed sort to player inventory");
+                    });
+                } else context.getInput().pressMouse(2);
                 context.waitFor(client -> sorted(client.player.getInventory().getItem(0)));
                 context.runOnClient(client -> require(ObserverPacketProbe.lastSort() != null
                         && ObserverPacketProbe.lastHoveredSort() == null, "Sidebar did not target selected backpack"));

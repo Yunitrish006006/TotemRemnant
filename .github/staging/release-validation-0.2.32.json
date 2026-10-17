@@ -1,0 +1,12 @@
+{
+  "version": "0.2.32",
+  "java": 25,
+  "minecraft": "26.3",
+  "artifact": "totem-remnant-0.2.32.jar",
+  "sha512": "98eda2272f8dbf2911ce09e2bd2223233f6c5842375f3306de65f847576f564ef7c7ab2f17865e76b51f6458d8febd5fd31c88e380f1815d726c6c42814b5807",
+  "core_version": "0.7.23",
+  "core_source_commit": "424b90dc3929caa8c1afcfca7e63c50a64bde669",
+  "core_artifact_sha512": "c3d2f88252ee23500d91f7d49a742f47ae981f25acf1e3cdfcf76c81aa36319943ea92f7aa0a7caf1685d89cb765a1e83ac6a0ee1f1af00cec9ea071cdbe923d",
+  "validation_scope": "All 158 production classes and resources are byte-identical to validated event-coordinate candidate except fabric.mod.json version. Baseline VT0.1.31 native test failed for sidebar click/cache mismatch; fixed native suites with/withoutVT passed checking panel request anchors, persisted sort and unchanged player inventory. 2 unit tests and scoped314-marker owner-UI three-JVM E2E passed. Server production classes unchanged from released0.2.31. Scoped E2E retains existing bounded profile and excludes unrelated account-admission fixtures. Exact-source CI server/restart, immutable artifact and Modrinth read-back required.",
+  "independent_review": "Implementation, native screenshot and final release review passed without blockers. Reviewer independently verified158 identical classes, version-only ZIP delta, SHA512, manifest scope, changelog and preflight. Exact-source CI/immutable artifact/read-back gates remain required."
+}

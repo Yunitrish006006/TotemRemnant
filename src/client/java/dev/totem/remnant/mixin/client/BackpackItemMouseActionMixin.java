@@ -13,14 +13,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class BackpackItemMouseActionMixin {
     @Shadow protected abstract void addItemSlotMouseAction(ItemSlotMouseAction action);
     @Shadow private net.minecraft.world.inventory.Slot getHoveredSlot(double x, double y) { throw new AssertionError(); }
-    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
-    private void totem$standaloneSort(net.minecraft.client.input.MouseButtonEvent event, boolean doubled,
-            org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Boolean> ci) {
-        // VanillaTweaks owns its configurable sort binding when present.
-        if (event.button() == 2 && !net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("totem-vanilla-tweaks")
-                && new dev.totem.remnant.client.integration.RemnantSortClientProvider().apply(
-                        (AbstractContainerScreen<?>) (Object) this, getHoveredSlot(event.x(), event.y()),
-                        event.x(), event.y())) ci.setReturnValue(true);
+    @com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod(method = "mouseClicked")
+    private boolean totem$sortAtClick(net.minecraft.client.input.MouseButtonEvent event, boolean doubled,
+            com.llamalad7.mixinextras.injector.wrapoperation.Operation<Boolean> original) {
+        var screen = (AbstractContainerScreen<?>) (Object) this;
+        return dev.totem.remnant.client.integration.RemnantSortClientProvider.withClick(screen, event, () -> {
+            // VanillaTweaks still owns its configurable binding; its provider receives this event's position.
+            if (event.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_MIDDLE
+                    && !net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("totem-vanilla-tweaks")
+                    && new dev.totem.remnant.client.integration.RemnantSortClientProvider().apply(
+                            screen, getHoveredSlot(event.x(), event.y()), event.x(), event.y())) return true;
+            return original.call(event, doubled);
+        });
     }
     @Inject(method = "init", at = @At("TAIL"))
     private void totem$addBackpackActions(CallbackInfo ci) {
